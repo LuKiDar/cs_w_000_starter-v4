@@ -1019,6 +1019,16 @@ def _indent_of(line: str) -> int:
     return len(line) - len(line.lstrip())
 
 
+def _closes_block(line: str, guard_indent: int) -> bool:
+    """True when `line` closes a block opened at `guard_indent`."""
+    if _indent_of(line) > guard_indent:
+        return False
+    stripped = line.strip()
+    if stripped.startswith("}"):
+        return True
+    return "endif" in stripped
+
+
 def _guarded(lines, index: int, name: str) -> bool:
     """True when a function_exists() guard for `name` actually encloses this call.
 
@@ -1028,23 +1038,36 @@ def _guarded(lines, index: int, name: str) -> bool:
     check exists to catch, so the exemption could be defeated by adding the guard it
     was written to accept.
 
-    A guard on the call's own line always counts (the one-line `if ( function_exists(
-    'x' ) ) { x(); }` form). Otherwise the guard must sit above the call within
-    GUARD_WINDOW lines AND the call must be indented deeper than the guard, which is
-    what distinguishes a call inside the guard's block from one that merely follows it.
+    Three conditions must all hold:
+      1. a guard for this exact `name` is on the call's own line, or within
+         GUARD_WINDOW lines above it;
+      2. the call is indented deeper than the guard line; and
+      3. the guard's block is still open at the call -- no closer at or above the
+         guard's own indent sits between them.
+
+    Condition 3 is what separates a call inside the guard's block from one that merely
+    follows a guard whose block has already ended. Proximity and indentation alone
+    exempt the second case, because it is deeper-indented and still within the window.
     """
     needles = (f"function_exists('{name}')", f'function_exists("{name}")')
     if any(n in lines[index] for n in needles):
         return True
 
-    guard_indent = None
+    guard_line = None
     for j in range(index - 1, max(-1, index - GUARD_WINDOW - 1), -1):
         if any(n in lines[j] for n in needles):
-            guard_indent = _indent_of(lines[j])
+            guard_line = j
             break
-    if guard_indent is None:
+    if guard_line is None:
         return False
-    return _indent_of(lines[index]) > guard_indent
+
+    guard_indent = _indent_of(lines[guard_line])
+    if _indent_of(lines[index]) <= guard_indent:
+        return False
+
+    return not any(
+        _closes_block(line, guard_indent) for line in lines[guard_line + 1 : index]
+    )
 
 
 # --- checks -----------------------------------------------------------------
