@@ -4,7 +4,8 @@
  *
  * Usage:  php scripts/check-symbols.php <theme-dir>
  * Output: one JSON object per line:
- *           {"file":"<path relative to theme>","line":<int>,"symbol":"<name>","kind":"call"|"new"}
+ *           {"file":"<path relative to theme>","line":<int>,"symbol":"<name>",
+ *            "kind":"call"|"new"|"callback"}
  * Exit:   0 when the analysis ran, 2 when it could not (bad argument). The caller
  *          decides what the output means; a non-zero exit would be indistinguishable
  *          from the caller's own failure.
