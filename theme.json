@@ -1,0 +1,23 @@
+{
+	"$schema": "https://schemas.wp.org/wp/6.8/theme.json",
+	"version": 3,
+	"settings": {
+		"appearanceTools": true,
+		"color": {
+			"custom": false,
+			"defaultPalette": false,
+			"defaultGradients": false,
+			"palette": [
+				{"color": "#000000", "name": "Black", "slug": "black"},
+				{"color": "#FFFFFF", "name": "White", "slug": "white"}
+			]
+		},
+		"layout": {"contentSize": "75rem", "wideSize": "87.5rem"},
+		"typography": {
+			"customFontSize": false,
+			"defaultFontSizes": false,
+			"fluid": false
+		},
+		"useRootPaddingAwareAlignments": true
+	}
+}

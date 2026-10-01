@@ -1,0 +1,8 @@
+{
+	"name": "cs_w_000_starter-v4",
+	"version": "4.0.0",
+	"description": "A WordPress starter theme built with a hybrid approach and native Gutenberg blocks.",
+	"author": "Crazy Seeker",
+	"license": "GPL-3.0",
+	"private": true
+}
