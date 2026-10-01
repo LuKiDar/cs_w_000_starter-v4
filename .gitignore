@@ -18,6 +18,9 @@ parts/block/**/editor.min.css.map
 # Tooling scratch directories
 .hermes-tmp.*/
 
+# SDD / skill scratch (never committed)
+.superpowers/
+
 # Editor / OS
 .DS_Store
 Thumbs.db
