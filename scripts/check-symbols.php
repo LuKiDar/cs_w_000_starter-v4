@@ -13,6 +13,18 @@
  * nor line-based, so a text scan cannot tell a call site from a mention inside a
  * comment, a string or a heredoc. Tokens can, and they do not guess.
  *
+ * What counts as a call site. Three forms, and every one of them is lexical -- none
+ * needs flow analysis, which is the whole point: six rounds of trying to reason about
+ * `function_exists()` guards statically each leaked, and every leak was a missed fatal.
+ *   - a plain call, `cs__x(`, including a fully qualified `\cs__x(`
+ *   - a class construction, `new cs__Widget`
+ *   - a string callback: a string literal whose entire content is a `cs__`/`CS_` name,
+ *     as in `add_action('init', 'cs__foo')`. This is the dominant form in a WordPress
+ *     theme -- the starter theme passes thirteen of them to add_action/add_filter --
+ *     and WordPress fatals at runtime if the named function does not exist.
+ * A method (`$o->cs__m()`), a static call (`Foo::cs__m()`), a docblock, a heredoc, and a
+ * string that merely mentions the name are not call sites.
+ *
  * Why a `function_exists()` test is NOT an exemption. Six rounds of trying to prove
  * statically that a `cs__` call is guarded each produced a replacement that leaked
  * somewhere new: an over-indented closer, a tab/space mix, `<?php } ?>`, a closer
@@ -134,6 +146,15 @@ function analyze(string $src): array
             $nx = next_significant($tokens, $i);
             if (is_array($nx) && $nx[0] === T_STRING && is_cs_symbol($nx[1])) {
                 $reported[] = [$nx[2], $nx[1], 'new'];
+            }
+        } elseif (is_array($t) && $t[0] === T_CONSTANT_ENCAPSED_STRING) {
+            // `add_action('init', 'cs__foo')` is a call site: WordPress calls
+            // cs__foo() at runtime and fatals if it does not exist. This is lexical,
+            // not flow analysis -- a string literal either names a cs__ symbol or it
+            // does not -- so it cannot leak the way guard tracking did.
+            $inner = trim($t[1], "'\"");
+            if (preg_match('/^(cs__|CS_)\w+$/', $inner)) {
+                $reported[] = [$t[2], $inner, 'callback'];
             }
         } elseif (is_array($t) && ($t[0] === T_STRING || $t[0] === T_NAME_FULLY_QUALIFIED)) {
             // PHP 8 lexes `\cs__x` as a single T_NAME_FULLY_QUALIFIED token rather than
