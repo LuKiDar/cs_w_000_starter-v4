@@ -2067,14 +2067,17 @@ function cs__render_link_group( $links, $modifier = '' ){
 			?>
 			<a
 				class="<?= esc_attr(implode(' ', $link_classes)); ?>"
-				href="<?= esc_url($url); ?>"
-				<?= $target ? 'target="'. esc_attr($target) .'" rel="noopener noreferrer"' : ''; ?>
+				href="<?= esc_url($url); ?>"<?= $target ? ' target="'. esc_attr($target) .'" rel="noopener noreferrer"' : ''; ?>
 			><?= esc_html($title); ?></a>
 		<?php endforeach; ?>
 	</div>
 	<?php
 }
 ```
+
+
+The `<?= $target ? … : ''; ?>` sits on the **same line as `href`**, not on its own line. That is not a style preference: an `<?= … ?>` on its own line emits the newline and the indentation before it, which lands as a stray space before the tag's `>` — `<a class="…" href="/x" >0</a>`. Valid HTML and invisible in a browser, but this helper is the template every block copies, so the space would appear in every link of every block for the life of the theme. Keep the conditional on the `href` line, and let it carry its own leading space inside the string so the output is clean with and without a target.
+
 
 - [ ] **Step 4: Write `parts/block/cta/block.json`**
 
@@ -2448,6 +2451,18 @@ echo "title \"0\" alone => bytes=", strlen(trim(do_blocks(get_post_field("post_c
 ```
 
 Expected: **non-zero**, and the markup contains `<a class="block-links__item button" href="/x">0</a>`. `cs__render_link_group()` skips a row only when url or title is `''` after a `?? ''` default — so the guard in `render.php` must use the same test, not `empty()`, which would treat `"0"` as absent and drop the button while the renderer would emit it.
+
+```bash
+# (e) no stray whitespace before a tag's '>' -- this markup is copied by every block
+"$WP" -e '
+wp_update_post( array( "ID" => 157, "post_content" => "<!-- wp:cs/cta {\"data\":{\"heading\":\"H\",\"buttons\":[{\"link\":{\"url\":\"/x\",\"title\":\"A\"},\"link_type\":\"button\"},{\"link\":{\"url\":\"/y\",\"title\":\"B\",\"target\":\"_blank\"},\"link_type\":\"button\"}]}} /-->" ) );
+$h = do_blocks( get_post_field("post_content",157) );
+echo preg_match("/href=\"[^\"]*\"\\s+>/", $h) ? "  STRAY WHITESPACE before >\n" : "  clean\n";
+echo "  ", preg_replace("/\\s+/\", " ", trim($h)), "\n";
+'
+```
+
+Expected: **`clean`**, and in the printed markup `href="/x">A</a>` and `href="/y" target="_blank" rel="noopener noreferrer">B</a>` — no space before either `>`. An `<?= … ?>` placed on its own line emits its newline and indentation, which is what produced `<a … href="/x" >A</a>`.
 
 Restore page 157 to empty content after these.
 
