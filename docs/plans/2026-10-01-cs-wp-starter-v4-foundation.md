@@ -965,11 +965,32 @@ Exit code 0 = all checks passed, 1 = at least one failed.
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-PHP = r"C:/Users/Admin/AppData/Roaming/Local/lightning-services/php-8.1.23+0/bin/win64/php.exe"
+
+def find_php() -> str:
+    """Locate the PHP CLI, in order: $CSWP_PHP, PATH, then this dev machine's Local install.
+
+    This script ships inside the theme and the client's team is expected to run it,
+    so a hard-coded path to one developer's machine must not be the only way to
+    find PHP. The Local path stays as the last fallback so the owner's own
+    environment keeps working without any setup.
+    """
+    candidates = [
+        os.environ.get("CSWP_PHP"),
+        shutil.which("php"),
+        r"C:/Users/Admin/AppData/Roaming/Local/lightning-services/php-8.1.23+0/bin/win64/php.exe",
+    ]
+    for candidate in candidates:
+        if candidate and Path(candidate).exists():
+            return candidate
+    return "php"  # nothing found: let the syntax check fail loudly rather than silently
+
+
+PHP = find_php()
 
 SKIP_DIRS = {"node_modules", ".git", "vendor", "build"}
 
@@ -1118,6 +1139,8 @@ python scripts/check-theme-stand.py "D:/Local/starter-theme/app/public/wp-conten
 Expected: FAIL with exit 1, and the `symbol resolution` check reporting `header.php: new cs__primary_menu_walker()`.
 
 If the symbol check does **not** report it, the check is wrong — fix the check, not the expectation. `php -l` passing on that same file (verified) is what makes this check the load-bearing one.
+
+**Assert the specific line, not the exit code.** v3 fails four of the five checks, not one (measured: `block.json validity` 4 problems, `symbol resolution` 2, `output escaping` 10, `build artifacts not tracked` 8). So `exit=1` proves almost nothing on its own — a stand script that had simply been broken in a way that always exits 1 would satisfy it. The oracle is only meaningful when `header.php: new cs__primary_menu_walker()` appears in the output, because that is the check `php -l` provably cannot make.
 
 - [ ] **Step 4: Run it against v4 — it must pass**
 
