@@ -957,9 +957,11 @@ Expected: FAIL — `python: can't open file ... No such file or directory`, exit
 
 **`scripts/check-symbols.php`** — the symbol analyser, and the reason this task ships two files rather than one.
 
-`check_symbols` used to be a regex pass in Python, with a `function_exists()` exemption reconstructed from indentation and line position. Three review rounds each found a new spelling that reconstruction missed — an over-indented closer, a tab/space mix, `<?php } ?>`, a closer behind a comment, a one-line guard — and the third round's own patch added a false alarm (`}` inside a comment on the guard line). The root cause is not a missing case: **PHP's block structure is neither indentation-based nor line-based**, so no amount of patching a text scan can decide whether a call sits inside a guard. The analyser therefore tokenizes.
+`check_symbols` used to be a regex pass in Python. It is a tokenizer now, because PHP's block structure is neither indentation-based nor line-based: a text scan cannot tell a call site from a mention inside a comment, a string or a heredoc, and tokens can.
 
-It prints one JSON object per line for every `cs__` call that resolves nowhere, and exits 0 whenever it ran at all — the caller decides what the output means. It ships inside the theme, so it must work on the client's machines: the theme directory is its only argument and the PHP standard library its only dependency.
+It reports every `cs__`/`CS_` call or `new` whose symbol is defined nowhere in the theme, and exits 0 whenever it ran at all — the caller decides what the output means. It ships inside the theme, so it must work on the client's machines: the theme directory is its only argument and the PHP standard library its only dependency.
+
+**It deliberately does not honour `function_exists()` guards.** Six review rounds tried to prove statically that a guarded call is safe, and every attempt leaked somewhere new — always as a *missed fatal* in code that reads as ordinary in a WordPress template. The rule is flat on purpose. The reasoning is in Step 3b and in the file's own header; it should not be re-litigated without reading both.
 
 ```php
 <?php
@@ -974,27 +976,24 @@ It prints one JSON object per line for every `cs__` call that resolves nowhere, 
  *          from the caller's own failure.
  *
  * Why a tokenizer and not a regex: PHP's block structure is neither indentation-based
- * nor line-based, so whether a call sits inside a `function_exists()` guard cannot be
- * decided by scanning text. Four rounds of regex heuristics each missed new spellings
- * -- an over-indented closer, a tab/space mix, `<?php } ?>`, a closer behind a comment,
- * a one-line guard -- and introduced false alarms of their own. Tokens do not guess.
+ * nor line-based, so a text scan cannot tell a call site from a mention inside a
+ * comment, a string or a heredoc. Tokens can, and they do not guess.
  *
- * What counts as a guard. A `function_exists('cs__x')` test protects a call only when
- * it makes the symbol's existence *certain* at that point:
- *   - every test in the condition contributes, not just the last, because `&&`-joined
- *     tests all hold when the body runs;
- *   - `||` and `xor` destroy that guarantee for every operand, but only at the paren
- *     level the test itself is evaluated at -- inside a nested group they are the
- *     group's business, not the test's;
- *   - a negated test (`! function_exists(...)`) guarantees the opposite, so it is not
- *     a guard at all;
- *   - the body may be a `{ }` block, a template `: ... endif;` region, a brace-less
- *     single statement, or a `? :` consequent -- and an `else`/`elseif` branch is not
- *     protected by the branch before it;
- *   - a test used as a value, or one whose result is then combined with an operator
- *     (`function_exists('x') . f()`), guards nothing.
- * Both directions matter: a missed closer lets a fatal through, and a false alarm
- * trains a team to ignore the gate.
+ * Why a `function_exists()` test is NOT an exemption. Six rounds of trying to prove
+ * statically that a `cs__` call is guarded each produced a replacement that leaked
+ * somewhere new: an over-indented closer, a tab/space mix, `<?php } ?>`, a closer
+ * behind a comment, a one-line guard, a brace-less body, `&&` versus `||`, a ternary
+ * consequent, a guard in a `for` header, an alt-form `else:` branch, a test nested in
+ * an enclosing group, and five more in the final round alone. Every one of those leaks
+ * was a *missed fatal* in code that reads as ordinary in a WordPress template -- and a
+ * missed fatal is the failure this check exists for: `Class "cs__primary_menu_walker"
+ * not found` is what took the v3 theme down.
+ *
+ * So the rule is flat: report every `cs__` call whose symbol is defined nowhere in the
+ * theme, guard or no guard. A false alarm costs one line of noise; a missed fatal costs
+ * the site. If a call really does target another theme or plugin, say so where the call
+ * is made -- `class_exists()` / `function_exists()` at the call site, or a stub -- rather
+ * than asking a scanner to prove it on your behalf.
  */
 
 declare(strict_types=1);
@@ -1053,47 +1052,6 @@ function is_cs_symbol(string $name): bool
 }
 
 /**
- * Is $name protected by one of the guard scopes currently open?
- *
- * @param list<array{names: list<string>, depth: int, kind: string}> $open
- */
-function guarded(array $open, string $name): bool
-{
-    foreach ($open as $g) {
-        if (in_array($name, $g['names'], true)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-/**
- * Could this token begin a statement, or does it continue the expression before it?
- *
- * The distinction decides whether a guard's body has started. `function_exists('x') . f()`
- * continues an expression, so f() is not guarded; `function_exists('x') ? a : b` and
- * `if ( ... ) f()` are.
- */
-function starts_statement(mixed $t): bool
-{
-    if (!is_array($t)) {
-        return in_array($t, ['(', '[', '!', '@', '$', '~'], true);
-    }
-    static $continues = [
-        T_IS_EQUAL, T_IS_IDENTICAL, T_IS_NOT_EQUAL, T_IS_NOT_IDENTICAL,
-        T_IS_SMALLER_OR_EQUAL, T_IS_GREATER_OR_EQUAL, T_SPACESHIP,
-        T_COALESCE, T_COALESCE_EQUAL, T_CONCAT_EQUAL,
-        T_BOOLEAN_AND, T_BOOLEAN_OR, T_LOGICAL_AND, T_LOGICAL_OR, T_LOGICAL_XOR,
-        T_OBJECT_OPERATOR, T_NULLSAFE_OBJECT_OPERATOR, T_DOUBLE_ARROW, T_DOUBLE_COLON,
-        T_SL, T_SR, T_POW, T_INC, T_DEC,
-        T_PLUS_EQUAL, T_MINUS_EQUAL, T_MUL_EQUAL, T_DIV_EQUAL, T_MOD_EQUAL,
-        T_AND_EQUAL, T_OR_EQUAL, T_XOR_EQUAL, T_SL_EQUAL, T_SR_EQUAL, T_POW_EQUAL,
-        T_NS_SEPARATOR, T_ELLIPSIS, T_ATTRIBUTE, T_AS, T_INSTANCEOF,
-    ];
-    return !in_array($t[0], $continues, true);
-}
-
-/**
  * One file: what it defines, and which of its `cs__` uses resolve nowhere.
  *
  * @return array{defined: list<string>, reported: list<array{int, string, string}>}
@@ -1105,21 +1063,7 @@ function analyze(string $src): array
 
     $defined = [];
     $reported = [];
-
-    $depth = 0;          // brace depth
-    $paren = 0;          // paren depth
-    $open = [];          // guard scopes: names + the depth they cover + their kind
-    $pending = [];       // function_exists('cs__x') names seen in the current condition
-    $pendingParen = -1;  // paren depth at the outermost such test
-    $sawOr = false;      // the condition is `||`/`xor`-joined at the test's own level
-    $condOrParen = -1;   // paren level of the last `||` seen since the last statement
-    $ctrlParen = -1;     // paren depth at the innermost control keyword
-    $ctrlPending = false;// that keyword's condition has not closed yet
-    $ctrlReady = false;  // it has closed: the next token opens (or is) its body
-    $prevSig = null;     // last significant token, for call context
-
-    $endKeywords = [T_ENDIF, T_ENDWHILE, T_ENDFOR, T_ENDFOREACH, T_ENDSWITCH];
-    $controls = [T_IF, T_ELSEIF, T_WHILE, T_FOR, T_FOREACH, T_SWITCH];
+    $prevSig = null;
 
     for ($i = 0; $i < $n; $i++) {
         $t = $tokens[$i];
@@ -1128,173 +1072,48 @@ function analyze(string $src): array
             continue;
         }
 
-        // --- 1. paren bookkeeping, before anything that depends on it ---------
-        if ($t === '(') {
-            $paren++;
-        } elseif ($t === ')') {
-            $paren--;
-            if ($ctrlPending && $paren === $ctrlParen) {
-                $ctrlReady = true;
-                $ctrlPending = false;
-            }
-        }
-
-        // --- 2. a control keyword starts a condition whose body may be alt-form
-        if (is_array($t) && in_array($t[0], $controls, true)) {
-            $ctrlParen = $paren;
-            $ctrlPending = true;
-            $ctrlReady = false;
-        }
-
-        // --- 3. `else` / `elseif` end the branch before them -------------------
-        // An alt-form `else:` runs when the test was FALSE, so the guard the `if`
-        // branch opened must close here. Only alt-form: in block form the `}` that
-        // precedes the `else` has already closed the branch, and popping again would
-        // close an enclosing alt guard that is still live.
-        if (is_array($t) && ($t[0] === T_ELSE || $t[0] === T_ELSEIF)) {
-            if ($prevSig !== '}' && $open && end($open)['kind'] === 'alt') {
-                array_pop($open);
-            }
-            if ($t[0] === T_ELSE) {
-                $ctrlReady = true;   // `else :` opens a body of its own
-            }
-        }
-
-        // --- 4. `||` and `xor` destroy the guarantee --------------------------
-        // Only at the level the test is evaluated at: inside a nested group they are
-        // that group's business, so `f('x') && ( $a || $b )` is still a guard.
-        if (is_array($t) && in_array($t[0], [T_BOOLEAN_OR, T_LOGICAL_OR, T_LOGICAL_XOR], true)) {
-            if ($pending) {
-                if ($paren <= $pendingParen) {
-                    $sawOr = true;
-                }
-            } else {
-                $condOrParen = $paren;
-            }
-        }
-
-        // --- 5. the condition has closed: this token opens, or is, its body ----
-        // `$paren < $pendingParen` when the test sits inside an enclosing group
-        // (`if ( ... )`); `$pendingParen === 0` means the test is the whole expression
-        // (`function_exists('cs__x') ? ... : ...`), which closes on its own `)`.
-        $guardReady = $pending
-            && ($paren < $pendingParen || ($pendingParen === 0 && $paren === 0));
-        if ($t !== ')' && ($guardReady || $ctrlReady)) {
-            $kind = null;
-            if ($t === '{') {
-                $kind = 'block';
-                $depth++;
-            } elseif ($t === ':') {
-                $kind = 'alt';
-            } elseif ($t === ';' || $t === ',') {
-                $kind = null;       // the test was used as a value
-            } elseif ($guardReady && $t === '?') {
-                $kind = 'stmt';     // the consequent of `test ? a : b` is guarded
-            } elseif ($guardReady && starts_statement($t)) {
-                $kind = 'stmt';
-            }
-            if ($kind !== null && !($guardReady && $sawOr)) {
-                $open[] = [
-                    'names' => $guardReady ? $pending : [],
-                    'depth' => $kind === 'alt' ? $depth + 1 : $depth,
-                    'kind'  => $kind,
-                ];
-            }
-            $pending = [];
-            $pendingParen = -1;
-            $sawOr = false;
-            $condOrParen = -1;
-            $ctrlReady = false;
-            if ($kind === 'block' || $kind === 'alt') {
-                $prevSig = $t;
-                continue;           // `{` is already counted; `:` opens nothing else
-            }
-        }
-
-        // --- 6. ordinary token handling ---------------------------------------
-        if ($t === '{') {
-            $depth++;
-            $condOrParen = -1;
-        } elseif ($t === '}') {
-            while ($open && end($open)['kind'] !== 'alt' && end($open)['depth'] === $depth) {
-                array_pop($open);
-            }
-            $depth--;
-            $condOrParen = -1;
-        } elseif ($t === ';') {
-            while ($open && end($open)['kind'] === 'stmt' && end($open)['depth'] === $depth) {
-                array_pop($open);
-            }
-            // A `;` inside a `for ( ... ; ... ; ... )` header separates clauses; it
-            // does not end a statement, so a guard condition there must survive it.
-            if ($paren === 0) {
-                $pending = [];
-                $sawOr = false;
-                $condOrParen = -1;
-            }
-            $ctrlReady = false;
-        } elseif ($t === ':') {
-            while ($open && end($open)['kind'] === 'stmt') {
-                array_pop($open);   // the `?` consequent ends here
-            }
-        } elseif (is_array($t) && in_array($t[0], $endKeywords, true)) {
-            if ($open && end($open)['kind'] === 'alt') {
-                array_pop($open);
-            }
-            $ctrlReady = false;
-        } elseif (is_array($t) && ($t[0] === T_FUNCTION || $t[0] === T_CLASS
+        if (is_array($t) && ($t[0] === T_FUNCTION || $t[0] === T_CLASS
             || $t[0] === T_INTERFACE || $t[0] === T_TRAIT)) {
-            $nx = next_significant($tokens, $i);
-            if ($nx === '&') {
-                $nx = next_significant($tokens, $i + 1);
+            // `function &cs__x()` returns by reference: the `&` sits between the
+            // keyword and the name, and stepping past it by token index rather than
+            // by "next significant" is what makes it land on the name.
+            $j = $i + 1;
+            while ($j < $n && is_skippable($tokens[$j])) {
+                $j++;
             }
-            if (is_array($nx) && $nx[0] === T_STRING && is_cs_symbol($nx[1])) {
-                $defined[$nx[1]] = true;
+            // PHP 8.1 lexes the `&` of `function &cs__x()` as T_AMPERSAND_* rather than
+            // as the single character '&', so match on the token's text.
+            $isAmp = $j < $n
+                && ($tokens[$j] === '&'
+                    || (is_array($tokens[$j]) && $tokens[$j][1] === '&'));
+            if ($isAmp) {
+                $j++;
+                while ($j < $n && is_skippable($tokens[$j])) {
+                    $j++;
+                }
+            }
+            if ($j < $n && is_array($tokens[$j]) && $tokens[$j][0] === T_STRING
+                && is_cs_symbol($tokens[$j][1])) {
+                $defined[$tokens[$j][1]] = true;
             }
         } elseif (is_array($t) && $t[0] === T_NEW) {
-            // Deliberately not guard-aware: `function_exists()` proves a *function*
-            // exists, not the class a `new` constructs. Use `class_exists()` for that,
-            // and let this check say so.
             $nx = next_significant($tokens, $i);
             if (is_array($nx) && $nx[0] === T_STRING && is_cs_symbol($nx[1])) {
                 $reported[] = [$nx[2], $nx[1], 'new'];
             }
         } elseif (is_array($t) && ($t[0] === T_STRING || $t[0] === T_NAME_FULLY_QUALIFIED)) {
-            // PHP 8 lexes `\cs__x` as a single T_NAME_FULLY_QUALIFIED token rather
-            // than T_NS_SEPARATOR + T_STRING, so a leading separator has to be
-            // stripped here or a fully qualified global call goes unseen.
+            // PHP 8 lexes `\cs__x` as a single T_NAME_FULLY_QUALIFIED token rather than
+            // T_NS_SEPARATOR + T_STRING, so the leading separator has to be stripped or
+            // a fully qualified global call goes unseen.
             $name = ltrim($t[1], '\\');
 
-            if ($name === 'function_exists') {
-                $negated = ($prevSig === '!');
-                $j = $i + 1;
-                while ($j < $n && is_skippable($tokens[$j])) {
-                    $j++;
-                }
-                if (!$negated && $j < $n && $tokens[$j] === '(') {
-                    $k = $j + 1;
-                    while ($k < $n && is_skippable($tokens[$k])) {
-                        $k++;
-                    }
-                    if ($k < $n && is_array($tokens[$k]) && $tokens[$k][0] === T_CONSTANT_ENCAPSED_STRING) {
-                        $inner = trim($tokens[$k][1], "'\"");
-                        if (is_cs_symbol($inner)) {
-                            if (!$pending) {
-                                $pendingParen = $paren;
-                                $sawOr = $condOrParen === $paren;
-                            }
-                            $pending[] = $inner;
-                        }
-                    }
-                }
-            } elseif (is_cs_symbol($name)
+            if (is_cs_symbol($name)
                 && next_significant($tokens, $i) === '('
                 && !(is_array($prevSig) && in_array(
                     $prevSig[0],
                     [T_FUNCTION, T_NEW, T_OBJECT_OPERATOR, T_DOUBLE_COLON],
                     true
-                ))
-                && !guarded($open, $name)) {
+                ))) {
                 // A call, not a definition or a method. `\cs__x()` is included on
                 // purpose: a leading separator means the global function, which is
                 // exactly what this check is about.
@@ -1578,266 +1397,51 @@ If the symbol check does **not** report it, the check is wrong — fix the check
 
 - [ ] **Step 3b: Prove the gate cannot pass over nothing**
 
-A quality gate that reports success when it has checked nothing is worse than no gate. These three assertions each caught a real false-pass path during review; all three must hold:
+A quality gate that reports success when it has checked nothing is worse than no gate. Both of these caught a real false-pass path during review and must hold:
 
 ```bash
 # (a) a nonexistent directory must FAIL, not pass over an empty tree
 python scripts/check-theme-stand.py "D:/no-such-theme-xyz"; echo "exit=$?"     # expect 1
 
-# (b) one function_exists() guard must not exempt every same-name call in the file.
-#     Build a scratch theme whose only PHP file guards one call and leaves another
-#     unguarded, with the symbol defined nowhere:
-#         if ( function_exists('cs__optional_widget') ) { cs__optional_widget(); }
-#         cs__optional_widget();
-#     expect: symbol resolution FAILS and names cs__optional_widget()
-python scripts/check-theme-stand.py "<scratch-dir>"; echo "exit=$?"            # expect 1
-
-# (c) a directory that is not a git working tree must say so, not silently pass
+# (b) a directory that is not a git working tree must say so, not silently pass
 git -C "<non-repo-dir>" ls-files; echo "git exit=$?"                           # expect 128
 python scripts/check-theme-stand.py "<non-repo-dir>"; echo "exit=$?"           # expect SKIP, not PASS
 ```
 
-For (c) the expected line is `SKIP  build artifacts not tracked  (could not run here)`. Skipping rather than failing is deliberate: claiming a pass would be a lie, but failing would raise a false alarm on a legitimate use — a copy of the theme that is not a git checkout.
+For (b) the expected line is `SKIP  build artifacts not tracked  (could not run here)`. Skipping rather than failing is deliberate: claiming a pass would be a lie, but failing would raise a false alarm on a legitimate use — a copy of the theme that is not a git checkout.
 
-**And the analyser must handle guard enclosure exactly.** These are the cases that defeated three rounds of regex heuristics, plus the false alarms those rounds introduced. The symbol is defined nowhere in each, and "reported" means `symbol resolution` must FAIL and name it.
-
-```bash
-# --- must be REPORTED (the call is genuinely unguarded) ---
-
-# (d) the guard's block has already closed
-#         if ( function_exists('cs__x') ) {
-#             cs__x();
-#         }
-#         if ( $cond ) {
-#             cs__x();          <- deeper-indented, but NOT guarded
-#         }
-
-# (e) a closer indented deeper than the guard
-#         if ( function_exists('cs__x') ) {
-#             cs__x();
-#                 }
-#         if ( $cond ) {
-#             cs__x();
-#         }
-
-# (f) a tab/space mix between guard and closer
-#         if ( function_exists('cs__x') ) {
-#             cs__x();
-#         <tab>}
-#         if ( $cond ) {
-#             cs__x();
-#         }
-
-# (g) a template brace closer written `<?php } ?>`
-#         <?php if ( function_exists('cs__x') ) { ?>
-#             <?php cs__x(); ?>
-#         <?php } ?>
-#         <?php if ( $c ) { ?>
-#             <?php cs__x(); ?>
-#         <?php } ?>
-
-# (h) a closer sharing its line with a preceding statement
-#         <?php if ( function_exists('cs__x') ) { ?>
-#             <?php cs__x(); ?>
-#         <?php $z = 1; } ?>
-#         <?php if ( $c ) { ?>
-#             <?php cs__x(); ?>
-#         <?php } ?>
-
-# (i) a closer behind a comment
-#         <?php if ( function_exists('cs__x') ) { ?>
-#             <?php cs__x(); ?>
-#         <?php /* done */ } ?>
-#         <?php if ( $c ) { ?>
-#             <?php cs__x(); ?>
-#         <?php } ?>
-
-# (j) a guard written on one line with its body
-#         if ( function_exists('cs__x') ) { cs__x(); }
-#         if ( $cond ) {
-#             cs__x();
-#         }
-
-# (k) an unguarded call after `endif;` -- both at the same indent and indented deeper
-#         <?php if ( function_exists('cs__x') ) : ?>
-#             <?php cs__x(); ?>
-#         <?php endif; ?>
-#         <?php cs__x(); ?>
-
-# (l) a call in the `else` branch of the guard's own `if`
-#         if ( function_exists('cs__x') ) {
-#             cs__x();
-#         } else {
-#             cs__x();
-#         }
-
-# (m) a call after a nested block inside the guard has closed
-#         if ( function_exists('cs__x') ) {
-#             if ( $y ) {
-#                 cs__x();
-#             }
-#         }
-#         cs__x();
-
-# --- must NOT be reported (the call is genuinely guarded, or resolves) ---
-
-# (n) the call two lines inside an open block
-#         if ( function_exists('cs__x') ) {
-#             $y = 1;
-#             cs__x();
-#         }
-
-# (o) the template form with an intervening line
-#         <?php if ( function_exists('cs__x') ) : ?>
-#             <?php $y = 1; ?>
-#             <?php cs__x(); ?>
-#         <?php endif; ?>
-
-# (p) a nested block inside the guard
-#         if ( function_exists('cs__x') ) {
-#             if ( $y ) {
-#                 cs__x();
-#             }
-#         }
-
-# (q) a variable named `$endif_check` inside the guard
-#         if ( function_exists('cs__x') ) {
-#             $endif_check = 1;
-#             cs__x();
-#         }
-
-# (r) a comment mentioning `endif` inside the guard
-#         if ( function_exists('cs__x') ) {
-#         // see endif; below
-#             cs__x();
-#         }
-
-# (s) a `}` inside a comment on the guard line
-#         if ( function_exists('cs__x') ) { // }
-#             cs__x();
-#         }
-
-# (t) a stale docblock mentioning the symbol -- a comment is not a call
-#         <?php
-#         /** @see cs__x() for the old API */
-
-# (u) the symbol is actually defined
-#         <?php
-#         function cs__x() {}
-#         cs__x();
-```
-
-`(t)` and `(u)` are two false alarms the old regex pass produced and structurally could not fix: a raw-text scan reads a docblock as a call site, and a definition has to be recognised by pattern rather than by token. Both come free once the analysis is tokenized.
-
-**And the test must actually guarantee something.** A `function_exists()` test protects a call only when it makes the symbol's existence *certain* at that point. The first tokenizer got five of these wrong, in both directions — the re-review caught them, and they are the reason this block exists:
+**And the symbol check must be right in both directions.** Build each as a one-file scratch theme outside the repo and run the checker against it:
 
 ```bash
-# --- must NOT be reported (the test genuinely guarantees the symbol) ---
+# --- must be REPORTED: the symbol is defined nowhere in the theme ---
+#   cs__x();                                    a plain call
+#   new cs__Widget();                           a class no file defines
+#   \cs__x();                                   fully qualified -- the global function
+#   if ( function_exists('cs__x') ) {           guarded, and still reported -- see below
+#       cs__x();
+#   }
+#   if ( function_exists('cs__x') ) cs__x();    the brace-less form, same rule
+#   <?php if ( function_exists('cs__x') ) : ?>  the alt-template form, same rule
+#   <?php cs__x(); ?><?php endif; ?>
+#   call_user_func('cs__x');                    a string callback is not a call site
 
-# (v) a brace-less body, on the guard's own line
-#         if ( function_exists('cs__x') ) cs__x();
-
-# (w) a brace-less body on the next line, and a brace-less body behind `echo`
-#         if ( function_exists('cs__x') )
-#             cs__x();
-#         if ( function_exists('cs__x') ) echo cs__x();
-
-# (x) two tests joined by `&&` -- both hold when the body runs
-#         if ( function_exists('cs__a') && function_exists('cs__b') ) {
-#             cs__a();
-#             cs__b();
-#         }
-
-# (y) a `? :` consequent
-#         function_exists('cs__x') ? cs__x() : null;
-
-# (z) a test used as a plain value guards nothing and must not leak into what
-#     follows it
-#         $x = function_exists('cs__x');
-#         foo( function_exists('cs__x') );
-#         if ( function_exists('cs__x') && is_admin() ) { cs__x(); }
-
-# --- must be REPORTED (the test guarantees nothing) ---
-
-# (aa) two tests joined by `||` -- either one may be false when the body runs,
-#      so the body is not protected at all
-#         if ( function_exists('cs__a') || function_exists('cs__b') ) {
-#             cs__a();
-#             cs__b();
-#         }
-
-# (ab) a `||` operand that is not a test, written BEFORE the test -- the ordering
-#      is what makes this one easy to miss
-#         if ( $b || function_exists('cs__x') ) {
-#             cs__x();
-#         }
-
-# (ac) a fully qualified call: `\cs__x` is the global function, and PHP 8 lexes
-#      it as a single token rather than a separator plus a name
-#         \cs__x();
-
-# --- neither of these is a global call at all ---
-
-# (ad) a method and a static method
-#         $o->cs__m();
-#         Foo::cs__m();
+# --- must stay SILENT: the symbol resolves, or it is not a call at all ---
+#   function cs__x() {}    cs__x();             defined in the same file
+#   function &cs__x() {}   cs__x();             defined by reference
+#   class cs__Widget {}    new cs__Widget();    the class exists
+#   a.php: cs__x();        b.php: function cs__x() {}   defined in a different file
+#   $o->cs__m();                                a method is not a global function
+#   Foo::cs__m();                               nor is a static method
+#   /** @see cs__x() for the old API */         a docblock is not a call site
+#   $s = <<<TXT ... cs__x() ... TXT;            nor is a heredoc
+#   $s = 'cs__x()';                             nor is a string
 ```
 
-`(x)` and `(aa)` are the pair that shows why the exemption cannot be approximated by proximity: the same shape is a guard with `&&` and a non-guard with `||`, and only the operator distinguishes them.
+**A `function_exists()` test is deliberately not an exemption.** This is the one rule in this task that was arrived at by failing, and it is worth stating plainly so that nobody re-adds it.
 
-**And the exemption must not leak.** The second tokenizer was exact about every shape above and still leaked in nine ways — all demonstrated, all reproduced by the controller. Four were false alarms and five were missed fatals, and four of the nine are reachable in ordinary WordPress template code:
+Six review rounds tried to prove statically that a guarded call is safe. Each replacement leaked somewhere new: an over-indented closer, a tab/space mix, `<?php } ?>`, a closer behind a comment, a one-line guard, a brace-less body, `&&` versus `||`, a ternary consequent, a guard in a `for` header, an alt-form `else:` branch, a test nested inside an enclosing group. **Every one of those leaks was a missed fatal**, in code that reads as ordinary in a WordPress template — and a missed fatal is the failure this check exists for: `Class "cs__primary_menu_walker" not found` is what took the v3 theme down. The final round alone found five new miss paths, which is what settled it.
 
-```bash
-# --- must NOT be reported (the test still guarantees the symbol) ---
-
-# (ae) a `||` inside a group that is `&&`-joined to the test: the group is the
-#      group's business, and the `&&` still guarantees the test
-#         if ( function_exists('cs__x') && ( is_admin() || is_singular() ) ) {
-#             cs__x();
-#         }
-#         if ( ( $a || $b ) && function_exists('cs__x') ) { cs__x(); }
-
-# (af) an `if ... endif;` nested inside a guarded alt block: the inner `endif`
-#      must close the inner block, not the outer guard
-#         <?php if ( function_exists('cs__x') ) : ?>
-#         <?php if ( is_admin() ) : ?>x<?php endif; ?>
-#         <?php cs__x(); ?>
-#         <?php endif; ?>
-
-# (ag) a guard in a `for` header -- the `;` there separates clauses, it does not
-#      end a statement, so the guard has to survive it
-#         for ( $i = 0; function_exists('cs__x') && $i < 3; $i++ ) {
-#             cs__x();
-#         }
-
-# --- must be REPORTED (the test no longer guarantees the symbol) ---
-
-# (ah) the `else:` branch of an alt-form guard -- it runs when the test was FALSE
-#         <?php if ( function_exists('cs__x') ) : ?>x
-#         <?php else : ?><?php cs__x(); ?><?php endif; ?>
-
-# (ai) `xor` -- exactly one operand is true, so the body can run with the test false
-#         if ( $a xor function_exists('cs__x') ) { cs__x(); }
-
-# (aj) a negated test -- it guarantees the opposite of what a guard needs
-#         if ( ! function_exists('cs__x') ) { cs__x(); }
-
-# (ak) an operator continuing the expression, so no guarded body ever started
-#         $m = function_exists('cs__x') . cs__x();
-
-# (al) a `match` arm: the `default` arm runs when the test did not match
-#         $v = match ( true ) {
-#             function_exists('cs__x') => 1,
-#             default => cs__x(),
-#         };
-```
-
-`(ae)` and `(ai)` are the pair that shows the operator cannot be judged without its paren level: a `||` nested inside an `&&` group is the group's business, and only the level the test itself is evaluated at decides whether the guarantee survives.
-
-**`new` is deliberately not guard-aware.** `function_exists()` proves a *function* exists, not the class a `new` constructs, so `if ( function_exists('cs__x') ) { new cs__x(); }` is reported — correctly. The guard for a class is `class_exists()`, and a theme that needs one should define the class rather than silence the check.
-
-The asymmetry that matters: **a missed closer lets a fatal through; a spurious closer raises a false alarm.** The first is the failure that killed v3, the second is the failure that trains a team to ignore the gate. The tokenizer is the only form that is exact in both directions, which is why this task no longer tries to reconstruct PHP's block structure from text.
-
+So the rule is flat: **report every `cs__` call whose symbol is defined nowhere in the theme, guard or no guard.** The asymmetry decides it — a false alarm costs one line of noise, a missed fatal costs the site. A theme that genuinely calls into another theme or plugin should say so at the call site (`class_exists()` / `function_exists()`) or ship a stub, rather than ask a scanner to prove it on its behalf.
 - [ ] **Step 4: Run it against v4 — it must pass**
 
 ```bash
