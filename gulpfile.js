@@ -43,7 +43,14 @@ function compileSass(){
 }
 
 function compileBlockSass(){
-	const files = glob.sync('parts/block/**/*.scss');
+	// Underscore-prefixed folders (`_skeleton`, `_base-block`) are templates, not
+	// blocks: `_skeleton`'s SCSS still carries {{SLUG}} placeholders, which is not
+	// valid SCSS. It sorts first, so its parse error aborts the whole gulp-sass
+	// stream and the build emits no block stylesheet at all while exiting 0.
+	// `cs__get_blocks()` excludes the same folders from registration. This is glob
+	// 11: negated patterns ('!parts/block/_*/**') and `ignore: 'parts/block/_*'`
+	// were measured and exclude nothing -- only the `ignore` form below works.
+	const files = glob.sync('parts/block/**/*.scss', { ignore: 'parts/block/_*/**' });
 	if ( ! files.length ){ return Promise.resolve(); }
 
 	return gulp.src(files)

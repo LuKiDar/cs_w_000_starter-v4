@@ -14,7 +14,7 @@
 		z-index: 1;
 	}
 	&__heading {
-		margin: 0 0 $layout_blockGap;
+		margin: 0 0 $layout_block_gap;
 	}
 	&__content {
 		margin: 0;
@@ -22,7 +22,7 @@
 
 	// Modifiers
 	&.alignfull {
-		padding-inline: $layout_blockGap;
+		padding-inline: $layout_block_gap;
 
 		#{$b}__container {
 			margin-inline: auto;

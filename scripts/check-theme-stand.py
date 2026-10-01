@@ -48,6 +48,11 @@ def php_files(theme: Path):
     for p in theme.rglob("*.php"):
         if any(part in SKIP_DIRS for part in p.parts):
             continue
+        # An underscore-prefixed folder is a template or a scratch block: `_skeleton`
+        # carries {{FUNC}} placeholders and is not parseable PHP. `cs__get_blocks()`
+        # excludes the same folders from registration.
+        if any(part.startswith("_") for part in p.relative_to(theme).parts):
+            continue
         yield p
 
 
@@ -83,6 +88,10 @@ def check_php_syntax(theme: Path):
 def check_block_json(theme: Path):
     problems = []
     for bj in sorted(theme.glob("parts/block/*/block.json")):
+        # `_skeleton` is the template every block is generated from, not a block: it
+        # holds {{SLUG}} placeholders and has no compiled assets to point at.
+        if bj.parent.name.startswith("_"):
+            continue
         try:
             data = json.loads(read(bj))
         except json.JSONDecodeError as e:
