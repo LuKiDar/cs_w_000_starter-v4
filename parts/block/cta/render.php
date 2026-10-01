@@ -16,7 +16,19 @@ $content    = $data['content'] ?? '';
 $buttons    = $data['buttons'] ?? array();
 $block      = $data['block'] ?? array();
 
-if ( $heading === '' && $content === '' && empty($buttons) ){
+// Count only the buttons that will actually render. A repeater row whose link was
+// left blank is skipped by cs__render_link_group(), so a non-empty $buttons array is
+// not the same as a block with a button -- and the wrapper would still be emitted,
+// with the block's own padding, as an empty band on the page.
+$has_button = false;
+foreach ( (array) $buttons as $row ){
+	if ( ! empty($row['link']['url']) && ! empty($row['link']['title']) ){
+		$has_button = true;
+		break;
+	}
+}
+
+if ( $heading === '' && $eyebrow === '' && $subheading === '' && $content === '' && ! $has_button ){
 	return;
 }
 ?>

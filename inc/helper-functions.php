@@ -69,8 +69,18 @@ function cs__get_block_classes( $block, $base = '' ){
 	if ( ! empty($block['align']) ){
 		$classes[] = 'align'. $block['align'];
 	}
-	if ( ! empty($block['textAlign']) ){
-		$classes[] = 'has-text-align-'. $block['textAlign'];
+	// ACF hands the render callback `alignText` (the key block.json declares and
+	// the editor writes) and mirrors it to `align_text` via
+	// acf_add_back_compat_attributes(). It never provides `textAlign`, so reading
+	// that key emitted nothing and the alignment styles were unreachable.
+	$text_align = $block['alignText'] ?? $block['align_text'] ?? '';
+	if ( ! empty($text_align) ){
+		$classes[] = 'has-text-align-'. $text_align;
+	}
+	// Same story for the background: style.scss styles `.has-background`, but the
+	// class is only emitted by core, which does not run for an ACF block here.
+	if ( ! empty($block['style']['color']['background']) ){
+		$classes[] = 'has-background';
 	}
 
 	return implode(' ', array_unique($classes));

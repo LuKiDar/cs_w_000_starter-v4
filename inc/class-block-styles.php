@@ -35,9 +35,9 @@ class CS_Block_Styles {
         // Check for text alignment in style first, then attributes
         if ( isset( $block['style']['typography']['textAlign'] ) ){
              $styles[] = "text-align: " . $block['style']['typography']['textAlign'];
-        } elseif ( !empty( $block['textAlign'] ) ){
-             $styles[] = "text-align: " . $block['textAlign'];
-        } elseif ( !empty( $block['align_text'] ) ){ // ACF often uses this key
+        } elseif ( !empty( $block['alignText'] ) ){ // canonical key, declared in block.json
+             $styles[] = "text-align: " . $block['alignText'];
+        } elseif ( !empty( $block['align_text'] ) ){ // ACF back-compat mirror
              $styles[] = "text-align: " . $block['align_text'];
         }
 
