@@ -555,14 +555,16 @@ get_header();
 /**
  * Search Form
  */
+
+$search_id = 'search-form-' . wp_unique_id();
 ?>
 <form role="search" method="get" class="search-form" action="<?= esc_url(home_url('/')); ?>">
-	<label class="search-form__label" for="search-form-<?= esc_attr(wp_unique_id()); ?>">
+	<label class="search-form__label" for="<?= esc_attr($search_id); ?>">
 		<?php esc_html_e('Search for:', CSWP); ?>
 	</label>
 	<input
 		type="search"
-		id="search-form-<?= esc_attr(wp_unique_id()); ?>"
+		id="<?= esc_attr($search_id); ?>"
 		class="search-form__input"
 		value="<?= esc_attr(get_search_query()); ?>"
 		name="s"
@@ -573,6 +575,8 @@ get_header();
 	</button>
 </form>
 ```
+
+**`wp_unique_id()` must be called exactly once and stored.** It is a static counter — `static $id_counter = 0; return $prefix . (string) ++$id_counter;` (`wp-includes/functions.php:8156`) — so two calls return two different values. Calling it separately in the `for` and the `id` produces a label bound to nothing on every render, and the input loses its accessible name.
 
 - [ ] **Step 13: Write a minimal `theme.json`**
 
