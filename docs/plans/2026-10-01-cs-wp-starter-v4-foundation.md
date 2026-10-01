@@ -2830,6 +2830,28 @@ The file is a verbatim v3 port and echoes roughly thirty dynamic values raw. A b
 
 Why fix at all when the reviewer called it inherited and there is no in-theme caller: breadcrumbs is a toolbox promise, and a page title is admin-controlled text rendering into HTML. That is reachable, not hypothetical. Why not blanket-escape: a port that stops rendering its own markup is a worse defect than the one being fixed.
 
+**F6 — fix (found by the scoped re-review, not by the first review). `inc/breadcrumbs.php:72` and `:125`.**
+
+```php
+$breadcrumbs[] = '<a href="'. get_permalink($page->ID) .'">'. get_the_title($page->ID) .'</a>';
+```
+
+Both are inside `if` blocks, hence the duplicate line number. The ancestor page title is plain text concatenated raw into an anchor this function **assembles itself**. F4 left `$breadcrumbs[$i]` alone on the reasoning that it "holds ready-made HTML" — that reasoning is wrong: it holds anchors built two lines up, not HTML returned by a WordPress call. The title inside them is exactly the value class F4 escaped at lines 86, 97, 112, 117 and 136, and the attachment sibling at line 110 escapes the same value (`esc_html( $parent->post_title )`), so the file contradicts itself.
+
+Reachable: **any child page.** Reproduced with a parent titled `Par <b>X</b> "Q"`:
+
+```
+<a href="https://starter-theme.local/par-x-q/">Par <b>X</b> &#8220;Q&#8221;</a>
+```
+
+WordPress entity-encodes the quotes but not the markup, so the `<b>` renders as markup. Escape the title, leave the anchor:
+
+```php
+$breadcrumbs[] = '<a href="'. get_permalink($page->ID) .'">'. esc_html( get_the_title($page->ID) ) .'</a>';
+```
+
+Both sites. Verify by rendering breadcrumbs on a child page whose parent's title contains markup — the tag must arrive as `&lt;b&gt;` — and by diffing the rendered HTML against the previous commit for a normal page, which must be unchanged.
+
 **F5 — no change.** Arosa's `$submenu_id`/`$toggle_label` were dropped from the port. They were assigned and never emitted, so nothing observable changed.
 
 **Also recorded, not a defect:** calling `cs__the_breadcrumbs()` from a bare harness context warns `Attempt to read property "labels" on null`. That branch needs `get_post_type()` falsy with no earlier context match, which a real WP query cannot reach — the front page, page, home, archive, search and 404 branches are all handled earlier. Harness artifact; leave it.
