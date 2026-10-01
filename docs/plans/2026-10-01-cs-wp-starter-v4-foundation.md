@@ -1733,7 +1733,16 @@ const replacements = {
 
 fs.mkdirSync(target, { recursive: true });
 
+// Copy sources only. A build leaves style.min.css, editor.min.css and their
+// source maps inside _skeleton, and copying those would hand every new block a
+// stale compiled stylesheet built from the placeholder SCSS. This is reachable
+// from the second block onwards, not hypothetically.
+const COMPILED = /\.min\.(css|js)$|\.min\.(css|js)\.map$/;
+
 for ( const name of fs.readdirSync(source) ){
+	if ( COMPILED.test(name) ){
+		continue;
+	}
 	const src = fs.readFileSync(path.join(source, name), 'utf8');
 	const out = Object.entries(replacements)
 		.reduce((acc, [from, to]) => acc.split(from).join(to), src);
@@ -1765,28 +1774,48 @@ Expected: PASS — five files created, no `{{…}}` placeholder left anywhere:
 grep -rn "{{" parts/block/demo/ || echo "no placeholders left"
 ```
 
-- [ ] **Step 9: Test the loader skips an incomplete folder**
+- [ ] **Step 9: The loader must skip an incomplete folder without a fatal**
+
+**This step was unreachable during Task 2 and is reachable now:** the active theme is v4 and the site serves it. The owner switches the active theme by hand, and did.
 
 ```bash
+# (a) the build must survive an incomplete folder
 mkdir -p parts/block/half-made
-npm run build
-curl -k -s -o /dev/null -w "%{http_code}\n" https://starter-theme.local
+npm run build; echo "build exit=$?"
+
+# (b) a live request must not add one line to the PHP error log. The status code
+#     alone proves nothing -- WordPress can serve a cached or partial page with a
+#     warning in the log -- so the log is the oracle.
+LOG="/d/Local/starter-theme/logs/php/error.log"
+before=$(wc -l < "$LOG")
+code=$(curl -k -s -o /dev/null -w "%{http_code}" https://starter-theme.local)
+after=$(wc -l < "$LOG")
 rmdir parts/block/half-made
+echo "code=$code  log grew by $((after - before))"
+
+# (c) a SECOND generation, after a build has already left output in _skeleton,
+#     must still produce five source files -- not nine with a stale stylesheet
+npm run make:block second "Second Block"
+ls -1 parts/block/second/
+rm -rf parts/block/second
 ```
 
-Expected: `200` — a folder with no `block.json` is skipped silently, no fatal, no warning in the log:
+Expected: `build exit=0` — an incomplete folder must not throw, the same short-circuit Task 3 established for an empty `parts/block/`; `code=200` with the log growing by **0** lines; and `parts/block/second/` holding **exactly five** entries — `block.json`, `callback.php`, `editor.scss`, `render.php`, `style.scss`.
 
-```bash
-tail -5 "/d/Local/starter-theme/logs/php/error.log"
-```
+(c) is the decisive one, and it is not hypothetical: `_skeleton` accumulates `style.min.css`, `editor.min.css` and their maps from the first build onward, and `cta` in Task 6 is generated after this build has already left that output there. If a `.min.css` or a `.map` appears in `parts/block/second/`, the generator's compiled-artifact filter is missing and every block from the second onward ships a stale stylesheet compiled from the placeholder SCSS.
+
+Note what is deliberately *not* asserted here: that WordPress registered the demo block. The REST route for block types requires `edit_posts` and answers `401` unauthenticated, and Local's PHP CLI cannot bootstrap WordPress without `mysqli` wired up by hand. End-to-end registration is Task 6's job, where a real page renders a real block; Task 5's offline oracle is `npm run stand`, which validates every `block.json` it finds — including the generated one.
 
 - [ ] **Step 10: Remove the demo block and commit**
 
 ```bash
 rm -rf parts/block/demo
-git add -A
+git add parts/block/_skeleton scripts/make-block.mjs package.json
+git status --short          # read it: the staged set must be exactly those paths
 git commit -m "feat: block skeleton and generator"
 ```
+
+**Never `git add -A` in this repository.** It has already dragged `.hermes-tmp.*/` and `.superpowers/` into a commit here. Stage by path, then read `git status --short` before committing. Note that `package-lock.json` is not in the staged set: adding an npm script does not touch the lock file, so if it shows up as modified, something else changed it — stop and report that rather than staging it.
 
 ---
 
