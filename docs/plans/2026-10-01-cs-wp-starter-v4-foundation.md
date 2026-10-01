@@ -1084,6 +1084,8 @@ def check_symbols(theme: Path):
             for name in set(re.findall(r"\b(cs__\w+)\s*\(", line)):
                 if name in defined:
                     continue
+                if re.search(rf"\bnew\s+{name}\s*\(", line):
+                    continue  # already reported by the file-wide `new` scan above
                 # function_exists guards are an accepted declaration of an optional
                 # dependency -- but only for the call they actually guard.
                 if _guarded(lines, i, name):
