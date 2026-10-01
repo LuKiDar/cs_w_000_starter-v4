@@ -1012,21 +1012,39 @@ def read(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
 
-GUARD_WINDOW = 2  # how many lines above a call a function_exists() guard may sit
+GUARD_WINDOW = 4  # how many lines above a call a function_exists() guard may sit
+
+
+def _indent_of(line: str) -> int:
+    return len(line) - len(line.lstrip())
 
 
 def _guarded(lines, index: int, name: str) -> bool:
-    """True when a function_exists() guard for `name` sits on this line or just above it.
+    """True when a function_exists() guard for `name` actually encloses this call.
 
-    The guard has to be *near the call*, not merely somewhere in the file. Testing the
-    whole file text let a single guarded call exempt every unguarded call to the same
-    symbol in that file -- which is exactly the shape of the v3 fatal this check exists
-    to catch, so the exemption could be defeated by adding the guard it was written to
-    accept.
+    The guard has to *enclose* the call, not merely appear somewhere in the file.
+    Testing the whole file text let one guarded call exempt every unguarded call to
+    the same symbol in that file -- which is exactly the shape of the v3 fatal this
+    check exists to catch, so the exemption could be defeated by adding the guard it
+    was written to accept.
+
+    A guard on the call's own line always counts (the one-line `if ( function_exists(
+    'x' ) ) { x(); }` form). Otherwise the guard must sit above the call within
+    GUARD_WINDOW lines AND the call must be indented deeper than the guard, which is
+    what distinguishes a call inside the guard's block from one that merely follows it.
     """
     needles = (f"function_exists('{name}')", f'function_exists("{name}")')
-    start = max(0, index - GUARD_WINDOW)
-    return any(n in line for n in needles for line in lines[start : index + 1])
+    if any(n in lines[index] for n in needles):
+        return True
+
+    guard_indent = None
+    for j in range(index - 1, max(-1, index - GUARD_WINDOW - 1), -1):
+        if any(n in lines[j] for n in needles):
+            guard_indent = _indent_of(lines[j])
+            break
+    if guard_indent is None:
+        return False
+    return _indent_of(lines[index]) > guard_indent
 
 
 # --- checks -----------------------------------------------------------------
@@ -1077,15 +1095,16 @@ def check_symbols(theme: Path):
     missing = []
     for f in php_files(theme):
         lines = read(f).splitlines()
-        for name in set(re.findall(r"\bnew\s+(cs__\w+|CS_\w+)\s*\(", "\n".join(lines))):
-            if name not in defined:
-                missing.append((f, f"new {name}()"))
         for i, line in enumerate(lines):
+            # Report per line so two call sites stay two findings, and so a `new`
+            # expression is not also counted again by the plain-call scan below.
+            new_names = set(re.findall(r"\bnew\s+(cs__\w+|CS_\w+)\s*\(", line))
+            for name in new_names:
+                if name not in defined:
+                    missing.append((f, f"new {name}()"))
             for name in set(re.findall(r"\b(cs__\w+)\s*\(", line)):
-                if name in defined:
+                if name in defined or name in new_names:
                     continue
-                if re.search(rf"\bnew\s+{name}\s*\(", line):
-                    continue  # already reported by the file-wide `new` scan above
                 # function_exists guards are an accepted declaration of an optional
                 # dependency -- but only for the call they actually guard.
                 if _guarded(lines, i, name):
