@@ -1,0 +1,41 @@
+/**
+ * Block: {{TITLE}}
+ */
+
+@import '../../../assets/scss/abstracts/functions';
+@import '../../../assets/scss/abstracts/variables';
+@import '../../../assets/scss/abstracts/mixins';
+
+.block-{{SLUG}} {
+	$b: &;
+
+	&__container {
+		position: relative;
+		z-index: 1;
+	}
+	&__heading {
+		margin: 0 0 $layout_blockGap;
+	}
+	&__content {
+		margin: 0;
+	}
+
+	// Modifiers
+	&.alignfull {
+		padding-inline: $layout_blockGap;
+
+		#{$b}__container {
+			margin-inline: auto;
+			max-width: $layout_content;
+		}
+	}
+	&.has-text-align-center {
+		text-align: center;
+	}
+
+	// States
+
+	// Frontend only styles
+	body:not(.wp-admin) & {
+	}
+}

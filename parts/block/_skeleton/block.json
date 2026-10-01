@@ -1,0 +1,41 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "cs/{{SLUG}}",
+	"title": "{{TITLE}}",
+	"description": "",
+	"category": "cs-blocks",
+	"icon": "block-default",
+	"keywords": [],
+	"acf": {
+		"mode": "auto",
+		"postTypes": ["page"],
+		"renderCallback": "cs__render_{{FUNC}}_block"
+	},
+	"style": "file:./style.min.css",
+	"script": "",
+	"editorStyle": "file:./editor.min.css",
+	"supports": {
+		"align": ["none", "wide", "full"],
+		"alignContent": false,
+		"alignText": true,
+		"anchor": true,
+		"html": false,
+		"multiple": true,
+		"color": {"background": true, "link": false, "text": false},
+		"spacing": {"blockGap": false, "margin": ["top", "bottom"], "padding": ["top", "bottom"]}
+	},
+	"attributes": {
+		"align": {"type": "string", "default": "none"},
+		"alignText": {"type": "string", "default": "none"}
+	},
+	"example": {
+		"attributes": {
+			"mode": "preview",
+			"data": {
+				"heading": "{{TITLE}}",
+				"content": "Block preview content."
+			}
+		}
+	}
+}

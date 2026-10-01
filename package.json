@@ -10,6 +10,7 @@
 		"build": "gulp build",
 		"watch": "gulp watch",
 		"tokens": "node scripts/build-tokens.mjs",
+		"make:block": "node scripts/make-block.mjs",
 		"stand": "python scripts/check-theme-stand.py"
 	},
 	"devDependencies": {
