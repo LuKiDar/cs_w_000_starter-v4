@@ -455,6 +455,80 @@ wins are CSS HMR instead of full page reload, one tool instead of
 gulp + rollup + glob + sourcemaps + autoprefixer + clean-css, and a manifest that maps
 cleanly onto `wp_enqueue_*`. Importance: medium, not blocking.
 
+### Spike result
+
+**Decision: `GULP`.**
+
+Spike run 2026-10-01 in a throwaway directory outside the theme (Vite 8.3.2, sass
+1.105.1, glob 13.0.6 on Node 24.19.0), against two probe blocks `cta` and `hero` with the
+per-block-entry config from the brief. Result: **(a) pass, (c) pass, (b) fail** — and per
+the rule above, one failure means Gulp.
+
+**(a) `style.scss` → `style.min.css` in place — PASS.** `npx vite build` exits 0 and lands
+the compiled CSS beside its source, unhashed and stable:
+
+```
+/parts/block/cta/editor.min.css   0.04 kB
+/parts/block/hero/editor.min.css  0.04 kB
+/parts/block/hero/style.min.css   0.15 kB
+/parts/block/cta/style.min.css    0.17 kB
+```
+
+`.vite/manifest.json` records the source→output map (`parts/block/cta/style.scss` →
+`parts/block/cta/style.min.css`) that a `wp_enqueue_*` helper would key on. The one blemish
+is a warning — `build.outDir must not be the same directory of root or a parent directory
+of root` — because `outDir: '.'`; it is a warning, not an error, and `emptyOutDir: false`
+is what stops the build deleting the sources.
+
+**(c) manifest-driven per-block enqueue — PASS.** A PHP helper reading the manifest
+enqueues only what the page rendered. Simulated page output:
+
+```
+blocks=cta        ENQUEUED: /parts/block/cta/style.min.css
+blocks=hero       ENQUEUED: /parts/block/hero/style.min.css
+blocks=cta,hero   ENQUEUED: /parts/block/cta/style.min.css /parts/block/hero/style.min.css
+```
+
+In production this does not even need the manifest for block CSS: §9's `block.json`
+`"style": "file:./style.min.css"` mechanism resolves the same files natively.
+
+**(b) SCSS HMR without a page reload — FAIL.** The raw mechanism works and was proven
+end-to-end: a PHP 8.4 page that emits the dev markup (`@vite/client` plus one module script
+per rendered block's `style.scss`) was loaded in headless Chrome; editing
+`parts/block/cta/style.scss` (`#2f6fed` → `#e01b24`) changed the computed background from
+`rgb(47, 111, 237)` to `rgb(224, 27, 36)` **while `window.__loadedAt` stayed identical** —
+no navigation. A websocket probe against Vite's HMR channel returned `fullReloads=0`.
+
+It fails on the machinery clause. Making it work requires a *second, dev-only asset-loading
+path in the theme*, and that path contradicts §9 and §4:
+
+1. In dev the built `.min.css` files do not exist (sources-only-in-git, §14), so
+   `block.json`'s `"style"` and `"editorStyle"` are inert — core resolves them through
+   `realpath()` (`wp-includes/blocks.php:407`), which returns `false` for a missing file,
+   registering a style with no source. The dev branch must therefore suppress block.json's
+   styles and enqueue SCSS modules instead, maintained in parallel with the manifest path.
+2. Vite's default `server.cors` only echoes `Access-Control-Allow-Origin` for localhost
+   origins. Measured: `Origin: http://localhost:8080` is echoed, `Origin:
+   http://starter-theme.local` — the host the Local site actually serves on — is not. The
+   module fetch would be blocked until `server.cors` is widened and `server.origin` set.
+3. §4 mandates `editorStyle` on every block and §4.2 sets `apiVersion: 3` (iframed editor).
+   In dev that file is absent too, so the editor's SCSS needs module injection into the
+   Gutenberg iframe — untested here and a further unknown.
+4. Without this path Vite keeps none of its advantage: `vite build --watch` writes real
+   `.min.css` files and keeps `block.json` working, but has no HMR at all, so a live-reload
+   tool would have to be bolted back on.
+
+With Gulp, dev behaves like production: `gulp watch` writes the same `.min.css` files
+`block.json` already points at, BrowserSync injects the CSS change, and **no PHP changes
+between dev and production** — no dev branch, no CORS widening, no editor-iframe work. The
+arosa Gulp 5 configuration is already written and proven, and the output layout is
+identical, so the choice stays reversible.
+
+Notes for the record: `outDir: '.'` will warn permanently with this layout; the manifest
+`name` field uses backslashes on Windows, so only `file` / `names[0]` are safe to key on;
+and the compiled CSS is minified and re-ordered, so §7's alphabetical property order
+survives in the SCSS source but not in the emitted CSS.
+
 ## 14. Repository hygiene
 
 `.gitignore` — **in the starter theme only** (client projects have their own `.gitignore`
