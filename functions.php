@@ -57,6 +57,7 @@ add_filter('get_custom_logo', function( $html ){
 require_once 'inc/enqueue.php';
 require_once 'inc/wordpress-cleanup.php';
 require_once 'inc/helper-functions.php';
+require_once 'inc/class-block-styles.php';
 require_once 'inc/gutenberg.php';
 
 // Toolbox — uncomment what the project needs. Every file below exists in inc/.

@@ -2004,10 +2004,10 @@ Verify, and **verify the build actually emitted the stylesheet** — not merely 
 ```bash
 npm run build; echo "build exit=$?"
 ls -1 parts/block/cta/        # must list style.min.css and editor.min.css
-grep -o "@media screen and (max-width: [0-9]*px)" parts/block/cta/style.min.css | sort -u
+grep -oE "@media screen and \(max-width: ?[0-9]+px\)" parts/block/cta/style.min.css | sort -u
 ```
 
-Expected: exit 0, both `.min.css` files present, and the resolved media query printed. **An empty `grep` means the mixin did not resolve and the build silently produced nothing** — stop and report it rather than proceeding, because every later step would then be testing a stylesheet that does not exist.
+Expected: exit 0, both `.min.css` files present, and the resolved media query printed — `@media screen and (max-width:1025px)` for `mediaMaxWidth( md )`. The `?` after the colon is deliberate: cleanCSS strips that space, so a literal grep for `max-width: ` finds nothing and looks like a failure when the mixin resolved fine. **Match the resolved number, not the spacing.** **An empty `grep` means the mixin did not resolve and the build silently produced nothing** — stop and report it rather than proceeding, because every later step would then be testing a stylesheet that does not exist.
 
 Port the media mixins and `remc` only. Arosa's other mixins (`iconMask`, `getStyles`, `addColorVariations`, `wpTextColors`, …) and `encodecolor()` serve Arosa's own icon and colour system; v4's blocks are meant to be light and universal, and a helper added for a need that does not exist yet is a surface with nothing behind it. Add them when a block actually needs them.
 
@@ -2378,9 +2378,13 @@ Assert the markup itself: the wrapper carries `block-cta` and the align class, t
 
 - [ ] **Step 12: Prove the assets load only where the block is**
 
+The theme filters `should_load_separate_core_block_assets` to true (`functions.php`), so WordPress loads block assets **on demand**: `wp_should_load_block_assets_on_demand()` returns true and a block's stylesheet is enqueued *during its own render* (`WP_Block::render()`), not from `has_block()` at `wp_enqueue_scripts`. Two consequences the assertion has to respect.
+
+**The block must actually render.** Since WP 6.9, `WP_Block::render()` (`wp-includes/class-wp-block.php:760`) dequeues every block asset enqueued during a render whose content is empty — `trim( $block_content ) === ''`, unless the `enqueue_empty_block_content_assets` filter is true. `render.php` early-returns on empty fields, so a block with no `data` renders nothing and its stylesheet is correctly dequeued. **An empty block returning `0` is not a missing asset; it is the on-demand design working.** The test content therefore carries field values:
+
 ```bash
 WP="C:/Users/Admin/Documents/CSTHEME-ops/scripts/cs-wp"
-BLOCK='<!-- wp:cs/cta {"align":"full"} /-->'
+BLOCK='<!-- wp:cs/cta {"align":"full","data":{"heading":"One"}} /-->'
 
 "$WP" -e "wp_update_post( array( 'ID' => 157, 'post_content' => '$BLOCK' ) ); echo 'page updated', \"\n\";"
 
@@ -2390,9 +2394,9 @@ echo "without the block: $(curl -k -s https://starter-theme.local/ | grep -c 'pa
 
 Expected: `1` then `0`.
 
-**Read the page over HTTP, not through `do_blocks()`.** WordPress decides whether to enqueue a block's stylesheet from `has_block()` against the current post during `wp_enqueue_scripts`; a bare `do_blocks()` call never runs that, so a CLI check would report "not enqueued" on a page that is in fact correct. The two paths answer different questions and only this one is the question being asked.
+Read the page over HTTP rather than through `do_blocks()`: the enqueue happens inside `WP_Block::render()` under a real front-end request, and the two paths answer different questions. Only this one is the question being asked.
 
-If the first is `0`, WordPress is not enqueueing the block's own stylesheet — check that `block.json` declares `style` and that the build produced the file. If the second is non-zero, something is enqueueing globally, and the loop in `cs__load_blocks()` is the usual culprit.
+If the first is `0` **while the block is rendering content**, the asset is genuinely missing — check that `block.json` declares `style` and that the build produced the file. If the second is non-zero, something is enqueueing globally, and the loop in `cs__load_blocks()` is the usual culprit.
 
 - [ ] **Step 13: Test the three failure modes**
 

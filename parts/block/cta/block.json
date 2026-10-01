@@ -1,0 +1,50 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "cs/cta",
+	"title": "Call to Action",
+	"description": "A heading, optional text and a group of buttons.",
+	"category": "cs-blocks",
+	"icon": "megaphone",
+	"keywords": ["cta", "call to action", "button"],
+	"acf": {
+		"mode": "auto",
+		"postTypes": ["page"],
+		"renderCallback": "cs__render_cta_block"
+	},
+	"style": "file:./style.min.css",
+	"script": "",
+	"editorStyle": "file:./editor.min.css",
+	"supports": {
+		"align": ["none", "full"],
+		"alignContent": false,
+		"alignText": true,
+		"anchor": true,
+		"html": false,
+		"multiple": true,
+		"color": {"background": true, "link": false, "text": false},
+		"spacing": {"blockGap": false, "margin": ["top", "bottom"], "padding": ["top", "bottom"]}
+	},
+	"attributes": {
+		"align": {"type": "string", "default": "full"},
+		"alignText": {"type": "string", "default": "center"},
+		"style": {
+			"type": "object",
+			"default": {
+				"spacing": {
+					"padding": {"top": "var:preset|spacing|40", "bottom": "var:preset|spacing|40"}
+				}
+			}
+		}
+	},
+	"example": {
+		"attributes": {
+			"mode": "preview",
+			"data": {
+				"heading": "Ready to get started?",
+				"content": "Get in touch to learn more.",
+				"buttons": [{"link": {"title": "Contact us", "url": "#"}, "link_type": "button"}]
+			}
+		}
+	}
+}

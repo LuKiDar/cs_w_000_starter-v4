@@ -81,3 +81,47 @@ function cs__get_block_classes( $block, $base = '' ){
 function cs__get_block_field( $name ){
 	return function_exists('get_field') ? get_field($name) : null;
 }
+
+
+/* --- Render a repeater of buttons/links --- */
+function cs__render_link_group( $links, $modifier = '' ){
+	if ( empty($links) || ! is_array($links) ){
+		return;
+	}
+
+	$classes = 'block-links';
+	if ( $modifier !== '' ){
+		$classes .= ' '. $modifier;
+	}
+	?>
+	<div class="<?= esc_attr($classes); ?>">
+		<?php foreach ( $links as $link ): ?>
+			<?php
+			$url    = $link['link']['url'] ?? '';
+			$title  = $link['link']['title'] ?? '';
+			$target = $link['link']['target'] ?? '';
+			$type   = $link['link_type'] ?? 'button';
+
+			if ( $url === '' || $title === '' ){
+				continue;
+			}
+
+			$link_classes = array('block-links__item');
+			if ( $type === 'button' ){
+				$link_classes[] = 'button';
+			} elseif ( $type === 'button-outlined' ){
+				$link_classes[] = 'button';
+				$link_classes[] = 'is-outlined';
+			} else {
+				$link_classes[] = 'link-arrow';
+			}
+			?>
+			<a
+				class="<?= esc_attr(implode(' ', $link_classes)); ?>"
+				href="<?= esc_url($url); ?>"
+				<?= $target ? 'target="'. esc_attr($target) .'" rel="noopener noreferrer"' : ''; ?>
+			><?= esc_html($title); ?></a>
+		<?php endforeach; ?>
+	</div>
+	<?php
+}

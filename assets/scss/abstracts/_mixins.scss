@@ -1,3 +1,35 @@
-// -----------------------------------------------------------------------------
-// Mixins
-// -----------------------------------------------------------------------------
+/**
+ * Mixins
+ */
+
+/* --- Media Queries --- */
+@mixin mediaMinWidth( $minWidth ){
+	@if type-of($minWidth)==string {
+		$minWidth: map-get($breakpoints, $minWidth);
+	}
+
+	@media screen and (min-width: #{$minWidth + 0px}){
+		@content;
+	}
+}
+@mixin mediaMaxWidth( $maxWidth ){
+	@if type-of($maxWidth)==string {
+		$maxWidth: map-get($breakpoints, $maxWidth);
+	}
+
+	@media screen and (max-width: #{$maxWidth + 0px}){
+		@content;
+	}
+}
+@mixin mediaBetween( $minWidth, $maxWidth ){
+	@if type-of($minWidth)==string {
+		$minWidth: map-get($breakpoints, $minWidth);
+	}
+	@if type-of($maxWidth)==string {
+		$maxWidth: map-get($breakpoints, $maxWidth);
+	}
+
+	@media screen and (min-width: #{$minWidth + 0px}) and (max-width: #{$maxWidth + 0px}){
+		@content;
+	}
+}

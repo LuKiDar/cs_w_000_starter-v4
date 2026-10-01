@@ -1,0 +1,84 @@
+/**
+ * Block: Call to Action
+ */
+
+@import '../../../assets/scss/abstracts/functions';
+@import '../../../assets/scss/abstracts/variables';
+@import '../../../assets/scss/abstracts/mixins';
+
+.block-cta {
+	$b: &;
+
+	&__container {
+		position: relative;
+		z-index: 1;
+	}
+	&__eyebrow {
+		margin: 0 0 $layout_block_gap;
+	}
+	&__heading {
+		margin: 0 0 calc($layout_padding * 1.5);
+
+		@include mediaMaxWidth( md ){
+			margin: 0 0 $layout_padding;
+		}
+	}
+	&__subheading {
+		margin: 0 0 $layout_block_gap;
+	}
+	&__subheading,
+	&__content {
+		max-width: remc(736);
+	}
+	&__content {
+		margin: 0;
+	}
+	&__button-wrapper {
+		align-items: center;
+		display: flex;
+		flex-flow: row wrap;
+		gap: $layout_block_gap;
+		margin: calc($layout_padding * 3) 0 0;
+	}
+
+	// Modifiers
+	&.alignfull {
+		padding-inline: $layout_block_gap;
+
+		#{$b}__container {
+			margin-inline: auto;
+			max-width: $layout_content;
+		}
+	}
+	&.has-background {
+		&:not(.alignwide):not(.alignfull) {
+			border-radius: $borderRadius_medium;
+			padding: calc($layout_padding * 3) $layout_block_gap;
+		}
+	}
+	&.has-text-align-center {
+		#{$b}__subheading,
+		#{$b}__content {
+			margin-left: auto;
+			margin-right: auto;
+		}
+		#{$b}__button-wrapper {
+			justify-content: center;
+		}
+	}
+	&.has-text-align-right {
+		#{$b}__subheading,
+		#{$b}__content {
+			margin-left: auto;
+		}
+		#{$b}__button-wrapper {
+			justify-content: flex-end;
+		}
+	}
+
+	// States
+
+	// Frontend only styles
+	body:not(.wp-admin) & {
+	}
+}
