@@ -2635,14 +2635,23 @@ def find_php() -> str:
     """
     candidates = [os.environ.get("CSWP_PHP"), shutil.which("php")]
 
-    local = Path(os.environ.get("LOCALAPPDATA", "")) / "Local" / "lightning-services"
-    if local.is_dir():
-        installs = sorted(
-            local.glob("php-*/bin/win64/php.exe"),
-            key=lambda p: [int(n) for n in re.findall(r"\d+", p.parts[-4].split("+")[0])],
-            reverse=True,
-        )
-        candidates.extend(str(p) for p in installs)
+    # Local stores its services under %APPDATA%\Local (Roaming) -- the same base the
+    # cs-wp harness uses -- NOT %LOCALAPPDATA%, which points at AppData\Local and holds
+    # nothing of Local's. With the wrong root the glob matches nothing, find_php() falls
+    # through to the literal "php", and the syntax check dies on a missing binary.
+    for base in (os.environ.get("APPDATA"), os.environ.get("LOCALAPPDATA")):
+        if not base:
+            continue
+        local = Path(base) / "Local" / "lightning-services"
+        if local.is_dir():
+            installs = sorted(
+                local.glob("php-*/bin/win64/php.exe"),
+                key=lambda p: [int(n) for n in re.findall(r"\d+", p.parts[-4].split("+")[0])],
+                reverse=True,
+            )
+            candidates.extend(str(p) for p in installs)
+            if installs:
+                break
 
     for candidate in candidates:
         if candidate and Path(candidate).exists():
@@ -2734,7 +2743,9 @@ git checkout -- functions.php
 grep -c "^// require_once 'inc/" functions.php
 ```
 
-Expected: no `MISSING`; every check `PASS` in both runs; **7** always-on includes before and after (the six from Step 1 plus `menu-walker`, which Step 8 makes permanent); the site answers **200** with all ten switched on; and after `git checkout` the commented count is back to **10**.
+Expected: no `MISSING`; every check `PASS` in both runs; the site answers **200** with all ten switched on; and after `git checkout` the commented count is back to **10**.
+
+On the counts, measured: `grep -c "^require_once 'inc/"` reads **5** before this task and **6** after Step 8 adds `menu-walker`; `inc/constants.php` is loaded with a bare `include`, so the theme has **7** always-on files while that grep sees 6. With the whole toolbox switched on the grep reads **15** (6 + 9). Step 1's "6 always-on" is the seven-minus-constants count, so do not be surprised by the 5.
 
 `curl -o NUL`, not `-o /dev/null` — MSYS's curl can exit 23 on the latter, which reads as a failed request when the request succeeded.
 
@@ -2764,19 +2775,23 @@ curl -k -s -o NUL -w "site: %{http_code}\n" https://starter-theme.local
 
 Expected: **2**, **1**, every check `PASS`, **exit 0**, site **200**.
 
-**Then prove the check can fail.** A stand check that cannot fail is not a check, and this is the exact defect it was built for:
+**Then prove the check can fail — by making the file absent, not by commenting the include.**
+
+An earlier draft of this step said to comment the include back and watch the check fail. **Measured: it does not.** The symbol check resolves a symbol by asking whether it is *defined anywhere in the theme's files*; it does not trace `require_once`, so a definition sitting behind a commented include satisfies it. Commenting the include gives `PASS symbol resolution`, exit 0 — while the page fatals. The state the check actually catches is the one v3 died of: **the file does not exist.**
 
 ```bash
-sed -i "s|^require_once 'inc/menu-walker.php';|// require_once 'inc/menu-walker.php';|" functions.php
+mv inc/menu-walker.php "$TMPDIR/menu-walker.php.bak"
 npm run stand 2>&1 | grep -A3 "FAIL symbol"
-npm run stand >/dev/null 2>&1; echo "with the include commented: exit=$?"
-git checkout -- functions.php
+npm run stand >/dev/null 2>&1; echo "with the file absent: exit=$?"
+mv "$TMPDIR/menu-walker.php.bak" inc/menu-walker.php
 npm run stand >/dev/null 2>&1; echo "restored: exit=$?"
 ```
 
-Expected: with the include commented, `FAIL symbol resolution` naming `header.php` and the line of the walker call, and **exit 1**; after `git checkout`, **exit 0**. That failure is v3's fatal caught statically — seeing it once is worth more than trusting that it works.
+Expected: with the file absent, `FAIL symbol resolution (2)` naming `header.php` and the line of the walker call, and **exit 1**; restored, **exit 0**. That failure is v3's fatal reproduced — the same `Class "cs__primary_menu_walker" not found` that 500'd every page of v3, caught before the page is ever loaded.
 
-**Note on §11 of the design.** It promises the stand script treats a symbol as fine if it is "defined **or behind a commented include**". The final analyzer deliberately does not, and cannot: a symbol behind a commented include is not loaded at runtime, so the page fatals — which is the whole v3 story. §11 has been corrected to match what the check actually does. This step is where the two readings diverged, so it is where the correction is recorded.
+Move the file, do not comment the include. `git checkout -- functions.php` is also wrong here: once Step 8 has uncommented the include and committed nothing yet, `git checkout` restores the **base** commit's commented version and silently undoes the step. Move the definition file instead and `functions.php` is never touched.
+
+**Note on the design.** §10 and §11 have been corrected to describe this check by what it measurably does, including the gap above, and to record why `menu-walker.php` is always-on rather than a toolbox item.
 
 - [ ] **Step 9: Commit**
 

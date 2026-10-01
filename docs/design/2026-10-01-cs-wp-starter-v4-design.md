@@ -352,18 +352,35 @@ v4 must keep it.
 disk, and the stand script (§11) verifies that every class or function a template
 references is **defined and loaded**.
 
-**The second half of that requirement is the one that matters, and an earlier draft of
-this section got it wrong.** It said a reference was acceptable if the symbol was
-"defined or behind a commented include". It cannot be: a symbol behind a commented
-include is not loaded at runtime, so the template that uses it fatals — which is the
-entire v3 story. The stand script's symbol check has no exemption for this and must not
-gain one (see Task 4's eight rounds). A file in the toolbox is a promise that the file
-*exists*, not a licence to call into it.
+**What the stand check actually does, measured rather than assumed.** The symbol check
+resolves a symbol by asking whether it is **defined anywhere in the theme's PHP files**.
+It does not trace `require_once`, so it answers "does this definition exist", not "is it
+loaded". Measured on this theme, two states that look alike behave differently:
+
+| state | stand check |
+| --- | --- |
+| `header.php` calls the walker, its file is **absent** (v3's actual fatal) | `FAIL symbol resolution (2)`, exit 1 |
+| `header.php` calls the walker, its file exists but the include is **commented** | `PASS`, exit 0 — and the page fatals at runtime |
+
+So the check catches the defect v3 actually died of — a template calling into a file that
+does not exist — and does **not** catch a file that exists but is not included. That
+second gap is real and is recorded here rather than closed: closing it means tracing
+includes, which is new analyzer surface with its own false-alarm cost, and Task 4 spent
+eight rounds learning how expensive that is. The failure it would catch is loud and
+immediate — a fatal naming the class, on the developer's own machine, the moment they
+toggle an include — not a silent one in production.
+
+An earlier draft of this section said a reference was acceptable if the symbol was
+"defined or behind a commented include". That describes the check's behaviour correctly,
+but it reads as a licence, and it is not one: a file in the toolbox is a promise that the
+file *exists*, never a licence to call into it while it is switched off.
 
 That settles where a feature belongs. A `Walker_Nav_Menu` subclass that the theme's own
 `header.php` uses is **not a toolbox item** — its include is always-on, like the other
 always-on includes, and the toolbox holds only what a new project may reasonably never
-switch on.
+switch on. (An earlier draft of the plan put `menu-walker.php` in the toolbox *and* wired
+it into `header.php`. That combination is the second row of the table above: green stand
+check, fatal page.)
 
 Toolbox files to ship, commented in `functions.php`:
 
