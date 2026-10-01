@@ -72,3 +72,15 @@ add_filter('acf/settings/load_json', function( $paths ){
 	}
 	return $paths;
 });
+
+
+/* --- Keep generator templates out of the page-template registry --- */
+add_filter('theme_page_templates', 'cs__exclude_generator_templates');
+function cs__exclude_generator_templates( $templates ){
+	foreach ( $templates as $file => $name ){
+		if ( str_starts_with( basename($file), '_' ) ){
+			unset( $templates[$file] );
+		}
+	}
+	return $templates;
+}
