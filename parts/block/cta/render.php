@@ -22,7 +22,13 @@ $block      = $data['block'] ?? array();
 // with the block's own padding, as an empty band on the page.
 $has_button = false;
 foreach ( (array) $buttons as $row ){
-	if ( ! empty($row['link']['url']) && ! empty($row['link']['title']) ){
+	// Mirror cs__render_link_group()'s own row test EXACTLY. It skips a row when url or
+	// title is '' after a `?? ''` default, so `! empty()` here would disagree with it on
+	// "0", 0 and false -- and a button whose visible label is literally "0" would be
+	// dropped while the renderer would happily emit it.
+	$url   = $row['link']['url'] ?? '';
+	$title = $row['link']['title'] ?? '';
+	if ( $url !== '' && $title !== '' ){
 		$has_button = true;
 		break;
 	}
