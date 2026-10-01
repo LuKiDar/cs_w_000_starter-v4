@@ -55,83 +55,18 @@ def read(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
 
-GUARD_WINDOW = 4  # how many lines above a call a function_exists() guard may sit
+def _display(where: Path, theme: Path) -> str:
+    """Show a finding's file relative to the theme when it lives there.
 
-
-def _indent_of(line: str) -> int:
-    return len(line) - len(line.lstrip())
-
-
-PHP_TAG_RE = re.compile(r"<\?(?:php|=)?|\?>")
-
-
-def _closes_block(line: str, guard_indent: int) -> bool:
-    """True when `line` closes a block opened at `guard_indent`.
-
-    PHP tags are stripped first, because a template closer is routinely written
-    `<?php } ?>` or `<?php endif; ?>` -- testing the raw line for a leading `}`
-    misses the first of those entirely and reopens the hole the check exists to close.
+    The basename alone is ambiguous: a theme with two `render.php` files reports two
+    findings that read identically, and whoever triages them cannot tell which file
+    to open. A finding about the theme itself prints the theme's name rather than `.`.
     """
-    if _indent_of(line) > guard_indent:
-        return False
-    body = PHP_TAG_RE.sub(" ", line).strip()
-    if body.startswith("}"):
-        return True
-    # `endif` must begin the statement. A mention inside a comment, a string literal
-    # or a variable name (`$endif_check`) closes nothing, and counting it as a closer
-    # would report a call that is genuinely guarded.
-    return body.startswith("endif")
-
-
-def _guarded(lines, index: int, name: str) -> bool:
-    """True when a function_exists() guard for `name` actually encloses this call.
-
-    The guard has to *enclose* the call, not merely appear somewhere in the file.
-    Testing the whole file text let one guarded call exempt every unguarded call to
-    the same symbol in that file -- which is exactly the shape of the v3 fatal this
-    check exists to catch, so the exemption could be defeated by adding the guard it
-    was written to accept.
-
-    Four conditions must all hold:
-      1. a guard for this exact `name` is on the call's own line, or within
-         GUARD_WINDOW lines above it;
-      2. the call is indented deeper than the guard line;
-      3. the guard does not close its own block on the guard line (the one-line
-         `if ( function_exists('x') ) { x(); }` form); and
-      4. no closer at or above the guard's own indent sits between guard and call.
-
-    Conditions 3 and 4 are what separate a call inside the guard's block from one that
-    merely follows a guard whose block has already ended. Proximity and indentation
-    alone exempt the second case, because it is deeper-indented and still in the window.
-    """
-    needles = (f"function_exists('{name}')", f'function_exists("{name}")')
-    if any(n in lines[index] for n in needles):
-        return True
-
-    guard_line = None
-    for j in range(index - 1, max(-1, index - GUARD_WINDOW - 1), -1):
-        if any(n in lines[j] for n in needles):
-            guard_line = j
-            break
-    if guard_line is None:
-        return False
-
-    guard_indent = _indent_of(lines[guard_line])
-    if _indent_of(lines[index]) <= guard_indent:
-        return False
-
-    # Condition 3: the guard line itself may open and close the block, in which case
-    # nothing below it is inside the guard. Only a closer *after* the guard expression
-    # counts -- the `{` that opens the block must not be read as one.
-    guard_text = lines[guard_line]
-    after_needle = guard_text[max(guard_text.find(n) for n in needles) :]
-    if "}" in after_needle:
-        return False
-
-    # Condition 4: the block must still be open at the call.
-    return not any(
-        _closes_block(line, guard_indent) for line in lines[guard_line + 1 : index]
-    )
+    try:
+        rel = where.relative_to(theme)
+    except ValueError:
+        return str(where)
+    return theme.name if str(rel) == "." else str(rel)
 
 
 # --- checks -----------------------------------------------------------------
@@ -170,34 +105,41 @@ def check_block_json(theme: Path):
 def check_symbols(theme: Path):
     """Every cs__ symbol used by a template must be defined in the theme.
 
+    The analysis is delegated to `scripts/check-symbols.php`, which tokenizes rather
+    than pattern-matches. PHP's block structure is neither indentation-based nor
+    line-based, so whether a call sits inside a `function_exists()` guard cannot be
+    decided by scanning text: three rounds of regex heuristics each missed new
+    spellings (an over-indented closer, a tab/space mix, `<?php } ?>`, a closer behind
+    a comment, a one-line guard) and introduced false alarms of their own. Tokens do
+    not guess. See that file for the reasoning.
+
     This is the check that would have caught the v3 fatal:
     Class "cs__primary_menu_walker" not found.
     """
-    defined = set()
-    for f in php_files(theme):
-        src = read(f)
-        defined |= set(re.findall(r"function\s+&?\s*(cs__\w+)", src))
-        defined |= set(re.findall(r"class\s+(cs__\w+|CS_\w+)", src))
-
-    missing = []
-    for f in php_files(theme):
-        lines = read(f).splitlines()
-        for i, line in enumerate(lines):
-            # Report per line so two call sites stay two findings, and so a `new`
-            # expression is not also counted again by the plain-call scan below.
-            new_names = set(re.findall(r"\bnew\s+(cs__\w+|CS_\w+)\s*\(", line))
-            for name in new_names:
-                if name not in defined:
-                    missing.append((f, f"new {name}()"))
-            for name in set(re.findall(r"\b(cs__\w+)\s*\(", line)):
-                if name in defined or name in new_names:
-                    continue
-                # function_exists guards are an accepted declaration of an optional
-                # dependency -- but only for the call they actually guard.
-                if _guarded(lines, i, name):
-                    continue
-                missing.append((f, f"{name}()"))
-    return missing
+    helper = Path(__file__).resolve().parent / "check-symbols.php"
+    if not helper.exists():
+        return [(theme, f"symbol analysis helper is missing: {helper}")]
+    try:
+        r = subprocess.run(
+            [PHP, str(helper), str(theme)], capture_output=True, text=True
+        )
+    except FileNotFoundError:
+        return SKIP  # no PHP on this machine; the syntax check reports the same
+    if r.returncode != 0:
+        return [(theme, f"symbol analysis failed: {r.stderr.strip() or r.returncode}")]
+    problems = []
+    for line in r.stdout.splitlines():
+        if not line.strip():
+            continue
+        try:
+            found = json.loads(line)
+        except json.JSONDecodeError:
+            problems.append((theme, f"symbol analysis emitted junk: {line.strip()}"))
+            continue
+        symbol = found.get("symbol")
+        shown = f"new {symbol}()" if found.get("kind") == "new" else f"{symbol}()"
+        problems.append((theme / found["file"], f"line {found['line']}: {shown}"))
+    return problems
 
 
 def check_escaping(theme: Path):
@@ -258,7 +200,7 @@ def main():
             failed += 1
             print(f"FAIL  {name}  ({len(problems)})")
             for where, what in problems[:20]:
-                print(f"        {where.name}: {what}")
+                print(f"        {_display(where, theme)}: {what}")
             if len(problems) > 20:
                 print(f"        … and {len(problems) - 20} more")
         else:
