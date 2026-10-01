@@ -994,6 +994,12 @@ PHP = find_php()
 
 SKIP_DIRS = {"node_modules", ".git", "vendor", "build"}
 
+# A check returns this when it could not run at all -- no git on the machine, or the
+# directory is not a working tree. It is reported as SKIP and does not fail the gate:
+# claiming a pass would be a lie, and failing would be a false alarm on a legitimate
+# use such as a delivered copy that is not a git checkout.
+SKIP = object()
+
 
 def php_files(theme: Path):
     for p in theme.rglob("*.php"):
@@ -1004,6 +1010,23 @@ def php_files(theme: Path):
 
 def read(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
+
+
+GUARD_WINDOW = 2  # how many lines above a call a function_exists() guard may sit
+
+
+def _guarded(lines, index: int, name: str) -> bool:
+    """True when a function_exists() guard for `name` sits on this line or just above it.
+
+    The guard has to be *near the call*, not merely somewhere in the file. Testing the
+    whole file text let a single guarded call exempt every unguarded call to the same
+    symbol in that file -- which is exactly the shape of the v3 fatal this check exists
+    to catch, so the exemption could be defeated by adding the guard it was written to
+    accept.
+    """
+    needles = (f"function_exists('{name}')", f'function_exists("{name}")')
+    start = max(0, index - GUARD_WINDOW)
+    return any(n in line for n in needles for line in lines[start : index + 1])
 
 
 # --- checks -----------------------------------------------------------------
@@ -1048,19 +1071,22 @@ def check_symbols(theme: Path):
     defined = set()
     for f in php_files(theme):
         src = read(f)
-        defined |= set(re.findall(r"function\s+(cs__\w+)", src))
+        defined |= set(re.findall(r"function\s+&?\s*(cs__\w+)", src))
         defined |= set(re.findall(r"class\s+(cs__\w+|CS_\w+)", src))
 
     missing = []
     for f in php_files(theme):
-        src = read(f)
-        for name in set(re.findall(r"\bnew\s+(cs__\w+|CS_\w+)\s*\(", src)):
+        lines = read(f).splitlines()
+        for name in set(re.findall(r"\bnew\s+(cs__\w+|CS_\w+)\s*\(", "\n".join(lines))):
             if name not in defined:
                 missing.append((f, f"new {name}()"))
-        for name in set(re.findall(r"\b(cs__\w+)\s*\(", src)):
-            if name.startswith("cs__") and name not in defined:
-                # function_exists guards are an accepted declaration of an optional dependency
-                if f"function_exists('{name}')" in src or f'function_exists("{name}")' in src:
+        for i, line in enumerate(lines):
+            for name in set(re.findall(r"\b(cs__\w+)\s*\(", line)):
+                if name in defined:
+                    continue
+                # function_exists guards are an accepted declaration of an optional
+                # dependency -- but only for the call they actually guard.
+                if _guarded(lines, i, name):
                     continue
                 missing.append((f, f"{name}()"))
     return missing
@@ -1077,11 +1103,14 @@ def check_escaping(theme: Path):
 
 
 def check_build_artifacts(theme: Path):
-    r = subprocess.run(
-        ["git", "-C", str(theme), "ls-files"], capture_output=True, text=True
-    )
+    try:
+        r = subprocess.run(
+            ["git", "-C", str(theme), "ls-files"], capture_output=True, text=True
+        )
+    except FileNotFoundError:
+        return SKIP  # no git on this machine
     if r.returncode != 0:
-        return []
+        return SKIP  # not a git working tree
     bad = [
         line for line in r.stdout.splitlines()
         if line.endswith((".min.css", ".min.js", ".map"))
@@ -1102,12 +1131,21 @@ def main():
     theme = Path(sys.argv[1] if len(sys.argv) > 1 else os.getcwd()).resolve()
     print(f"Stand check: {theme}\n")
 
+    # Without this guard a typo, a wrong cwd or a failed checkout iterates an empty
+    # tree, every check finds nothing wrong, and the gate reports success over nothing.
+    if not theme.is_dir():
+        print(f"FAIL  theme directory not found: {theme}")
+        return 1
+
     failed = 0
     for name, fn in CHECKS:
         try:
             problems = fn(theme)
         except Exception as e:  # a crashing check is a failing check
             problems = [(theme, f"check raised {type(e).__name__}: {e}")]
+        if problems is SKIP:
+            print(f"SKIP  {name}  (could not run here)")
+            continue
         if problems:
             failed += 1
             print(f"FAIL  {name}  ({len(problems)})")
@@ -1141,6 +1179,29 @@ Expected: FAIL with exit 1, and the `symbol resolution` check reporting `header.
 If the symbol check does **not** report it, the check is wrong — fix the check, not the expectation. `php -l` passing on that same file (verified) is what makes this check the load-bearing one.
 
 **Assert the specific line, not the exit code.** v3 fails four of the five checks, not one (measured: `block.json validity` 4 problems, `symbol resolution` 2, `output escaping` 10, `build artifacts not tracked` 8). So `exit=1` proves almost nothing on its own — a stand script that had simply been broken in a way that always exits 1 would satisfy it. The oracle is only meaningful when `header.php: new cs__primary_menu_walker()` appears in the output, because that is the check `php -l` provably cannot make.
+
+- [ ] **Step 3b: Prove the gate cannot pass over nothing**
+
+A quality gate that reports success when it has checked nothing is worse than no gate. These three assertions each caught a real false-pass path during review; all three must hold:
+
+```bash
+# (a) a nonexistent directory must FAIL, not pass over an empty tree
+python scripts/check-theme-stand.py "D:/no-such-theme-xyz"; echo "exit=$?"     # expect 1
+
+# (b) one function_exists() guard must not exempt every same-name call in the file.
+#     Build a scratch theme whose only PHP file guards one call and leaves another
+#     unguarded, with the symbol defined nowhere:
+#         if ( function_exists('cs__optional_widget') ) { cs__optional_widget(); }
+#         cs__optional_widget();
+#     expect: symbol resolution FAILS and names cs__optional_widget()
+python scripts/check-theme-stand.py "<scratch-dir>"; echo "exit=$?"            # expect 1
+
+# (c) a directory that is not a git working tree must say so, not silently pass
+git -C "<non-repo-dir>" ls-files; echo "git exit=$?"                           # expect 128
+python scripts/check-theme-stand.py "<non-repo-dir>"; echo "exit=$?"           # expect SKIP, not PASS
+```
+
+For (c) the expected line is `SKIP  build artifacts not tracked  (could not run here)`. Skipping rather than failing is deliberate: claiming a pass would be a lie, but failing would raise a false alarm on a legitimate use — a copy of the theme that is not a git checkout.
 
 - [ ] **Step 4: Run it against v4 — it must pass**
 
