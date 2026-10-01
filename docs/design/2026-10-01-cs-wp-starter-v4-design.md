@@ -59,7 +59,7 @@ These are established, working conventions. v4 reproduces them.
 | PHP layout | `inc/` one file per concern; `parts/{block,content,section}/`; `templates/` |
 | Asset versioning | `filemtime()` as the `$ver` argument on every enqueue |
 | Token flow | `theme.json` → CSS custom properties → SCSS variables (one direction only) |
-| CPT/taxonomy registration | Declarative array over `DEFAULT_CPT_ARGS` / `DEFAULT_CPT_LABELS` / `DEFAULT_TAXONOMY_ARGS` constants |
+| CPT/taxonomy registration | **Not the primary path** — see §6. The declarative registrar (`DEFAULT_CPT_ARGS` / `DEFAULT_CPT_LABELS` / `DEFAULT_TAXONOMY_ARGS` constants plus `cs__register_post_types()`) ships in the commented toolbox, for the cases ACF's UI cannot express: custom capabilities, `register_post_meta()`, or a post type owned by a plugin |
 | Nav menus | Custom `Walker_Nav_Menu` subclass + `nav_menu_css_class` cleanup |
 | Editor curation | `assets/js/block-styles.js` unregisters unused core blocks; core patterns and the block directory removed |
 | Cleanup layer | `inc/wordpress-cleanup.php` — clean head, whitelisted body/nav classes, emoji and comments off |
@@ -177,32 +177,41 @@ Verified on ACF Pro 6.8.6:
 - Local JSON for post types and taxonomies is supported since ACF 6.1
   (`local-json.php:324-358`, `include_post_types()` / `include_taxonomies()`)
 
-**Decision:** CPTs and taxonomies are registered through ACF Pro. No custom site plugin is
-written for this purpose. The theme un-comments nothing — it simply stops disabling the
-feature (v3/arosa/millburn/nucleux/corazon all call
-`add_filter('acf/settings/enable_post_types', '__return_false')`).
+**Decision:** CPTs and taxonomies are registered through ACF Pro's Post Types and
+Taxonomies UI. No custom site plugin is written for this purpose. The theme simply stops
+disabling the feature (v3/arosa/millburn/nucleux/corazon all call
+`add_filter('acf/settings/enable_post_types', '__return_false')`; in v4 that line sits in
+the commented toolbox).
 
-### 6.1 The theme-independence trap and its fix
+### 6.1 Where the definitions actually live
 
-If CPT JSON lives in the *theme's* `acf-json/`, changing the theme destroys the
-definitions as well as the registration — because `load_json` points at
-`get_stylesheet_directory()`. The problem being solved comes straight back.
+Verified empirically against the local installs: ACF stores its definitions as
+**WordPress posts in the database**. `acf-json/` is a mirror for version control, not the
+source of truth.
 
-Fix: split the load/save paths so site-level definitions live **outside** the theme.
+| Evidence | Value |
+|---|---|
+| `acf_get_acf_post_types()` | delegates to `acf_get_internal_post_type_posts('acf-post-type', $filter)` — a query over ACF's internal post types |
+| arosa `app/sql/local.sql` | 31 `acf-field-group` rows, 168 `acf-field` rows |
+| corazon `app/sql/local.sql` | 36 `acf-field-group` rows, 389 `acf-field` rows |
 
-```php
-add_filter('acf/settings/save_json', fn() => WP_CONTENT_DIR . '/acf-json');
-add_filter('acf/settings/load_json', function( $paths ){
-    $paths[] = WP_CONTENT_DIR . '/acf-json';              // site: CPT, taxonomies, options
-    $paths[] = get_stylesheet_directory() . '/acf-json';  // theme: block field groups
-    return $paths;
-});
-```
+Consequences:
+
+- **Changing the theme does not lose CPT, taxonomy or field definitions.** They stay in
+  the database and ACF keeps registering them. Theme-switch safety comes from ACF itself,
+  not from where the JSON file sits.
+- **Deactivating ACF Pro does lose them** — nothing registers and every CPT post becomes
+  "Invalid post type". See §6.2.
+- JSON's real job is version control and carrying definitions into a fresh environment.
+
+**Decision: keep a single `acf-json/` inside the theme**, exactly as the existing themes
+do. Splitting the load/save paths to a location outside the theme is **not needed** — it
+adds a moving part without buying theme independence that the database already provides.
 
 | Lives where | What | Why |
 |---|---|---|
-| `wp-content/acf-json/` | CPT + taxonomies + their field groups, options groups | survives a theme change; versioned with the WP instance, not the theme |
-| `themes/<theme>/acf-json/` and/or `parts/block/<slug>/` | block field groups | belong to the theme's blocks; ship with the theme |
+| `themes/<theme>/acf-json/` | field groups; CPT and taxonomy definitions if created through the ACF UI | versioned with the theme that owns them; the database holds the runtime copy |
+| `parts/block/<slug>/` | block field groups, where a block owns them | ship with the block |
 | A dedicated site plugin | job boards, reviews integrations, external services | business logic, not presentation (as done for arosa `workstream-jobs` and `google-reviews-places`) |
 
 ### 6.2 Residual risk, stated honestly
@@ -272,6 +281,24 @@ Rules:
    `editor.min.css`.
 7. Spacing/colour per instance comes from Gutenberg native supports, emitted by
    `CS_Block_Styles` as an inline `style` attribute — not from per-instance `<style>` tags.
+8. **Card partials** live one per file in `assets/scss/parts/content/_<type>-card.scss` and
+   are imported by **exactly one entry point** — the narrowest one that covers every
+   consumer:
+
+   | Consumers | Imported by | Cost |
+   |---|---|---|
+   | one block only | that block's `style.scss` | none |
+   | a block **and** PHP templates / archives | `assets/scss/main.scss` (global) | unavoidable — no block owns it, so per-block loading cannot apply |
+   | several blocks, no templates | each consuming block's `style.scss` | single source, a few KB duplicated in the compiled output |
+
+   Never import the same partial from both `main.scss` and a block file — that emits
+   duplicate CSS on pages carrying the block.
+
+   This is what arosa already does: `post-card`, `location-card`, `team-card` and
+   `job-card` are imported in `main.scss` because archives render them from PHP templates,
+   while `card-feature` — used only by the `features` block — is defined inside
+   `parts/block/features/style.scss`. `card-list` (§5.1) resolves its card by post type,
+   so its cards are shared with the archives and therefore belong in the global layer.
 
 ## 8. Design tokens
 

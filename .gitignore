@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Compiled assets — sources only in git (see docs/design/)
+assets/css/*.min.css
+assets/css/*.min.css.map
+assets/js/dist/*.min.js
+assets/js/dist/*.min.js.map
+parts/block/**/style.min.css
+parts/block/**/style.min.css.map
+parts/block/**/editor.min.css
+parts/block/**/editor.min.css.map
+
+# Build caches
+.cache/
+.vite/
+
+# Tooling scratch directories
+.hermes-tmp.*/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.swp
+
+# Logs
+*.log
