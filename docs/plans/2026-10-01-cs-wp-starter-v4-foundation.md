@@ -647,7 +647,7 @@ Expected: `200`, `1`, `1`
 - [ ] **Step 18: Commit**
 
 ```bash
-git add -A
+git add style.css functions.php package.json theme.json inc/ parts/ assets/ *.php  # by path, never -A: it has swept .hermes-tmp.*/ and .superpowers/ in here before
 git commit -m "feat: theme skeleton with block loader and commented toolbox"
 ```
 
@@ -927,7 +927,7 @@ Expected: `_tokens.scss` and the `*.min.css` outputs do **not** appear. If they 
 - [ ] **Step 9: Commit**
 
 ```bash
-git add -A
+git add scripts/ package.json theme.json assets/scss/  # by path, never -A: it has swept .hermes-tmp.*/ and .superpowers/ in here before
 git commit -m "feat: build pipeline and generated design-token mirror"
 ```
 
@@ -1909,10 +1909,11 @@ Proves the whole chain: contract, field access, `CS_Block_Styles`, per-page asse
 - [ ] **Step 1: Write the failing test**
 
 ```bash
-curl -k -s https://starter-theme.local/ | grep -c "block-cta"
+WP="C:/Users/Admin/Documents/CSTHEME-ops/scripts/cs-wp"
+"$WP" -e 'echo implode( ",", array_filter( array_keys( WP_Block_Type_Registry::get_instance()->get_all_registered() ), fn( $k ) => str_starts_with( $k, "cs/" ) ) ) ?: "(none)";'
 ```
 
-Expected: `0` — the block does not exist yet.
+Expected: `(none)` — no `cs/` block is registered yet. This is the failing test; Steps 2-9 make it pass. `cs-wp` is the CLI harness Step 10 describes: it reaches WordPress directly rather than over HTTP, which is what makes the rest of this task's verification possible without a browser and without a manual step.
 
 - [ ] **Step 2: Write `inc/class-block-styles.php`**
 
@@ -2226,62 +2227,131 @@ Follow the conventions exactly — elements in architectural order, `// Modifier
 
 Use the key format from `arosa/acf-json/group_*.json` so the shapes stay identical to what the ACF UI writes.
 
-- [ ] **Step 10: Build and verify the block renders**
+- [ ] **Step 10: Build, and prove the block registers**
+
+All verification from here runs through **`cs-wp`**, a CLI harness that bootstraps this site's WordPress:
 
 ```bash
-npm run build
+WP="C:/Users/Admin/Documents/CSTHEME-ops/scripts/cs-wp"
+"$WP"                 # smoke test: theme, plugins, registered cs/ blocks
+"$WP" -e '<code>'     # run a one-liner inside WordPress
+"$WP" -f script.php   # run a script
+```
+
+It reaches WordPress directly rather than over HTTP, so `do_blocks()`, `render_block()` and ACF's field API are available — which is what makes block verification possible with no browser and no manual step. It reads the DB port and the PHP version from Local's own site registry instead of pinning them, because a pinned version is how a check ends up linting with a PHP the site does not run (this site runs **8.4.10**).
+
+**There is a test page for this: `block-test`, ID 157.** Put the block there, never on the front page (which is page 2 and holds the site's own content).
+
+```bash
+npm run build; echo "build exit=$?"
 ls -1 parts/block/cta/
-curl -k -s "https://starter-theme.local/sample-page/" | grep -c "block-cta"
+
+"$WP" -e 'echo WP_Block_Type_Registry::get_instance()->is_registered("cs/cta") ? "REGISTERED\n" : "NOT REGISTERED\n";'
 ```
 
-Add the block to a page in the editor, then:
+Expected: the five sources plus `style.min.css` and `editor.min.css`, and `REGISTERED`.
 
-Expected: `style.min.css` and `editor.min.css` exist; the page HTML contains `class="block-cta`.
-
-- [ ] **Step 11: Verify assets load only on pages with the block**
+- [ ] **Step 11: Prove the block renders, with fields that are actually set**
 
 ```bash
-# a page WITHOUT the block
-curl -k -s "https://starter-theme.local/" | grep -c "parts/block/cta/style.min.css"
-# a page WITH the block
-curl -k -s "https://starter-theme.local/sample-page/" | grep -c "parts/block/cta/style.min.css"
+WP="C:/Users/Admin/Documents/CSTHEME-ops/scripts/cs-wp"
+"$WP" -e '
+$id = 157;
+wp_update_post( array( "ID" => $id, "post_content" => "<!-- wp:cs/cta {\"align\":\"full\"} /-->" ) );
+$html = do_blocks( get_post_field( "post_content", $id ) );
+echo "contains block-cta: ", ( str_contains( $html, "block-cta" ) ? "yes" : "no" ), "\n";
+echo $html, "\n";
+'
 ```
 
-Expected: `0` then `1`. If the first is non-zero, something is enqueuing globally — the loop in `cs__load_blocks()` is the usual culprit.
+`render.php` early-returns when the heading, the content and the buttons are all empty, so **an empty result here is the empty path, not the render path** — it proves nothing about the markup. An ACF block's values live in meta that ACF writes from the editor, and whether they can be set from a script is for you to determine rather than assume. Find the mechanism ACF actually uses for this block — the block's `data` attribute in the comment delimiter, post meta, or `acf_setup_meta()` — and set the heading, the content and one button so the full markup is produced.
 
-- [ ] **Step 12: Test the four failure modes**
+Then assert the markup itself: the wrapper carries `block-cta` and the align class, the heading is escaped, the button group rendered through `cs__render_link_group()`, and `cs__get_block_styles()` produced the inline `style` from the block's `style` attribute. **Report which mechanism you used and paste the rendered HTML.** If none of them works, report the step as blocked with what you tried — a blocked step reported as blocked is worth more than a plausible-looking claim, and this project has already been saved twice by exactly that.
+
+- [ ] **Step 12: Prove the assets load only where the block is**
 
 ```bash
-# (1) unsynced field group: delete the local JSON, reload the page
-mv acf-json/group_part_block_content.json /tmp/ && curl -k -s -o /dev/null -w "%{http_code}\n" "https://starter-theme.local/sample-page/" && mv /tmp/group_part_block_content.json acf-json/
+WP="C:/Users/Admin/Documents/CSTHEME-ops/scripts/cs-wp"
+BLOCK='<!-- wp:cs/cta {"align":"full"} /-->'
+
+"$WP" -e "wp_update_post( array( 'ID' => 157, 'post_content' => '$BLOCK' ) ); echo 'page updated', \"\n\";"
+
+echo "with the block:    $(curl -k -s https://starter-theme.local/block-test/ | grep -c 'parts/block/cta/style.min.css')"
+echo "without the block: $(curl -k -s https://starter-theme.local/ | grep -c 'parts/block/cta/style.min.css')"
 ```
 
-Expected: `200`, and the block prints nothing (early return) rather than an empty `<section>` or a PHP notice.
+Expected: `1` then `0`.
+
+**Read the page over HTTP, not through `do_blocks()`.** WordPress decides whether to enqueue a block's stylesheet from `has_block()` against the current post during `wp_enqueue_scripts`; a bare `do_blocks()` call never runs that, so a CLI check would report "not enqueued" on a page that is in fact correct. The two paths answer different questions and only this one is the question being asked.
+
+If the first is `0`, WordPress is not enqueueing the block's own stylesheet — check that `block.json` declares `style` and that the build produced the file. If the second is non-zero, something is enqueueing globally, and the loop in `cs__load_blocks()` is the usual culprit.
+
+- [ ] **Step 13: Test the three failure modes**
 
 ```bash
-# (2) block twice on one page: add a second cs/cta to the page, then
-curl -k -s "https://starter-theme.local/sample-page/" | grep -o 'parts/block/cta/style.min.css' | wc -l
-curl -k -s "https://starter-theme.local/sample-page/" | grep -o 'id="block-[a-z0-9]*"' | sort | uniq -d
+WP="C:/Users/Admin/Documents/CSTHEME-ops/scripts/cs-wp"
+LOG="/d/Local/starter-theme/logs/php/error.log"
 ```
 
-Expected: `1` stylesheet reference, and no duplicate `id` (the second command prints nothing).
+**(1) The field group JSON is missing.** The local JSON is a mirror, not the source of truth, so removing it must change nothing:
 
 ```bash
-# (3) ACF deactivated
-# deactivate ACF Pro in wp-admin, then
-curl -k -s -o /dev/null -w "%{http_code}\n" "https://starter-theme.local/sample-page/"
-tail -5 "/d/Local/starter-theme/logs/php/error.log"
-# reactivate ACF Pro
+mv acf-json/group_part_block_content.json /tmp/
+before=$(wc -l < "$LOG")
+curl -k -s -o NUL -w "code=%{http_code}\n" https://starter-theme.local/block-test/
+after=$(wc -l < "$LOG")
+tail -n $((after - before)) "$LOG" | grep -ci "cs_w_000_starter-v4" | sed 's/^/theme-related lines: /'
+mv /tmp/group_part_block_content.json acf-json/
 ```
 
-Expected: `200` and no new fatal. The callbacks already route every field read through `cs__get_block_field()` (Task 2, Step 7), which returns `null` when ACF is inactive — so `render.php` sees empty values and early-returns without printing an empty wrapper. If this step produces a fatal, some callback is still calling `get_field()` directly; fix that call site.
+Expected: `code=200`, and **zero** theme-related lines. The log always grows by one line per request from a pre-existing `wp-config.php` bug that defines `WP_DEBUG` twice (guarded at line 90, unguarded at line 97) — that line is not this theme's and must not be counted as a failure.
 
-- [ ] **Step 13: Commit**
+**(2) The block twice on one page.** Put two blocks with explicit, distinct `id` attributes in the content so a missing `id` is distinguishable from a duplicated one:
 
 ```bash
-git add -A
+"$WP" -e '
+wp_update_post( array( "ID" => 157, "post_content" =>
+  "<!-- wp:cs/cta {\"id\":\"aaa111\",\"align\":\"full\"} /--><!-- wp:cs/cta {\"id\":\"bbb222\",\"align\":\"full\"} /-->" ) );
+'
+echo "stylesheet references: $(curl -k -s https://starter-theme.local/block-test/ | grep -o 'parts/block/cta/style.min.css' | wc -l)"
+echo "duplicate ids:        $(curl -k -s https://starter-theme.local/block-test/ | grep -oE 'id="(aaa111|bbb222)"' | sort | uniq -d | wc -l)"
+echo "both ids present:     $(curl -k -s https://starter-theme.local/block-test/ | grep -oE 'id="(aaa111|bbb222)"' | sort -u | wc -l)"
+```
+
+Expected: `1` stylesheet reference, `0` duplicate ids, and **`2`** distinct ids present. The third assertion is what makes the second one mean something: with an empty render both would be `0` and "no duplicates" would pass vacuously. If the ids are absent, Step 11's field population did not work and this step cannot be judged — say so rather than reporting a pass.
+
+**(3) ACF Pro deactivated.** Deactivate it, read the page, reactivate:
+
+```bash
+"$WP" -e '
+require_once ABSPATH . "wp-admin/includes/plugin.php";
+deactivate_plugins( "advanced-custom-fields-pro/acf.php" );
+echo "acf deactivated\n";
+'
+before=$(wc -l < "$LOG")
+curl -k -s -o NUL -w "code=%{http_code}\n" https://starter-theme.local/block-test/
+after=$(wc -l < "$LOG")
+tail -n $((after - before)) "$LOG" | grep -iE "fatal|cs_w_000_starter-v4" || echo "no fatal, no theme line"
+"$WP" -e '
+require_once ABSPATH . "wp-admin/includes/plugin.php";
+activate_plugin( "advanced-custom-fields-pro/acf.php" );
+echo "acf reactivated\n";
+'
+```
+
+Expected: `code=200`, no fatal, no theme-related line. Every field read goes through `cs__get_block_field()` (Task 2, Step 7), which returns `null` when ACF is inactive, so `render.php` sees empty values and early-returns instead of printing an empty wrapper. **If this produces a fatal, a callback is still calling `get_field()` directly — fix that call site.**
+
+**Leave ACF active and the test page in a clean state when you finish.** Reset `post_content` on page 157 to empty and confirm the site still answers 200.
+
+- [ ] **Step 14: Commit**
+
+```bash
+git add parts/block/cta inc/class-block-styles.php inc/helper-functions.php functions.php acf-json/group_part_block_content.json acf-json/group_part_button_group.json
+git status --short          # read it: the staged set must be exactly those paths
 git commit -m "feat: cta reference block proving the full block contract"
 ```
+
+**Never `git add -A` in this repository** — it has already dragged `.hermes-tmp.*/` and `.superpowers/` into a commit here. Stage by path and read `git status --short` before committing.
 
 ---
 
@@ -2381,7 +2451,7 @@ Expected: exit 0 — with the walker uncommented it resolves; the check only fai
 - [ ] **Step 9: Commit**
 
 ```bash
-git add -A
+git add inc/ functions.php  # by path, never -A: it has swept .hermes-tmp.*/ and .superpowers/ in here before
 git commit -m "feat: toolbox files behind commented includes"
 ```
 
@@ -2514,7 +2584,7 @@ Expected: empty output.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add -A
+git add *.php templates/ parts/  # by path, never -A: it has swept .hermes-tmp.*/ and .superpowers/ in here before
 git commit -m "feat: base template hierarchy and the post card contract"
 ```
 
@@ -2595,7 +2665,7 @@ If the runtime produces no observable change on any template in the theme, delet
 - [ ] **Step 7: Commit**
 
 ```bash
-git add -A
+git add inc/ functions.php assets/js/src/  # by path, never -A: it has swept .hermes-tmp.*/ and .superpowers/ in here before
 git commit -m "feat: accessibility layer (eyebrow heading fix, focus runtime)"
 ```
 
@@ -2663,7 +2733,7 @@ Expected: exit 0.
 - [ ] **Step 5: Commit and push**
 
 ```bash
-git add -A
+git add readme.md  # by path, never -A: it has swept .hermes-tmp.*/ and .superpowers/ in here before
 git commit -m "docs: README for the client support team, PHP 8.4 compatibility"
 git push
 git ls-remote origin refs/heads/main | cut -f1
@@ -2842,7 +2912,7 @@ tools/
 - [ ] **Step 9: Commit**
 
 ```bash
-git add -A
+git add .editorconfig .stylelintrc.json phpcs.xml .gitignore package.json package-lock.json  # by path, never -A: it has swept .hermes-tmp.*/ and .superpowers/ in here before
 git commit -m "chore: editorconfig, stylelint and PHPCS with WordPress standards"
 ```
 
