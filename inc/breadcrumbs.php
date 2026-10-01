@@ -2,11 +2,24 @@
 /**
  * Breadcrumbs
  *
- * Ported from v3. Escapes are scoped: the plain-text sites (titles, the search
- * query, tag/category names, post-type labels) are escaped, while the calls that
- * return ready-made HTML (get_category_parents(), $breadcrumbs[$i], $homeItem)
- * and the get_the_time() values are left as they are -- escaping those would
- * print markup as text.
+ * Ported from v3. Escapes are scoped, and the scoping has one rule:
+ *
+ * - Values this file renders **as text** are escaped -- titles, the search query,
+ *   tag and category names, post-type labels, the author's display name, and the
+ *   home link and $modifier.
+ * - Markup this file **assembles** is not escaped at the echo site --
+ *   get_category_parents() and single_cat_title() return HTML, and $breadcrumbs[$i]
+ *   and $homeItem hold anchors built a few lines above. Escaping those would print
+ *   tags as text.
+ *
+ * The rule is about the value, not the line: an anchor assembled here is left raw,
+ * while the plain-text title inside it is escaped where the anchor is built. An
+ * earlier pass grouped $breadcrumbs[$i] with get_category_parents() as
+ * "ready-made HTML", which is not true of it and left the ancestor title unescaped
+ * on every child page.
+ *
+ * get_the_time() values are the one thing kept as-is -- they come from a timestamp
+ * and a fixed format string, never from user text.
  */
 
 function cs__the_breadcrumbs( $modifier='' ){
