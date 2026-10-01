@@ -1019,14 +1019,25 @@ def _indent_of(line: str) -> int:
     return len(line) - len(line.lstrip())
 
 
+PHP_TAG_RE = re.compile(r"<\?(?:php|=)?|\?>")
+
+
 def _closes_block(line: str, guard_indent: int) -> bool:
-    """True when `line` closes a block opened at `guard_indent`."""
+    """True when `line` closes a block opened at `guard_indent`.
+
+    PHP tags are stripped first, because a template closer is routinely written
+    `<?php } ?>` or `<?php endif; ?>` -- testing the raw line for a leading `}`
+    misses the first of those entirely and reopens the hole the check exists to close.
+    """
     if _indent_of(line) > guard_indent:
         return False
-    stripped = line.strip()
-    if stripped.startswith("}"):
+    body = PHP_TAG_RE.sub(" ", line).strip()
+    if body.startswith("}"):
         return True
-    return "endif" in stripped
+    # `endif` must begin the statement. A mention inside a comment, a string literal
+    # or a variable name (`$endif_check`) closes nothing, and counting it as a closer
+    # would report a call that is genuinely guarded.
+    return body.startswith("endif")
 
 
 def _guarded(lines, index: int, name: str) -> bool:
@@ -1038,16 +1049,17 @@ def _guarded(lines, index: int, name: str) -> bool:
     check exists to catch, so the exemption could be defeated by adding the guard it
     was written to accept.
 
-    Three conditions must all hold:
+    Four conditions must all hold:
       1. a guard for this exact `name` is on the call's own line, or within
          GUARD_WINDOW lines above it;
-      2. the call is indented deeper than the guard line; and
-      3. the guard's block is still open at the call -- no closer at or above the
-         guard's own indent sits between them.
+      2. the call is indented deeper than the guard line;
+      3. the guard does not close its own block on the guard line (the one-line
+         `if ( function_exists('x') ) { x(); }` form); and
+      4. no closer at or above the guard's own indent sits between guard and call.
 
-    Condition 3 is what separates a call inside the guard's block from one that merely
-    follows a guard whose block has already ended. Proximity and indentation alone
-    exempt the second case, because it is deeper-indented and still within the window.
+    Conditions 3 and 4 are what separate a call inside the guard's block from one that
+    merely follows a guard whose block has already ended. Proximity and indentation
+    alone exempt the second case, because it is deeper-indented and still in the window.
     """
     needles = (f"function_exists('{name}')", f'function_exists("{name}")')
     if any(n in lines[index] for n in needles):
@@ -1065,6 +1077,15 @@ def _guarded(lines, index: int, name: str) -> bool:
     if _indent_of(lines[index]) <= guard_indent:
         return False
 
+    # Condition 3: the guard line itself may open and close the block, in which case
+    # nothing below it is inside the guard. Only a closer *after* the guard expression
+    # counts -- the `{` that opens the block must not be read as one.
+    guard_text = lines[guard_line]
+    after_needle = guard_text[max(guard_text.find(n) for n in needles) :]
+    if "}" in after_needle:
+        return False
+
+    # Condition 4: the block must still be open at the call.
     return not any(
         _closes_block(line, guard_indent) for line in lines[guard_line + 1 : index]
     )
@@ -1278,6 +1299,49 @@ For (c) the expected line is `SKIP  build artifacts not tracked  (could not run 
 ```
 
 (d) and (g) are the hole; (e) and (f) are the reason the hole is closed by *enclosure* rather than by making the exemption narrower — proximity plus indentation alone exempts (d), because it is deeper-indented and still within the window.
+
+**Two more closers the first enclosure rule missed**, both idiomatic in WordPress templates, both of which reopen the hole. Both must FAIL:
+
+```bash
+# (h) a template brace closer written `<?php } ?>` -- the line does not *start* with `}`
+#         <?php if ( function_exists('cs__x') ) { ?>
+#             <?php cs__x(); ?>
+#         <?php } ?>
+#         <?php if ( $c ) { ?>
+#             <?php cs__x(); ?>      <- deeper-indented, but the guard's block is gone
+#         <?php } ?>
+
+# (i) a guard written on one line with its body -- the block opens and closes on the
+#     guard line itself, so nothing below it is inside the guard
+#         if ( function_exists('cs__x') ) { cs__x(); }
+#         if ( $cond ) {
+#             cs__x();
+#         }
+
+# (j) `endif` followed by a deeper-indented unguarded call -> must FAIL
+#         <?php if ( function_exists('cs__x') ) : ?>
+#             <?php cs__x(); ?>
+#         <?php endif; ?>
+#             <?php cs__x(); ?>
+```
+
+**And the closer test must not fire on mere mentions of `endif`.** Both of these are legitimately guarded and must PASS — treating a comment or a variable name as a closer would report a call that is fine:
+
+```bash
+# (k) a variable whose name contains `endif`, inside the guard -> must PASS
+#         if ( function_exists('cs__x') ) {
+#             $endif_check = 1;
+#             cs__x();
+#         }
+
+# (l) a comment mentioning `endif`, inside the guard -> must PASS
+#         if ( function_exists('cs__x') ) {
+#         // see endif; below
+#             cs__x();
+#         }
+```
+
+The asymmetry is deliberate: a missed closer lets a fatal through, while a spurious closer raises a false alarm. Neither is acceptable, which is why `endif` must *begin the statement* and PHP tags must be stripped before testing — not why the test should be blunt.
 
 - [ ] **Step 4: Run it against v4 — it must pass**
 
