@@ -2907,6 +2907,7 @@ git commit -m "feat: toolbox files behind commented includes"
 - Create: `front-page.php`, `home.php`, `archive.php`, `category.php`, `tag.php`, `date.php`, `author.php`, `search.php`
 - Create: `templates/_skeleton.php`
 - Create: `parts/content/post-card.php`
+- Modify: `inc/gutenberg.php` (Step 4b — filter the generator skeleton out of the page-template registry)
 
 **Interfaces:**
 - Consumes: `cs__the_pagination()` (Task 7), `cs__the_breadcrumbs()`.
@@ -3004,31 +3005,100 @@ get_header();
 <?php get_footer(); ?>
 ```
 
+- [ ] **Step 4b: Keep `templates/_skeleton.php` out of the page-template registry**
+
+The design says of `_skeleton`: **"Generator template, not registered"** (line 144). Left alone, it *is* registered. Measured, with the file Step 4 writes in place:
+
+```
+page templates seen by WP: {"templates\/_skeleton.php":"{{TITLE}}"}
+```
+
+WordPress scans every `.php` file in the theme, subfolders included, and reads the `Template Name:` header — so `{{TITLE}}` appears in the Page Attributes dropdown as a selectable template. A user picking it gets a blank page, and the placeholder name is in the client's admin. The `_skeleton` entry at `inc/gutenberg.php:32` is a `scandir` exclusion for the **block** directory and does not touch this registry.
+
+Filter it out in `inc/gutenberg.php`, which is already always-on and already owns the `_skeleton` exclusion:
+
+```php
+/* --- Keep generator templates out of the page-template registry --- */
+add_filter('theme_page_templates', 'cs__exclude_generator_templates');
+function cs__exclude_generator_templates( $templates ){
+	foreach ( $templates as $file => $name ){
+		if ( str_starts_with( basename($file), '_' ) ){
+			unset( $templates[$file] );
+		}
+	}
+	return $templates;
+}
+```
+
+Leading underscore is the convention the theme already uses for generator files, so the rule matches how a new generator template would be named rather than naming one file. `str_starts_with()` is PHP 8, which this site runs.
+
+Verify:
+
+```bash
+WP="C:/Users/Admin/Documents/CSTHEME-ops/scripts/cs-wp"
+"$WP" -e 'echo "  page templates: ", (wp_get_theme()->get_page_templates(null,"page") ?: "(none)"), "\n";'
+ls -l templates/_skeleton.php
+```
+
+Expected: `(none)` — and the file still on disk. A registry that is empty because the file is missing is not the same as one that is empty because it is filtered, so check both.
+
 - [ ] **Step 5: Verify every template renders**
 
 ```bash
 npm run build
 for u in "/" "/sample-page/" "/blog/" "/?s=test" "/?p=1" "/category/uncategorized/" "/nonexistent-xyz/"; do
-  printf "%-28s %s\n" "$u" "$(curl -k -s -o /dev/null -w '%{http_code}' "https://starter-theme.local$u")"
+  printf "%-28s %s\n" "$u" "$(curl -k -s -o NUL -w '%{http_code}' "https://starter-theme.local$u")"
+done
+# and again following redirects, which is what a visitor sees
+for u in "/sample-page/" "/?p=1"; do
+  printf "  %-14s -> %s\n" "$u" "$(curl -k -s -L -o NUL -w '%{http_code}' "https://starter-theme.local$u")"
 done
 ```
 
-Expected: `200` for every existing route, `404` for `/nonexistent-xyz/`.
+Expected, **measured on this install before the templates exist** — do not read these as pass/fail until you have re-run them, but expect the same shape:
+
+| route | code | why |
+| --- | --- | --- |
+| `/` | 200 | front page, `page_on_front=2` |
+| `/sample-page/` | **301** | page 2 *is* the front page, so this is a canonical redirect to `/`; follows to 200 |
+| `/blog/` | 200 | `page_for_posts=131` |
+| `/?s=test` | 200 | search |
+| `/?p=1` | **301** | canonical redirect to post 1's permalink; follows to 200 |
+| `/category/uncategorized/` | 200 | category archive |
+| `/nonexistent-xyz/` | 404 | — |
+
+Two routes answering 301 is correct, not a failure: WordPress canonicalises `/sample-page/` to `/` and `?p=1` to its pretty permalink. A test that demanded 200 everywhere would have failed on a working site and taught you to ignore it.
+
+`curl -o NUL`, never `-o /dev/null` — MSYS's curl can exit 23 on the latter.
 
 - [ ] **Step 6: Verify no notices reach the log**
 
-```bash
-: > "/d/Local/starter-theme/logs/php/error.log"
-curl -k -s -o /dev/null "https://starter-theme.local/" && curl -k -s -o /dev/null "https://starter-theme.local/blog/"
-cat "/d/Local/starter-theme/logs/php/error.log"
+`wp-config.php` defines `WP_DEBUG` twice — once under a guard at line 90 and again without one at line 97 — so **every request appends one known line** and the log is already ~1 MB. `Expected: empty output` would therefore fail on a perfectly healthy site, and a test that always fails is one you stop reading. Measured: two requests, two lines, both identical:
+
+```
+[01-Oct-2026 17:05:37 UTC] PHP Warning:  Constant WP_DEBUG already defined in .../wp-config.php on line 97
 ```
 
-Expected: empty output.
+So the oracle is **"exactly one known line per request, and zero lines mentioning the theme"** — not "no lines":
+
+```bash
+LOG="/d/Local/starter-theme/logs/php/error.log"
+: > "$LOG"
+curl -k -s -o NUL "https://starter-theme.local/"
+curl -k -s -o NUL "https://starter-theme.local/blog/"
+echo "  lines appended: $(wc -l < "$LOG")"
+echo "  distinct lines:"; sort -u "$LOG" | sed 's/^/    /'
+echo "  lines naming the theme: $(grep -c 'cs_w_000_starter-v4' "$LOG" || true)"
+```
+
+Expected: **2** lines appended (one per request), every one of them the `WP_DEBUG` line above, and **0** naming the theme. Anything naming a theme file — a notice, a warning, a deprecation — is a real finding, and that is what this step is for.
+
+The double `WP_DEBUG` definition is not this theme's and is not fixed here; it is reported to the owner separately.
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add *.php templates/ parts/  # by path, never -A: it has swept .hermes-tmp.*/ and .superpowers/ in here before
+git add front-page.php home.php archive.php category.php tag.php date.php author.php search.php templates/ parts/content/post-card.php inc/gutenberg.php  # by path, never -A: it has swept .hermes-tmp.*/ and .superpowers/ in here before, and a bare `*.php` would sweep any stray probe left in the theme root
 git commit -m "feat: base template hierarchy and the post card contract"
 ```
 
