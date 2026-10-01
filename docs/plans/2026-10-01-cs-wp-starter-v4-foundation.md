@@ -387,8 +387,19 @@ function cs__get_block_classes( $block, $base = '' ){
 	if ( ! empty($block['align']) ){
 		$classes[] = 'align'. $block['align'];
 	}
-	if ( ! empty($block['textAlign']) ){
-		$classes[] = 'has-text-align-'. $block['textAlign'];
+	// ACF provides 'alignText' (the key block.json declares and the editor writes) and
+	// mirrors it to 'align_text' for back-compat -- see acf_add_back_compat_attributes()
+	// in advanced-custom-fields-pro/pro/blocks.php:480. It never provides 'textAlign',
+	// so reading that key silently emits no alignment class at all.
+	$text_align = $block['alignText'] ?? $block['align_text'] ?? '';
+	if ( $text_align !== '' ){
+		$classes[] = 'has-text-align-'. $text_align;
+	}
+	// WordPress's own block wrapper emits this for a block with a background colour, and
+	// the theme's block CSS keys off it. Same shape of bug as the one above: the class
+	// has to be emitted for the rule to be reachable.
+	if ( ! empty($block['style']['color']['background']) ){
+		$classes[] = 'has-background';
 	}
 
 	return implode(' ', array_unique($classes));
@@ -1918,6 +1929,13 @@ Expected: `(none)` — no `cs/` block is registered yet. This is the failing tes
 
 - [ ] **Step 2: Write `inc/class-block-styles.php`**
 
+**One correction to the port.** Arosa's `get_styles()` reads `$block['textAlign']` for the text
+alignment. Measured: ACF never sets that key — it provides `alignText`, the key `block.json` declares
+and the editor writes, and mirrors it to `align_text` through `acf_add_back_compat_attributes()`
+(`advanced-custom-fields-pro/pro/blocks.php:480`). Read `alignText` first and keep `align_text` as the
+fallback, in that order, so the canonical key wins and legacy content still resolves. Everything else
+ports verbatim.
+
 Port `CS_Block_Styles` from `arosa/inc/class-block-styles.php` (260 lines) unchanged, including the `cs__get_block_styles( $block )` wrapper. It converts the standard Gutenberg `style` attribute array (spacing, typography, colour, dimensions, border) into an inline `style="…"` string, translating `var:preset|color|slug` into `var(--wp--preset--color--slug)`.
 
 Add it to the always-on includes in `functions.php`:
@@ -2163,7 +2181,19 @@ $content    = $data['content'] ?? '';
 $buttons    = $data['buttons'] ?? array();
 $block      = $data['block'] ?? array();
 
-if ( $heading === '' && $content === '' && empty($buttons) ){
+// Count only the buttons that will actually render. A repeater row whose link was
+// left blank is skipped by cs__render_link_group(), so a non-empty $buttons array is
+// not the same as a block with a button -- and the wrapper would still be emitted,
+// with the block's own padding, as an empty band on the page.
+$has_button = false;
+foreach ( (array) $buttons as $row ){
+	if ( ! empty($row['link']['url']) && ! empty($row['link']['title']) ){
+		$has_button = true;
+		break;
+	}
+}
+
+if ( $heading === '' && $eyebrow === '' && $subheading === '' && $content === '' && ! $has_button ){
 	return;
 }
 ?>
@@ -2376,6 +2406,35 @@ echo do_blocks( get_post_field( "post_content", $id ) ), "\n";
 
 Assert the markup itself: the wrapper carries `block-cta` and the align class, the eyebrow and heading are **escaped** (`&` becomes `&amp;`, `<b>` becomes `&lt;b&gt;`), the content goes through `wp_kses_post()`, the buttons render through `cs__render_link_group()` with `target="_blank"` gaining `rel="noopener noreferrer"`, and `cs__get_block_styles()` produced the inline `style` from the block's `style` attribute. **Paste the rendered HTML.**
 
+Two assertions beyond the markup, because both are cases where the block renders something that looks fine and is wrong. Run each and paste the output:
+
+```bash
+WP="C:/Users/Admin/Documents/CSTHEME-ops/scripts/cs-wp"
+
+# (a) the alignment class must actually be emitted
+"$WP" -e '
+foreach ( ["alignText", "align_text"] as $k ) {
+  $b = ["id"=>"x","name"=>"cs/cta","align"=>"full",$k=>"center","style"=>[]];
+  printf( "%-11s => [%s]\n", $k, cs__get_block_classes($b,"block-cta") );
+}
+'
+```
+
+Expected: **both** lines carry `has-text-align-center`. ACF provides `alignText` and mirrors it to `align_text`, and **never provides `textAlign`** — reading that key emits no class, which leaves the compiled `.block-cta.has-text-align-center .block-cta__button-wrapper{justify-content:center}` unreachable and the button row left-aligned under a centred heading.
+
+```bash
+# (b) a repeater whose only row has a blank link must render nothing at all
+"$WP" -e '
+wp_update_post( array( "ID" => 157, "post_content" => "<!-- wp:cs/cta {\"data\":{\"buttons\":[{\"link\":{\"url\":\"\",\"title\":\"\"},\"link_type\":\"button\"}]}} /-->" ) );
+$h = do_blocks( get_post_field( "post_content", 157 ) );
+echo "bytes=", strlen(trim($h)), "\n", trim($h), "\n";
+'
+```
+
+Expected: **`bytes=0`**. A non-empty `$buttons` array is not the same as a block with a button: `cs__render_link_group()` skips a row with no url, but the wrapper is still emitted — and with the block's own `attributes.style.default` padding that is a blank band on the page. The `link` sub-field is `required: 0` in the field group, so this is reachable from the editor.
+
+Restore page 157 to empty content after these.
+
 - [ ] **Step 12: Prove the assets load only where the block is**
 
 The theme filters `should_load_separate_core_block_assets` to true (`functions.php`), so WordPress loads block assets **on demand**: `wp_should_load_block_assets_on_demand()` returns true and a block's stylesheet is enqueued *during its own render* (`WP_Block::render()`), not from `has_block()` at `wp_enqueue_scripts`. Two consequences the assertion has to respect.
@@ -2394,7 +2453,7 @@ echo "without the block: $(curl -k -s https://starter-theme.local/ | grep -c 'pa
 
 Expected: `1` then `0`.
 
-Read the page over HTTP rather than through `do_blocks()`: the enqueue happens inside `WP_Block::render()` under a real front-end request, and the two paths answer different questions. Only this one is the question being asked.
+Read the page over HTTP rather than through `do_blocks()`. Not because the enqueue does not happen under `do_blocks()` — measured, it does — but because **only an HTTP response prints the asset through `wp_head()`**, and a printed `<link>` is the thing being asserted. A CLI render can tell you the style is enqueued; it cannot tell you the page carries it.
 
 If the first is `0` **while the block is rendering content**, the asset is genuinely missing — check that `block.json` declares `style` and that the build produced the file. If the second is non-zero, something is enqueueing globally, and the loop in `cs__load_blocks()` is the usual culprit.
 
