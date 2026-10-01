@@ -1514,6 +1514,8 @@ git commit -m "feat: stand check script with v3 as its failing oracle"
 - Create: `parts/block/_skeleton/block.json`, `callback.php`, `render.php`, `style.scss`, `editor.scss`
 - Create: `scripts/make-block.mjs`
 - Modify: `package.json` (`make:block` script)
+- Modify: `gulpfile.js` — exclude `_skeleton` from the block SCSS glob (Step 6b)
+- Modify: `scripts/check-theme-stand.py` — the same exclusion in its two globs (Step 6b)
 
 **Interfaces:**
 - Consumes: `cs__get_block_id()`, `cs__get_block_classes()`, `CS_Block_Styles` (Task 6).
@@ -1657,7 +1659,7 @@ if ( $heading === '' && $content === '' ){
 		z-index: 1;
 	}
 	&__heading {
-		margin: 0 0 $layout_blockGap;
+		margin: 0 0 $layout_block_gap;
 	}
 	&__content {
 		margin: 0;
@@ -1665,7 +1667,7 @@ if ( $heading === '' && $content === '' ){
 
 	// Modifiers
 	&.alignfull {
-		padding-inline: $layout_blockGap;
+		padding-inline: $layout_block_gap;
 
 		#{$b}__container {
 			margin-inline: auto;
@@ -1684,6 +1686,10 @@ if ( $heading === '' && $content === '' ){
 }
 ```
 
+**Two traps in that stylesheet, both measured.** The `$layout_*` names come from `theme.json` through `scripts/build-tokens.mjs`, which normalises a camelCase theme.json key into a snake_case SCSS variable: `block-gap` becomes **`$layout_block_gap`**, not `$layout_blockGap`. The Arosa reference theme — where this convention was copied from — uses `$layout_blockGap`, and that spelling does not exist here: `npm run build` reports `Undefined variable. $layout_blockGap` and emits no stylesheet. It stays invisible until the `{{SLUG}}` parse error is out of the way, because that error aborts the stream before variable resolution happens at all — so fixing one defect uncovers the next.
+
+Run `npm run tokens` and read `assets/scss/abstracts/_tokens.scss` before inventing a token name. It is generated, gitignored, and the only authority on what exists; the same trap was already sitting in Task 6's `cta` stylesheet, five occurrences of it.
+
 - [ ] **Step 6: Write `parts/block/_skeleton/editor.scss`**
 
 ```scss
@@ -1694,6 +1700,60 @@ if ( $heading === '' && $content === '' ){
 .block-{{SLUG}} {
 }
 ```
+
+- [ ] **Step 6b: Stop `_skeleton` from breaking the two globs it lands in**
+
+The skeleton's SCSS carries `{{SLUG}}`, which is not valid SCSS, and two things glob `parts/block/**` without excluding it. Both failures were measured, not reasoned about:
+
+```bash
+npx sass parts/block/_skeleton/style.scss NUL
+# Error: expected end of rule.  ->  .block-{{SLUG}} {
+```
+
+`compileBlockSass()` in `gulpfile.js` globs `parts/block/**/*.scss` and `_skeleton` sorts first, so that single parse error **aborts the whole gulp-sass stream**. `npm run build` then exits **0** — `.on('error', sass.logError)` logs without failing the task — while producing **no block stylesheet at all**. That is a silent failure of the worst kind: every block ships without CSS and the build reports success. Confirm it on the current state: after `npm run build`, `parts/block/<slug>/` holds the five source files and no `.min.css`.
+
+Fix the glob so it skips underscore-prefixed folders, which is exactly what `cs__get_blocks()` already does for registration (`_skeleton`, `_base-block`):
+
+```js
+const files = glob.sync('parts/block/**/*.scss', { ignore: 'parts/block/_*/**' });
+```
+
+**Use the `ignore` option, not a negated pattern.** This glob is version 11, and every negated form was tried and measured against it — `['parts/block/**/*.scss', '!parts/block/_*/**']`, `'!parts/block/_*/style.scss'`, `['parts/block/*/*.scss', '!parts/block/_*/*.scss']` — and **none of them excludes anything**; all four return `_skeleton`'s files alongside the real blocks. `{ ignore: 'parts/block/_*/**' }` does exclude them, while `{ ignore: 'parts/block/_*' }` does not. A fix that looks right and silently does nothing is the exact failure this step exists to undo, so check the returned list, not the exit code.
+
+Then `scripts/check-theme-stand.py` needs the same exclusion in its two globs. `php_files()` lints `_skeleton/callback.php` and hits a parse error from `{{FUNC}}`; `check_block_json()` matches `_skeleton/block.json`, which is a template rather than a block:
+
+```python
+def php_files(theme: Path):
+    for p in theme.rglob("*.php"):
+        if any(part in SKIP_DIRS for part in p.parts):
+            continue
+        # An underscore-prefixed folder is a template or a scratch block: `_skeleton`
+        # carries {{FUNC}} placeholders and is not parseable PHP. `cs__get_blocks()`
+        # excludes the same folders from registration.
+        if any(part.startswith("_") for part in p.relative_to(theme).parts):
+            continue
+        yield p
+```
+
+```python
+    for bj in sorted(theme.glob("parts/block/*/block.json")):
+        # `_skeleton` is the template every block is generated from, not a block: it
+        # holds {{SLUG}} placeholders and has no compiled assets to point at.
+        if bj.parent.name.startswith("_"):
+            continue
+```
+
+```bash
+npm run build; echo "build exit=$?"
+ls -1 parts/block/<slug>/          # must now include style.min.css and editor.min.css
+npm run stand; echo "stand exit=$?"
+```
+
+Expected: the generated block's folder gains `style.min.css`, `style.min.css.map`, `editor.min.css` and `editor.min.css.map`; `_skeleton` gains none; the compiled CSS contains the block's own selectors (`block-<slug>`, `block-<slug>__container`, …) rather than the placeholders; and `npm run stand` is **0**.
+
+Before this step `npm run stand` is **1** — `FAIL PHP syntax (1)` and `FAIL block.json validity (4)` — while `npm run build` exits 0 and produces no block stylesheet at all. That pair is the whole point: **the build's exit code is not evidence the build worked.** Read the file list.
+
+The full chain was verified end to end before this step was written, with all three fixes applied and then reverted: build exit 0; `tmpblk/` holding all four compiled files; `_skeleton/` holding its five source files and nothing else; `block-tmpblk__heading` present in the compiled CSS; `npm run stand` at **5 PASS, exit 0**. The live site answered **200** and added exactly one line to the log — the pre-existing `WP_DEBUG` warning — with zero lines mentioning the theme.
 
 - [ ] **Step 7: Write `scripts/make-block.mjs`**
 
@@ -1783,26 +1843,39 @@ grep -rn "{{" parts/block/demo/ || echo "no placeholders left"
 mkdir -p parts/block/half-made
 npm run build; echo "build exit=$?"
 
-# (b) a live request must not add one line to the PHP error log. The status code
-#     alone proves nothing -- WordPress can serve a cached or partial page with a
-#     warning in the log -- so the log is the oracle.
+# (b) the status code alone proves nothing -- WordPress serves cached and partial
+#     pages happily with warnings in the log -- so the log is the oracle. It DOES
+#     grow by one line per request, from a pre-existing wp-config.php bug that has
+#     nothing to do with this theme: WP_DEBUG is defined guarded at line 90 and
+#     again unguarded at line 97, so every request warns "Constant WP_DEBUG already
+#     defined". It had logged 1987 of those before this task began. That is not
+#     this task's to fix; the assertion is that the growth is exactly that one known
+#     line, and that nothing added mentions the theme.
 LOG="/d/Local/starter-theme/logs/php/error.log"
 before=$(wc -l < "$LOG")
-code=$(curl -k -s -o /dev/null -w "%{http_code}" https://starter-theme.local)
+code=$(curl -k -s -o NUL -w "%{http_code}" https://starter-theme.local)
 after=$(wc -l < "$LOG")
 rmdir parts/block/half-made
 echo "code=$code  log grew by $((after - before))"
+tail -n $((after - before)) "$LOG" | grep -i "cs_w_000_starter-v4" \
+  && echo "THEME-RELATED LINE ADDED" || echo "no theme-related line"
 
-# (c) a SECOND generation, after a build has already left output in _skeleton,
-#     must still produce five source files -- not nine with a stale stylesheet
+# (c) a second generation must still produce five source files. Plant the artifacts
+#     first: this is the regression test for the generator's compiled-artifact filter,
+#     and the filter has to hold whether or not a build happens to leave them there.
+touch parts/block/_skeleton/style.min.css parts/block/_skeleton/style.min.css.map
+touch parts/block/_skeleton/editor.min.css parts/block/_skeleton/editor.min.css.map
 npm run make:block second "Second Block"
 ls -1 parts/block/second/
 rm -rf parts/block/second
+rm -f parts/block/_skeleton/*.min.css parts/block/_skeleton/*.map
 ```
 
-Expected: `build exit=0` — an incomplete folder must not throw, the same short-circuit Task 3 established for an empty `parts/block/`; `code=200` with the log growing by **0** lines; and `parts/block/second/` holding **exactly five** entries — `block.json`, `callback.php`, `editor.scss`, `render.php`, `style.scss`.
+Expected: `build exit=0`; `code=200` with the log growing by exactly **1** line, that line being the pre-existing `WP_DEBUG` warning and not one mentioning the theme; and `parts/block/second/` holding **exactly five** entries — `block.json`, `callback.php`, `editor.scss`, `render.php`, `style.scss`.
 
-(c) is the decisive one, and it is not hypothetical: `_skeleton` accumulates `style.min.css`, `editor.min.css` and their maps from the first build onward, and `cta` in Task 6 is generated after this build has already left that output there. If a `.min.css` or a `.map` appears in `parts/block/second/`, the generator's compiled-artifact filter is missing and every block from the second onward ships a stale stylesheet compiled from the placeholder SCSS.
+(c) guards the generator's compiled-artifact filter, and what changed here is worth stating plainly: the filter was written against a premise that turned out to be **false**. The build never leaves output in `_skeleton` — `_skeleton`'s own SCSS fails to parse and aborts the stream, which is Step 6b's defect and worse than assumed. Once Step 6b excludes `_skeleton` from the glob, the folder still never accumulates compiled output, so the filter guards nothing today. (c) therefore plants the artifacts itself rather than waiting for a build to create them.
+
+The filter stays anyway, and not as "defence in depth": the glob lives in `gulpfile.js` and the generator in `scripts/make-block.mjs`, and a generator that copies whatever it happens to find in a directory is wrong on its own terms regardless of what is currently there. That is a judgement call, recorded as one — not a defect found, and not a reason to keep piling on.
 
 Note what is deliberately *not* asserted here: that WordPress registered the demo block. The REST route for block types requires `edit_posts` and answers `401` unauthenticated, and Local's PHP CLI cannot bootstrap WordPress without `mysqli` wired up by hand. End-to-end registration is Task 6's job, where a real page renders a real block; Task 5's offline oracle is `npm run stand`, which validates every `block.json` it finds — including the generated one.
 
@@ -2060,7 +2133,7 @@ Follow the conventions exactly — elements in architectural order, `// Modifier
 		z-index: 1;
 	}
 	&__eyebrow {
-		margin: 0 0 $layout_blockGap;
+		margin: 0 0 $layout_block_gap;
 	}
 	&__heading {
 		margin: 0 0 calc($layout_padding * 1.5);
@@ -2070,7 +2143,7 @@ Follow the conventions exactly — elements in architectural order, `// Modifier
 		}
 	}
 	&__subheading {
-		margin: 0 0 $layout_blockGap;
+		margin: 0 0 $layout_block_gap;
 	}
 	&__subheading,
 	&__content {
@@ -2083,13 +2156,13 @@ Follow the conventions exactly — elements in architectural order, `// Modifier
 		align-items: center;
 		display: flex;
 		flex-flow: row wrap;
-		gap: $layout_blockGap;
+		gap: $layout_block_gap;
 		margin: calc($layout_padding * 3) 0 0;
 	}
 
 	// Modifiers
 	&.alignfull {
-		padding-inline: $layout_blockGap;
+		padding-inline: $layout_block_gap;
 
 		#{$b}__container {
 			margin-inline: auto;
@@ -2099,7 +2172,7 @@ Follow the conventions exactly — elements in architectural order, `// Modifier
 	&.has-background {
 		&:not(.alignwide):not(.alignfull) {
 			border-radius: $borderRadius_medium;
-			padding: calc($layout_padding * 3) $layout_blockGap;
+			padding: calc($layout_padding * 3) $layout_block_gap;
 		}
 	}
 	&.has-text-align-center {
