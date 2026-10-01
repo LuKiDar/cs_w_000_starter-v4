@@ -35,6 +35,7 @@
 							'menu_class'     => 'primary-menu',
 							'container'      => false,
 							'depth'          => 2,
+							'walker'         => new cs__primary_menu_walker(),
 						)); ?>
 					</nav>
 				<?php endif; ?>
@@ -52,6 +53,7 @@
 						'menu_class'     => 'primary-menu',
 						'container'      => false,
 						'depth'          => 2,
+						'walker'         => new cs__primary_menu_walker(),
 					)); ?>
 				</nav>
 			<?php endif; ?>

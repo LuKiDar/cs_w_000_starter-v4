@@ -59,9 +59,9 @@ require_once 'inc/wordpress-cleanup.php';
 require_once 'inc/helper-functions.php';
 require_once 'inc/class-block-styles.php';
 require_once 'inc/gutenberg.php';
+require_once 'inc/menu-walker.php';
 
 // Toolbox — uncomment what the project needs. Every file below exists in inc/.
-// require_once 'inc/menu-walker.php';
 // require_once 'inc/breadcrumbs.php';
 // require_once 'inc/pagination.php';
 // require_once 'inc/shortcodes.php';

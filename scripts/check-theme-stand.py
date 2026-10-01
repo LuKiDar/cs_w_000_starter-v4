@@ -15,22 +15,43 @@ from pathlib import Path
 
 
 def find_php() -> str:
-    """Locate the PHP CLI, in order: $CSWP_PHP, PATH, then this dev machine's Local install.
+    """Locate the PHP CLI, in order: $CSWP_PHP, PATH, then this machine's newest Local install.
 
     This script ships inside the theme and the client's team is expected to run it,
     so a hard-coded path to one developer's machine must not be the only way to
-    find PHP. The Local path stays as the last fallback so the owner's own
+    find PHP. The Local glob stays as the last fallback so the owner's own
     environment keeps working without any setup.
+
+    The version is globbed, never pinned. A pinned 8.1.23 linted this theme's files
+    while the site itself ran 8.4.10, so the check was reporting on a PHP that was
+    not in use -- and it would have kept doing so silently.
     """
-    candidates = [
-        os.environ.get("CSWP_PHP"),
-        shutil.which("php"),
-        r"C:/Users/Admin/AppData/Roaming/Local/lightning-services/php-8.1.23+0/bin/win64/php.exe",
+    candidates = [os.environ.get("CSWP_PHP"), shutil.which("php")]
+
+    # Local stores its services under %APPDATA%\Local (Roaming), the same base the
+    # cs-wp harness uses -- not %LOCALAPPDATA%, which points at AppData\Local and
+    # holds no such directory. Both roots are checked, and whichever exists is
+    # globbed for installs, because discovery must not depend on one env var being
+    # the "right" one.
+    local_roots = [
+        Path(base) / "Local" / "lightning-services"
+        for base in (os.environ.get("APPDATA"), os.environ.get("LOCALAPPDATA"))
+        if base
     ]
+    installs = []
+    for local in local_roots:
+        if local.is_dir():
+            installs.extend(local.glob("php-*/bin/win64/php.exe"))
+    installs.sort(
+        key=lambda p: [int(n) for n in re.findall(r"\d+", p.parts[-4].split("+")[0])],
+        reverse=True,
+    )
+    candidates.extend(str(p) for p in installs)
+
     for candidate in candidates:
         if candidate and Path(candidate).exists():
             return candidate
-    return "php"  # nothing found: let the syntax check fail loudly rather than silently
+    return "php"
 
 
 PHP = find_php()
