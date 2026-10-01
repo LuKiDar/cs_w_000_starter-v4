@@ -2793,6 +2793,80 @@ Move the file, do not comment the include. `git checkout -- functions.php` is al
 
 **Note on the design.** §10 and §11 have been corrected to describe this check by what it measurably does, including the gap above, and to record why `menu-walker.php` is always-on rather than a toolbox item.
 
+- [ ] **Step 10: Fix round 1 — the review's findings, split by reachability**
+
+The Task 7 review returned **Approved** with five Minor findings. Four are fixed here; the fifth is an observation with no observable change. The split follows the project's standing rule — fix what is reachable from the theme's own shipped state, document the rest — and it is applied per finding, not per file.
+
+**F1 — fix. `inc/menu-walker.php:53`, `$item->title` raw into an attribute.**
+
+```php
+$output .= $indent . '<li id="menu-item-' . $item->ID . '" class="' . $class_names . ' ' . $depth_class_names . '" data-content="' . $item->title . '">';
+```
+
+Reachable: the walker is **always-on** and the title is an admin-editable menu label, so a label containing a quote — `Say "Hi" now` — closes the attribute early and the rest of the label lands in the markup as attributes. Reproduced. Wrap it:
+
+```php
+'" data-content="' . esc_attr( $item->title ) . '">';
+```
+
+Arosa has the same line; it is a ported defect, not an inherited-by-design one, and this theme's walker is always-on rather than opt-in. WP core's own walker does not escape the anchor text, but it also does not emit a `data-content` attribute — this one is the theme's own, so it is the theme's own responsibility.
+
+**F2 — fix. `inc/customize.php:64`, the comment cites a file that is not shipped.**
+
+The comment says the option is read by `parts/social-networks-menu.php`. `parts/` holds only `block/`; nothing in the theme reads `cs_social_*`. The key fix is right and must stay — v3's template read `cs_social_x` while v3 registered `cs_social_twitter`, so the field saved to an option nothing consumed. Only the comment is wrong: it describes a v4 file that does not exist. Reword it to say v3's template read the option, and that v4 ships no social template yet, so the settings are consumed by whatever a project renders.
+
+**F3 — fix. `inc/customize.php:68-73`, the control labels lost their translation wrappers.**
+
+v3 wrapped them: `sprintf( __( '%s', CSWP ), $network )`. They are now bare `'Email'`, `'Facebook'`, `'X (Twitter)'`. The theme is translation-ready with text domain `CSWP`; restore the wrappers. No output change in English.
+
+**F4 — fix, but scoped. `inc/breadcrumbs.php`, unescaped dynamic values.**
+
+The file is a verbatim v3 port and echoes roughly thirty dynamic values raw. A blanket escape would **break** it: `get_category_parents()` and `$breadcrumbs[$i]` and `$homeItem` return or hold ready-made HTML, and escaping those would print markup as text. So fix the sites where a value is **plain text**, and leave the HTML-producing calls alone:
+
+- line 17 `$homeLink` -> `esc_url()`, `$home` -> `esc_html()`
+- line 19 `$modifier` -> `esc_attr()`
+- the leaf-text echoes: `get_the_title()`, `$parent->post_title`, `single_tag_title('', false)`, `get_search_query()`, `$post_type_obj->labels->singular_name`
+- **leave** `get_category_parents(...)`, `single_cat_title('', false)`, `$breadcrumbs[$i]`, `$homeItem` and the `get_the_time()` values as they are.
+
+Why fix at all when the reviewer called it inherited and there is no in-theme caller: breadcrumbs is a toolbox promise, and a page title is admin-controlled text rendering into HTML. That is reachable, not hypothetical. Why not blanket-escape: a port that stops rendering its own markup is a worse defect than the one being fixed.
+
+**F5 — no change.** Arosa's `$submenu_id`/`$toggle_label` were dropped from the port. They were assigned and never emitted, so nothing observable changed.
+
+**Also recorded, not a defect:** calling `cs__the_breadcrumbs()` from a bare harness context warns `Attempt to read property "labels" on null`. That branch needs `get_post_type()` falsy with no earlier context match, which a real WP query cannot reach — the front page, page, home, archive, search and 404 branches are all handled earlier. Harness artifact; leave it.
+
+Verify:
+
+```bash
+PHP="C:/Users/Admin/AppData/Roaming/Local/lightning-services/php-8.4.10+0/bin/win64/php.exe"
+for f in inc/menu-walker.php inc/customize.php inc/breadcrumbs.php; do "$PHP" -l "$f"; done
+npm run stand 2>&1 | grep -E "^(PASS|FAIL)"
+npm run stand >/dev/null 2>&1; echo "stand exit=$?"
+curl -k -s -o NUL -w "site: %{http_code}\n" https://starter-theme.local
+```
+
+Then prove F1 with real output, not by reading the code — a menu item whose label contains a quote must produce a well-formed attribute:
+
+```bash
+WP="C:/Users/Admin/Documents/CSTHEME-ops/scripts/cs-wp"
+"$WP" -e '$i = new WP_Post((object) array("ID"=>999,"title"=>"Say \"Hi\" now","classes"=>array(),"attr_title"=>"","target"=>"","xfn"=>"","url"=>"/x","menu_item_parent"=>0,"object_id"=>999,"type"=>"post_type","object"=>"page","db_id"=>999));
+$w = new cs__primary_menu_walker();
+ob_start(); $w->start_el("", $i, 0, (object) array("theme_location"=>"primary"), 1); $out = ob_get_clean();
+echo $out, "\n";
+echo "well-formed: ", (str_contains($out, "&quot;") && substr_count($out, chr(34)) % 2 === 0 ? "yes" : "NO"), "\n";'
+```
+
+Expected: the label arrives escaped (`&quot;`) and the attribute closes where it should.
+
+Then commit and **push**:
+
+```bash
+git add inc/menu-walker.php inc/customize.php inc/breadcrumbs.php
+git status --short
+git commit -m "fix: escape the walker's data-content and the breadcrumb text, restore i18n wrappers"
+git push origin main
+git rev-parse --short HEAD; git rev-parse --short origin/main
+```
+
 - [ ] **Step 9: Commit**
 
 ```bash
