@@ -970,8 +970,7 @@ It reports every `cs__`/`CS_` call or `new` whose symbol is defined nowhere in t
  *
  * Usage:  php scripts/check-symbols.php <theme-dir>
  * Output: one JSON object per line:
- *           {"file":"<path relative to theme>","line":<int>,"symbol":"<name>",
- *            "kind":"call"|"new"|"callback"}
+ *           {"file":"<path relative to theme>","line":<int>,"symbol":"<name>","kind":"call"|"new"}
  * Exit:   0 when the analysis ran, 2 when it could not (bad argument). The caller
  *          decides what the output means; a non-zero exit would be indistinguishable
  *          from the caller's own failure.
@@ -1120,7 +1119,14 @@ function analyze(string $src): array
             // not flow analysis -- a string literal either names a cs__ symbol or it
             // does not -- so it cannot leak the way guard tracking did.
             $inner = trim($t[1], "'\"");
-            if (preg_match('/^(cs__|CS_)\w+$/', $inner)) {
+            // Only `cs__`, not `CS_`. The spec names `cs__` as the prefix for
+            // functions and classes; `CS_` appears nowhere in it, and an
+            // uppercase-underscore string is a CONSTANT name far more often than a
+            // callback -- `define('CS_VERSION', ...)` would report as a callback the
+            // moment anyone adds a version constant to a starter theme. Calls and
+            // `new` still check both prefixes: an undefined `CS_foo()` is a fatal
+            // whichever way you read it.
+            if (preg_match('/^cs__\w+$/', $inner)) {
                 $reported[] = [$t[2], $inner, 'callback'];
             }
         } elseif (is_array($t) && ($t[0] === T_STRING || $t[0] === T_NAME_FULLY_QUALIFIED)) {
@@ -1461,6 +1467,11 @@ For (b) the expected line is `SKIP  build artifacts not tracked  (could not run 
 #   $s = 'cs__x()';                             parens: a mention, not a bare name
 #   $s = 'cs__Class::method';                   a method callback, not a bare name
 #   $s = 'notcs__x';                            the prefix has to start the string
+#   define('CS_VERSION', '4.0.0');               CS_ is the constant shape, not a
+#   $s = 'CS_SETTINGS';                         callback shape: only a cs__ string is
+#                                               treated as a callback. Calls and `new`
+#                                               still check both prefixes, so an
+#                                               undefined CS_foo() is still reported.
 ```
 
 **A call site has exactly three forms, and all three are lexical.** This matters, because the one thing this task learned the hard way is that *flow* analysis leaks and *lexical* rules do not. There is no flow question in any of them — a token either is one of these or it is not:
