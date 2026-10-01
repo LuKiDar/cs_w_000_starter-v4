@@ -2,14 +2,16 @@
 /**
  * Search Form
  */
+
+$search_id = 'search-form-' . wp_unique_id();
 ?>
 <form role="search" method="get" class="search-form" action="<?= esc_url(home_url('/')); ?>">
-	<label class="search-form__label" for="search-form-<?= esc_attr(wp_unique_id()); ?>">
+	<label class="search-form__label" for="<?= esc_attr($search_id); ?>">
 		<?php esc_html_e('Search for:', CSWP); ?>
 	</label>
 	<input
 		type="search"
-		id="search-form-<?= esc_attr(wp_unique_id()); ?>"
+		id="<?= esc_attr($search_id); ?>"
 		class="search-form__input"
 		value="<?= esc_attr(get_search_query()); ?>"
 		name="s"
