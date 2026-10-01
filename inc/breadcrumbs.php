@@ -69,7 +69,7 @@ function cs__the_breadcrumbs( $modifier='' ){
 						$breadcrumbs = array();
 						while ( $parent_id ){
 							$page = get_page($parent_id);
-							$breadcrumbs[] = '<a href="'. get_permalink($page->ID) .'">'. get_the_title($page->ID) .'</a>';
+							$breadcrumbs[] = '<a href="'. get_permalink($page->ID) .'">'. esc_html( get_the_title($page->ID) ) .'</a>';
 							$parent_id = $page->post_parent;
 						}
 						$breadcrumbs = array_reverse($breadcrumbs);
@@ -122,7 +122,7 @@ function cs__the_breadcrumbs( $modifier='' ){
 				$breadcrumbs = array();
 				while ( $parent_id ){
 					$page = get_page($parent_id);
-					$breadcrumbs[] = '<a href="'. get_permalink($page->ID) .'">'. get_the_title($page->ID) .'</a>';
+					$breadcrumbs[] = '<a href="'. get_permalink($page->ID) .'">'. esc_html( get_the_title($page->ID) ) .'</a>';
 					$parent_id = $page->post_parent;
 				}
 				$breadcrumbs = array_reverse($breadcrumbs);
