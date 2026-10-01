@@ -128,9 +128,7 @@ function cs__render_link_group( $links, $modifier = '' ){
 			?>
 			<a
 				class="<?= esc_attr(implode(' ', $link_classes)); ?>"
-				href="<?= esc_url($url); ?>"
-				<?= $target ? 'target="'. esc_attr($target) .'" rel="noopener noreferrer"' : ''; ?>
-			><?= esc_html($title); ?></a>
+				href="<?= esc_url($url); ?>"<?= $target ? ' target="'. esc_attr($target) .'" rel="noopener noreferrer"' : ''; ?>><?= esc_html($title); ?></a>
 		<?php endforeach; ?>
 	</div>
 	<?php

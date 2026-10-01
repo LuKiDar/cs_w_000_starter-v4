@@ -2067,8 +2067,7 @@ function cs__render_link_group( $links, $modifier = '' ){
 			?>
 			<a
 				class="<?= esc_attr(implode(' ', $link_classes)); ?>"
-				href="<?= esc_url($url); ?>"<?= $target ? ' target="'. esc_attr($target) .'" rel="noopener noreferrer"' : ''; ?>
-			><?= esc_html($title); ?></a>
+				href="<?= esc_url($url); ?>"<?= $target ? ' target="'. esc_attr($target) .'" rel="noopener noreferrer"' : ''; ?>><?= esc_html($title); ?></a>
 		<?php endforeach; ?>
 	</div>
 	<?php
@@ -2076,7 +2075,18 @@ function cs__render_link_group( $links, $modifier = '' ){
 ```
 
 
-The `<?= $target ? … : ''; ?>` sits on the **same line as `href`**, not on its own line. That is not a style preference: an `<?= … ?>` on its own line emits the newline and the indentation before it, which lands as a stray space before the tag's `>` — `<a class="…" href="/x" >0</a>`. Valid HTML and invisible in a browser, but this helper is the template every block copies, so the space would appear in every link of every block for the life of the theme. Keep the conditional on the `href` line, and let it carry its own leading space inside the string so the output is clean with and without a target.
+**The tag's `>` must sit on the same line as the closing `?>`.** That is not a style preference, and getting it half right is easy — this exact line was wrong twice.
+
+The output was `<a class="block-links__item button" href="/x" >0</a>`: a stray whitespace run before the `>`. Moving the `target`/`rel` conditional up onto the `href` line is necessary but **not sufficient**, because PHP's `?>` swallows only the newline immediately after it, **not the indentation on the next line** — so the tag's own `>` on its own line at three tabs still emits those three tabs between the `"` and the `>`.
+
+Measured, both layouts in one eval:
+
+```
+brief_layout    STRAY  |\t\t\t<a\n\t\t\t\tclass="c"\n\t\t\t\thref="/x"\t\t\t>A</a>\n|
+joined_layout   clean  |\t\t\t<a\n\t\t\t\tclass="c"\n\t\t\t\thref="/x">A</a>\n|
+```
+
+So the conditional rides on the `href` line, carries its own leading space **inside the string** (so the output is clean with and without a target), and the `>` follows the `?>` immediately. Whitespace between attributes is fine and required; whitespace *before* the closing `>` is what assertion (e) catches. This helper is the template all twelve blocks copy, so the space would otherwise live in every link of every block for the life of the theme.
 
 
 - [ ] **Step 4: Write `parts/block/cta/block.json`**
