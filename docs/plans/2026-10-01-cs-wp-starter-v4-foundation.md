@@ -1785,7 +1785,7 @@ For (c) the expected line is `SKIP  build artifacts not tracked  (could not run 
 
 `(x)` and `(aa)` are the pair that shows why the exemption cannot be approximated by proximity: the same shape is a guard with `&&` and a non-guard with `||`, and only the operator distinguishes them.
 
-**And the exemption must not leak.** The second tokenizer was exact about every shape above and still leaked in nine ways — all demonstrated, all reproduced by the controller. Four were false alarms and five were missed fatals, and three of the nine are reachable in ordinary WordPress template code:
+**And the exemption must not leak.** The second tokenizer was exact about every shape above and still leaked in nine ways — all demonstrated, all reproduced by the controller. Four were false alarms and five were missed fatals, and four of the nine are reachable in ordinary WordPress template code:
 
 ```bash
 # --- must NOT be reported (the test still guarantees the symbol) ---
