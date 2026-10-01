@@ -349,15 +349,30 @@ and its include is commented out, so every page 500s. A commented include is a p
 v4 must keep it.
 
 **Requirement:** every entry in the commented include list has a real, working file on
-disk, and the stand script (§11) verifies that any class or function referenced by a
-template is either defined or behind a commented include.
+disk, and the stand script (§11) verifies that every class or function a template
+references is **defined and loaded**.
+
+**The second half of that requirement is the one that matters, and an earlier draft of
+this section got it wrong.** It said a reference was acceptable if the symbol was
+"defined or behind a commented include". It cannot be: a symbol behind a commented
+include is not loaded at runtime, so the template that uses it fatals — which is the
+entire v3 story. The stand script's symbol check has no exemption for this and must not
+gain one (see Task 4's eight rounds). A file in the toolbox is a promise that the file
+*exists*, not a licence to call into it.
+
+That settles where a feature belongs. A `Walker_Nav_Menu` subclass that the theme's own
+`header.php` uses is **not a toolbox item** — its include is always-on, like the other
+always-on includes, and the toolbox holds only what a new project may reasonably never
+switch on.
 
 Toolbox files to ship, commented in `functions.php`:
 
 `breadcrumbs.php`, `pagination.php`, `shortcodes.php`, `widgets.php`, `cpt-post.php`,
-`menu-walker.php`, `plugin-acf.php` (options-page fallback), `post-types.php`.
+`plugin-acf.php` (options-page fallback), `post-types.php`.
 
-Arosa already contains a working `inc/menu-walker.php` (87 lines) to port.
+**Always-on, not toolbox:** `menu-walker.php` — `header.php` wires it into both
+`wp_nav_menu` calls, so it loads with the theme. Arosa already contains a working
+`inc/menu-walker.php` (87 lines) to port.
 
 ## 11. Stand script
 

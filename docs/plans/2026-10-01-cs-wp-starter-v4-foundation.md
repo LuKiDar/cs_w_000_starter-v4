@@ -2585,6 +2585,7 @@ Every commented include in `functions.php` gets a real, working file.
 
 **Files:**
 - Create: `inc/menu-walker.php`, `inc/breadcrumbs.php`, `inc/pagination.php`, `inc/shortcodes.php`, `inc/widgets.php`, `inc/post-types.php`, `inc/cpt-post.php`, `inc/admin.php`, `inc/customize.php`, `inc/plugin-acf.php`
+- Modify: `functions.php` (uncomment the `menu-walker` include), `header.php` (wire the walker into both `wp_nav_menu` calls), `scripts/check-theme-stand.py` (Step 1b)
 
 **Interfaces:**
 - Consumes: `DEFAULT_CPT_ARGS` and friends from `inc/constants.php`; `cs__get_template_page_ID()` from `inc/helper-functions.php`.
@@ -2597,7 +2598,79 @@ grep -c "require_once 'inc/" functions.php
 ls -1 inc/ | wc -l
 ```
 
-Expected: the commented list names 10 files; `inc/` holds 6 (the always-on ones). The difference is the gap to close.
+Expected: the commented list names **10** files; `inc/` holds **6** always-on ones. The difference is the gap to close.
+
+Two of the ten change category before this task ends, both decided rather than assumed:
+- `menu-walker.php` becomes an **always-on** include (Step 8) — a `Walker_Nav_Menu` subclass the theme's own `header.php` uses cannot sit behind a commented include.
+- `plugin-acf.php` (Step 6) is written and stays commented: an options-page fallback for projects that do not want the Customizer.
+
+So the task ends with **7** always-on includes and **9** commented entries.
+
+- [ ] **Step 1b: Make the stand script lint with the PHP the site actually runs**
+
+Do this **first**, because every later step here leans on `npm run stand` to tell the truth about syntax.
+
+`find_php()` in `scripts/check-theme-stand.py` pins one Local version:
+
+```python
+r"C:/Users/Admin/AppData/Roaming/Local/lightning-services/php-8.1.23+0/bin/win64/php.exe",
+```
+
+**This site runs PHP 8.4.10** — `services.php.version` in Local's own registry — so every `php -l` the script has run has checked syntax against a PHP the site does not use. A pinned version is not a fallback: it is a check that silently stops testing what you think it tests, the same class of mistake as pinning the MySQL port. **Anything resolved from the environment must be discovered, not remembered.**
+
+Glob the installed versions and take the newest. Add `re` to the imports if it is not already there:
+
+```python
+def find_php() -> str:
+    """Locate the PHP CLI, in order: $CSWP_PHP, PATH, then this machine's newest Local install.
+
+    This script ships inside the theme and the client's team is expected to run it,
+    so a hard-coded path to one developer's machine must not be the only way to
+    find PHP. The Local glob stays as the last fallback so the owner's own
+    environment keeps working without any setup.
+
+    The version is globbed, never pinned. A pinned 8.1.23 linted this theme's files
+    while the site itself ran 8.4.10, so the check was reporting on a PHP that was
+    not in use -- and it would have kept doing so silently.
+    """
+    candidates = [os.environ.get("CSWP_PHP"), shutil.which("php")]
+
+    local = Path(os.environ.get("LOCALAPPDATA", "")) / "Local" / "lightning-services"
+    if local.is_dir():
+        installs = sorted(
+            local.glob("php-*/bin/win64/php.exe"),
+            key=lambda p: [int(n) for n in re.findall(r"\d+", p.parts[-4].split("+")[0])],
+            reverse=True,
+        )
+        candidates.extend(str(p) for p in installs)
+
+    for candidate in candidates:
+        if candidate and Path(candidate).exists():
+            return candidate
+    return "php"
+```
+
+```bash
+python - <<'PY'
+import importlib.util as u
+s = u.spec_from_file_location("st", "scripts/check-theme-stand.py")
+m = u.module_from_spec(s); s.loader.exec_module(m)
+print("resolved:", m.find_php())
+PY
+```
+
+Expected: a path containing `php-8.4.10`, **not** `php-8.1.23`. Then confirm the explicit override still wins:
+
+```bash
+CSWP_PHP="C:/Users/Admin/AppData/Roaming/Local/lightning-services/php-8.1.23+0/bin/win64/php.exe" python - <<'PY'
+import importlib.util as u
+s = u.spec_from_file_location("st", "scripts/check-theme-stand.py")
+m = u.module_from_spec(s); s.loader.exec_module(m)
+print("override wins:", m.find_php().endswith("php-8.1.23+0/bin/win64/php.exe"))
+PY
+```
+
+Expected: `True`.
 
 - [ ] **Step 2: Port `inc/menu-walker.php`**
 
@@ -2638,44 +2711,77 @@ Small, working, generic files: a `[cs-year]` shortcode returning the current yea
 
 `enable_post_types` is deliberately **not** disabled here — CPTs and taxonomies are registered through the ACF Pro UI (spec §6).
 
-- [ ] **Step 7: Test every include uncomments cleanly**
+- [ ] **Step 7: Test that every toolbox include uncomments cleanly**
+
+The question is "does the site survive when the feature is switched on", so the test has to actually switch it on. Two things it must get right:
+
+- **Lint each file, not `functions.php`.** A `php -l functions.php` after uncommenting a `require_once` checks `functions.php` and says nothing about the file being required — a syntax error in `inc/breadcrumbs.php` would sail through. `npm run stand` already lints every PHP file with the PHP Step 1b made it discover, so it is the check to use.
+- **Restore from git, not by re-commenting.** A `sed` round-trip leaves `functions.php` modified if anything in the middle fails. `git checkout -- functions.php` restores the committed toolbox exactly, whatever happened.
 
 ```bash
-PHP="C:/Users/Admin/AppData/Roaming/Local/lightning-services/php-8.1.23+0/bin/win64/php.exe"
+# every file exists and every check is green before anything is switched on
 for f in menu-walker breadcrumbs pagination shortcodes widgets post-types cpt-post admin customize plugin-acf; do
-  sed -i "s|// require_once 'inc/$f.php';|require_once 'inc/$f.php';|" functions.php
-  "$PHP" -l functions.php >/dev/null || echo "SYNTAX FAIL: $f"
-  curl -k -s -o /dev/null -w "$f: %{http_code}\n" https://starter-theme.local
-  sed -i "s|require_once 'inc/$f.php';|// require_once 'inc/$f.php';|" functions.php
+  [ -f "inc/$f.php" ] || echo "MISSING: inc/$f.php"
 done
+npm run stand 2>&1 | grep -E "^(PASS|FAIL)"
+
+# switch the whole toolbox on and prove the site survives it
+sed -i "s|^// require_once 'inc/|require_once 'inc/|" functions.php
+grep -c "^require_once 'inc/" functions.php
+npm run stand 2>&1 | grep -E "^(PASS|FAIL)"
+curl -k -s -o NUL -w "site with the whole toolbox on: %{http_code}\n" https://starter-theme.local
+git checkout -- functions.php
+grep -c "^// require_once 'inc/" functions.php
 ```
 
-Expected: every line reports `200`, no `SYNTAX FAIL`. Then leave all of them commented again.
+Expected: no `MISSING`; every check `PASS` in both runs; **7** always-on includes before and after (the six from Step 1 plus `menu-walker`, which Step 8 makes permanent); the site answers **200** with all ten switched on; and after `git checkout` the commented count is back to **10**.
 
-- [ ] **Step 8: Test the walker is actually wired**
+`curl -o NUL`, not `-o /dev/null` — MSYS's curl can exit 23 on the latter, which reads as a failed request when the request succeeded.
 
-```bash
-grep -n "primary_menu_walker" header.php
-```
+- [ ] **Step 8: Make the menu walker always-on and wire it into `header.php`**
 
-Expected: no match — `header.php` uses the plain `wp_nav_menu` until this task. Add the walker to `header.php`'s two `wp_nav_menu` calls now that `inc/menu-walker.php` exists and the include is documented as required for it. Add a comment in `header.php` naming the include:
+**The owner's decision, taken when this step was found to recreate v3's fatal.** The design contradicted itself: §10 listed `menu-walker.php` among the *commented* toolbox files, while the feature table listed the custom walker as a theme feature. Both cannot hold — a `Walker_Nav_Menu` subclass that is not loaded cannot be used by `header.php`, and using it anyway is precisely how v3 died. **The walker is a feature: its include is always-on, and `header.php` uses it.**
+
+Uncomment its include in `functions.php`, drop it from the toolbox comment block, and add the walker to **both** `wp_nav_menu` calls in `header.php` — the desktop `site-header__navigation` and the mobile `mobile-navigation` — so submenu markup and depth classes are identical in both:
 
 ```php
-// Requires: inc/menu-walker.php (uncomment its include in functions.php)
+<?php wp_nav_menu(array(
+	'theme_location' => 'primary',
+	'menu_class'     => 'primary-menu',
+	'container'      => false,
+	'depth'          => 2,
+	'walker'         => new cs__primary_menu_walker(),
+)); ?>
 ```
-
-Then re-run the stand check:
 
 ```bash
-python scripts/check-theme-stand.py; echo "exit=$?"
+grep -c "primary_menu_walker" header.php                        # 2 -- both calls
+grep -c "^require_once 'inc/menu-walker.php';" functions.php    # 1 -- uncommented
+npm run stand 2>&1 | grep -E "^(PASS|FAIL)"
+npm run stand >/dev/null 2>&1; echo "stand exit=$?"
+curl -k -s -o NUL -w "site: %{http_code}\n" https://starter-theme.local
 ```
 
-Expected: exit 0 — with the walker uncommented it resolves; the check only fails when a symbol is used but undefined **and** unguarded.
+Expected: **2**, **1**, every check `PASS`, **exit 0**, site **200**.
+
+**Then prove the check can fail.** A stand check that cannot fail is not a check, and this is the exact defect it was built for:
+
+```bash
+sed -i "s|^require_once 'inc/menu-walker.php';|// require_once 'inc/menu-walker.php';|" functions.php
+npm run stand 2>&1 | grep -A3 "FAIL symbol"
+npm run stand >/dev/null 2>&1; echo "with the include commented: exit=$?"
+git checkout -- functions.php
+npm run stand >/dev/null 2>&1; echo "restored: exit=$?"
+```
+
+Expected: with the include commented, `FAIL symbol resolution` naming `header.php` and the line of the walker call, and **exit 1**; after `git checkout`, **exit 0**. That failure is v3's fatal caught statically — seeing it once is worth more than trusting that it works.
+
+**Note on §11 of the design.** It promises the stand script treats a symbol as fine if it is "defined **or behind a commented include**". The final analyzer deliberately does not, and cannot: a symbol behind a commented include is not loaded at runtime, so the page fatals — which is the whole v3 story. §11 has been corrected to match what the check actually does. This step is where the two readings diverged, so it is where the correction is recorded.
 
 - [ ] **Step 9: Commit**
 
 ```bash
-git add inc/ functions.php  # by path, never -A: it has swept .hermes-tmp.*/ and .superpowers/ in here before
+git add inc/ functions.php header.php scripts/check-theme-stand.py  # by path, never -A: it has swept .hermes-tmp.*/ and .superpowers/ in here before
 git commit -m "feat: toolbox files behind commented includes"
 ```
 
@@ -2899,7 +3005,6 @@ git commit -m "feat: accessibility layer (eyebrow heading fix, focus runtime)"
 
 **Files:**
 - Create: `readme.md`
-- Modify: `scripts/check-theme-stand.py` (Step 3b — it pins a Local PHP version instead of discovering one)
 - Modify: any file that trips a PHP 8.4 deprecation
 
 **Interfaces:**
@@ -2947,71 +3052,9 @@ cat "/d/Local/starter-theme/logs/php/error.log"
 
 Expected: empty. Fix any `Deprecated:` line it prints. Switch the site back to 8.1.23 afterwards.
 
-- [ ] **Step 3b: Make the stand script lint with the PHP the site actually runs**
+- [ ] **Step 3b: (moved) the stand script's PHP resolution was fixed in Task 7 Step 1b**
 
-`find_php()`'s Local fallback pins a single version:
-
-```python
-r"C:/Users/Admin/AppData/Roaming/Local/lightning-services/php-8.1.23+0/bin/win64/php.exe",
-```
-
-**This site runs PHP 8.4.10** — `services.php.version` in Local's own registry — so every `php -l` this script has run has been checking syntax against a PHP the site does not use. A pinned version is not a fallback: it is a check that silently stops testing what you think it tests, and it is the same class of mistake as pinning the MySQL port. The lesson generalises — anything this theme resolves from the environment (PHP, Node, the site's own version) must be discovered, not remembered.
-
-Glob the installed versions and take the newest, so the fallback follows the machine. Add `re` to the imports if it is not already there:
-
-```python
-def find_php() -> str:
-    """Locate the PHP CLI, in order: $CSWP_PHP, PATH, then this machine's newest Local install.
-
-    This script ships inside the theme and the client's team is expected to run it,
-    so a hard-coded path to one developer's machine must not be the only way to
-    find PHP. The Local glob stays as the last fallback so the owner's own
-    environment keeps working without any setup.
-
-    The version is globbed, never pinned. A pinned 8.1.23 linted this theme's files
-    while the site itself ran 8.4.10, so the check was reporting on a PHP that was
-    not in use -- and it would have kept doing so silently.
-    """
-    candidates = [os.environ.get("CSWP_PHP"), shutil.which("php")]
-
-    local = Path(os.environ.get("LOCALAPPDATA", "")) / "Local" / "lightning-services"
-    if local.is_dir():
-        installs = sorted(
-            local.glob("php-*/bin/win64/php.exe"),
-            key=lambda p: [int(n) for n in re.findall(r"\d+", p.parts[-4].split("+")[0])],
-            reverse=True,
-        )
-        candidates.extend(str(p) for p in installs)
-
-    for candidate in candidates:
-        if candidate and Path(candidate).exists():
-            return candidate
-    return "php"
-```
-
-Verify it resolves 8.4 rather than 8.1, and that the override still wins:
-
-```bash
-python - <<'PY'
-import importlib.util as u
-s = u.spec_from_file_location("st", "scripts/check-theme-stand.py")
-m = u.module_from_spec(s); s.loader.exec_module(m)
-print("resolved:", m.find_php())
-PY
-```
-
-Expected: a path containing `php-8.4.10`, **not** `php-8.1.23`.
-
-```bash
-CSWP_PHP="C:/Users/Admin/AppData/Roaming/Local/lightning-services/php-8.1.23+0/bin/win64/php.exe" python - <<'PY'
-import importlib.util as u
-s = u.spec_from_file_location("st", "scripts/check-theme-stand.py")
-m = u.module_from_spec(s); s.loader.exec_module(m)
-print("override wins:", m.find_php().endswith("php-8.1.23+0/bin/win64/php.exe"))
-PY
-```
-
-Expected: `True` — the explicit override still takes precedence over the glob, which is what keeps the escape hatch usable on a machine whose Local layout differs.
+`find_php()` pinned Local's 8.1.23 while this site runs 8.4.10, so every `php -l` checked syntax against a PHP the site does not use. It now globs the installed versions and takes the newest, with `$CSWP_PHP` still winning. Moved to Task 7 because Task 7's own verification depends on the stand check telling the truth about syntax.
 
 - [ ] **Step 4: Run the stand check one last time**
 
