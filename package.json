@@ -9,7 +9,8 @@
 		"start": "gulp",
 		"build": "gulp build",
 		"watch": "gulp watch",
-		"tokens": "node scripts/build-tokens.mjs"
+		"tokens": "node scripts/build-tokens.mjs",
+		"stand": "python scripts/check-theme-stand.py"
 	},
 	"devDependencies": {
 		"browser-sync": "^3.0.3",
