@@ -939,6 +939,7 @@ git commit -m "feat: build pipeline and generated design-token mirror"
 
 **Files:**
 - Create: `scripts/check-theme-stand.py`
+- Create: `scripts/check-symbols.php`
 
 **Interfaces:**
 - Consumes: nothing from earlier tasks beyond the theme layout.
@@ -952,7 +953,275 @@ python scripts/check-theme-stand.py "D:/Local/starter-theme/app/public/wp-conten
 
 Expected: FAIL — `python: can't open file ... No such file or directory`, exit 2.
 
-- [ ] **Step 2: Write the script**
+- [ ] **Step 2: Write the two scripts**
+
+**`scripts/check-symbols.php`** — the symbol analyser, and the reason this task ships two files rather than one.
+
+`check_symbols` used to be a regex pass in Python, with a `function_exists()` exemption reconstructed from indentation and line position. Three review rounds each found a new spelling that reconstruction missed — an over-indented closer, a tab/space mix, `<?php } ?>`, a closer behind a comment, a one-line guard — and the third round's own patch added a false alarm (`}` inside a comment on the guard line). The root cause is not a missing case: **PHP's block structure is neither indentation-based nor line-based**, so no amount of patching a text scan can decide whether a call sits inside a guard. The analyser therefore tokenizes.
+
+It prints one JSON object per line for every `cs__` call that resolves nowhere, and exits 0 whenever it ran at all — the caller decides what the output means. It ships inside the theme, so it must work on the client's machines: the theme directory is its only argument and the PHP standard library its only dependency.
+
+```php
+<?php
+/**
+ * Report `cs__` symbols that are called but defined nowhere in the theme.
+ *
+ * Usage:  php scripts/check-symbols.php <theme-dir>
+ * Output: one JSON object per line:
+ *           {"file":"<path relative to theme>","line":<int>,"symbol":"<name>","kind":"call"|"new"}
+ * Exit:   0 when the analysis ran, 2 when it could not (bad argument). The caller
+ *          decides what the output means; a non-zero exit would be indistinguishable
+ *          from the caller's own failure.
+ *
+ * Why a tokenizer and not a regex: PHP's block structure is neither indentation-based
+ * nor line-based, so whether a call sits inside a `function_exists()` guard cannot be
+ * decided by scanning text. Three rounds of regex heuristics each missed new spellings
+ * -- an over-indented closer, a tab/space mix, `<?php } ?>`, a closer behind a comment,
+ * a one-line guard -- and introduced false alarms of their own. Tokens do not guess.
+ */
+
+declare(strict_types=1);
+
+const SKIP_DIRS = ['node_modules', '.git', 'vendor', 'build'];
+
+/**
+ * Collect the theme's PHP files as [absolute path, path relative to the theme].
+ */
+function theme_files(string $root): array
+{
+    $files = [];
+    $it = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS)
+    );
+    foreach ($it as $f) {
+        if (!$f->isFile() || $f->getExtension() !== 'php') {
+            continue;
+        }
+        $rel = str_replace('\\', '/', substr($f->getPathname(), strlen($root) + 1));
+        foreach (SKIP_DIRS as $skip) {
+            if (str_starts_with($rel, $skip . '/') || str_contains($rel, '/' . $skip . '/')) {
+                continue 2;
+            }
+        }
+        $files[] = [$f->getPathname(), $rel];
+    }
+    sort($files);
+    return $files;
+}
+
+/**
+ * The next significant token at or after $i, skipping whitespace and comments.
+ */
+function next_significant(array $tokens, int $i): array|string|null
+{
+    $n = count($tokens);
+    for ($j = $i + 1; $j < $n; $j++) {
+        $t = $tokens[$j];
+        if (is_array($t) && in_array($t[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true)) {
+            continue;
+        }
+        return $t;
+    }
+    return null;
+}
+
+function is_skippable(mixed $t): bool
+{
+    return is_array($t) && in_array($t[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true);
+}
+
+/**
+ * One file: what it defines, and which of its `cs__` uses resolve nowhere.
+ *
+ * @return array{defined: list<string>, reported: list<array{int, string, string}>}
+ */
+function analyze(string $src): array
+{
+    $tokens = token_get_all($src);
+    $n = count($tokens);
+
+    $defined = [];
+    $reported = [];
+
+    $depth = 0;
+    $openGuards = [];       // stack of ['name' => string, 'depth' => int, 'alt' => bool]
+    $pendingGuard = null;   // a function_exists('cs__x') seen, awaiting its block opener
+    $pendingTernary = false;
+    $prevSig = null;        // last significant token, for call context
+
+    for ($i = 0; $i < $n; $i++) {
+        $t = $tokens[$i];
+
+        // --- single-character tokens -----------------------------------------
+        if (!is_array($t)) {
+            switch ($t) {
+                case '{':
+                    $depth++;
+                    if ($pendingGuard !== null) {
+                        $openGuards[] = ['name' => $pendingGuard, 'depth' => $depth, 'alt' => false];
+                        $pendingGuard = null;
+                    }
+                    break;
+
+                case '}':
+                    while ($openGuards && !end($openGuards)['alt'] && end($openGuards)['depth'] === $depth) {
+                        array_pop($openGuards);
+                    }
+                    $depth--;
+                    break;
+
+                case ':':
+                    // Alternative syntax (`if ( ... ) : ... endif;`). A ternary never
+                    // opens a block, and `?` before the `:` is what tells them apart.
+                    if ($pendingGuard !== null && !$pendingTernary) {
+                        $openGuards[] = ['name' => $pendingGuard, 'depth' => $depth + 1, 'alt' => true];
+                    }
+                    $pendingGuard = null;
+                    break;
+
+                case '?':
+                    $pendingTernary = true;
+                    break;
+
+                case ';':
+                    $pendingGuard = null;
+                    $pendingTernary = false;
+                    break;
+            }
+            $prevSig = $t;
+            continue;
+        }
+
+        // --- tokens we ignore -------------------------------------------------
+        if (is_skippable($t)) {
+            continue;
+        }
+
+        switch ($t[0]) {
+            case T_ENDIF:
+                if ($openGuards && end($openGuards)['alt']) {
+                    array_pop($openGuards);
+                }
+                break;
+
+            case T_FUNCTION:
+                $nx = next_significant($tokens, $i);
+                if ($nx === '&') {
+                    $nx = next_significant($tokens, $i + 1);
+                }
+                if (is_array($nx) && $nx[0] === T_STRING
+                    && (str_starts_with($nx[1], 'cs__') || str_starts_with($nx[1], 'CS_'))) {
+                    $defined[$nx[1]] = true;
+                }
+                break;
+
+            case T_CLASS:
+            case T_INTERFACE:
+            case T_TRAIT:
+                $nx = next_significant($tokens, $i);
+                if (is_array($nx) && $nx[0] === T_STRING
+                    && (str_starts_with($nx[1], 'cs__') || str_starts_with($nx[1], 'CS_'))) {
+                    $defined[$nx[1]] = true;
+                }
+                break;
+
+            case T_NEW:
+                $nx = next_significant($tokens, $i);
+                if (is_array($nx) && $nx[0] === T_STRING
+                    && (str_starts_with($nx[1], 'cs__') || str_starts_with($nx[1], 'CS_'))) {
+                    $reported[] = [$nx[2], $nx[1], 'new'];
+                }
+                break;
+
+            case T_STRING:
+                $name = $t[1];
+
+                if ($name === 'function_exists') {
+                    $j = $i + 1;
+                    while ($j < $n && is_skippable($tokens[$j])) {
+                        $j++;
+                    }
+                    if ($j < $n && $tokens[$j] === '(') {
+                        $k = $j + 1;
+                        while ($k < $n && is_skippable($tokens[$k])) {
+                            $k++;
+                        }
+                        if ($k < $n && is_array($tokens[$k]) && $tokens[$k][0] === T_CONSTANT_ENCAPSED_STRING) {
+                            $inner = trim($tokens[$k][1], "'\"");
+                            if (str_starts_with($inner, 'cs__') || str_starts_with($inner, 'CS_')) {
+                                $pendingGuard = $inner;
+                                $pendingTernary = false;
+                            }
+                        }
+                    }
+                    break;
+                }
+
+                if (!str_starts_with($name, 'cs__')) {
+                    break;
+                }
+                // A call, not a definition or a method: `cs__x(` with no `function`,
+                // `new`, `->` or `::` in front of it.
+                if (next_significant($tokens, $i) !== '(') {
+                    break;
+                }
+                if (is_array($prevSig)
+                    && in_array($prevSig[0], [T_FUNCTION, T_NEW, T_OBJECT_OPERATOR, T_DOUBLE_COLON, T_NS_SEPARATOR], true)) {
+                    break;
+                }
+                $guarded = false;
+                foreach ($openGuards as $g) {
+                    if ($g['name'] === $name) {
+                        $guarded = true;   // inside a guard for this very symbol
+                        break;
+                    }
+                }
+                if (!$guarded) {
+                    $reported[] = [$t[2], $name, 'call'];
+                }
+                break;
+        }
+
+        $prevSig = $t;
+    }
+
+    return ['defined' => array_keys($defined), 'reported' => $reported];
+}
+
+// --- driver ------------------------------------------------------------------
+
+$root = rtrim($argv[1] ?? '.', "/\\");
+if (!is_dir($root)) {
+    fwrite(STDERR, "not a directory: $root\n");
+    exit(2);
+}
+
+$files = theme_files($root);
+
+$defined = [];
+$perFile = [];
+foreach ($files as [$abs, $rel]) {
+    $result = analyze((string) file_get_contents($abs));
+    $perFile[$rel] = $result['reported'];
+    foreach ($result['defined'] as $name) {
+        $defined[$name] = true;
+    }
+}
+
+foreach ($perFile as $rel => $reported) {
+    foreach ($reported as [$line, $symbol, $kind]) {
+        if (isset($defined[$symbol])) {
+            continue;
+        }
+        echo json_encode(
+            ['file' => $rel, 'line' => $line, 'symbol' => $symbol, 'kind' => $kind],
+            JSON_UNESCAPED_SLASHES
+        ), "\n";
+    }
+}
+```
+
+**`scripts/check-theme-stand.py`** — the gate itself. It orchestrates the five checks and owns the exit code.
 
 ```python
 #!/usr/bin/env python3
@@ -1012,83 +1281,18 @@ def read(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
 
-GUARD_WINDOW = 4  # how many lines above a call a function_exists() guard may sit
+def _display(where: Path, theme: Path) -> str:
+    """Show a finding's file relative to the theme when it lives there.
 
-
-def _indent_of(line: str) -> int:
-    return len(line) - len(line.lstrip())
-
-
-PHP_TAG_RE = re.compile(r"<\?(?:php|=)?|\?>")
-
-
-def _closes_block(line: str, guard_indent: int) -> bool:
-    """True when `line` closes a block opened at `guard_indent`.
-
-    PHP tags are stripped first, because a template closer is routinely written
-    `<?php } ?>` or `<?php endif; ?>` -- testing the raw line for a leading `}`
-    misses the first of those entirely and reopens the hole the check exists to close.
+    The basename alone is ambiguous: a theme with two `render.php` files reports two
+    findings that read identically, and whoever triages them cannot tell which file
+    to open. A finding about the theme itself prints the theme's name rather than `.`.
     """
-    if _indent_of(line) > guard_indent:
-        return False
-    body = PHP_TAG_RE.sub(" ", line).strip()
-    if body.startswith("}"):
-        return True
-    # `endif` must begin the statement. A mention inside a comment, a string literal
-    # or a variable name (`$endif_check`) closes nothing, and counting it as a closer
-    # would report a call that is genuinely guarded.
-    return body.startswith("endif")
-
-
-def _guarded(lines, index: int, name: str) -> bool:
-    """True when a function_exists() guard for `name` actually encloses this call.
-
-    The guard has to *enclose* the call, not merely appear somewhere in the file.
-    Testing the whole file text let one guarded call exempt every unguarded call to
-    the same symbol in that file -- which is exactly the shape of the v3 fatal this
-    check exists to catch, so the exemption could be defeated by adding the guard it
-    was written to accept.
-
-    Four conditions must all hold:
-      1. a guard for this exact `name` is on the call's own line, or within
-         GUARD_WINDOW lines above it;
-      2. the call is indented deeper than the guard line;
-      3. the guard does not close its own block on the guard line (the one-line
-         `if ( function_exists('x') ) { x(); }` form); and
-      4. no closer at or above the guard's own indent sits between guard and call.
-
-    Conditions 3 and 4 are what separate a call inside the guard's block from one that
-    merely follows a guard whose block has already ended. Proximity and indentation
-    alone exempt the second case, because it is deeper-indented and still in the window.
-    """
-    needles = (f"function_exists('{name}')", f'function_exists("{name}")')
-    if any(n in lines[index] for n in needles):
-        return True
-
-    guard_line = None
-    for j in range(index - 1, max(-1, index - GUARD_WINDOW - 1), -1):
-        if any(n in lines[j] for n in needles):
-            guard_line = j
-            break
-    if guard_line is None:
-        return False
-
-    guard_indent = _indent_of(lines[guard_line])
-    if _indent_of(lines[index]) <= guard_indent:
-        return False
-
-    # Condition 3: the guard line itself may open and close the block, in which case
-    # nothing below it is inside the guard. Only a closer *after* the guard expression
-    # counts -- the `{` that opens the block must not be read as one.
-    guard_text = lines[guard_line]
-    after_needle = guard_text[max(guard_text.find(n) for n in needles) :]
-    if "}" in after_needle:
-        return False
-
-    # Condition 4: the block must still be open at the call.
-    return not any(
-        _closes_block(line, guard_indent) for line in lines[guard_line + 1 : index]
-    )
+    try:
+        rel = where.relative_to(theme)
+    except ValueError:
+        return str(where)
+    return theme.name if str(rel) == "." else str(rel)
 
 
 # --- checks -----------------------------------------------------------------
@@ -1127,34 +1331,41 @@ def check_block_json(theme: Path):
 def check_symbols(theme: Path):
     """Every cs__ symbol used by a template must be defined in the theme.
 
+    The analysis is delegated to `scripts/check-symbols.php`, which tokenizes rather
+    than pattern-matches. PHP's block structure is neither indentation-based nor
+    line-based, so whether a call sits inside a `function_exists()` guard cannot be
+    decided by scanning text: three rounds of regex heuristics each missed new
+    spellings (an over-indented closer, a tab/space mix, `<?php } ?>`, a closer behind
+    a comment, a one-line guard) and introduced false alarms of their own. Tokens do
+    not guess. See that file for the reasoning.
+
     This is the check that would have caught the v3 fatal:
     Class "cs__primary_menu_walker" not found.
     """
-    defined = set()
-    for f in php_files(theme):
-        src = read(f)
-        defined |= set(re.findall(r"function\s+&?\s*(cs__\w+)", src))
-        defined |= set(re.findall(r"class\s+(cs__\w+|CS_\w+)", src))
-
-    missing = []
-    for f in php_files(theme):
-        lines = read(f).splitlines()
-        for i, line in enumerate(lines):
-            # Report per line so two call sites stay two findings, and so a `new`
-            # expression is not also counted again by the plain-call scan below.
-            new_names = set(re.findall(r"\bnew\s+(cs__\w+|CS_\w+)\s*\(", line))
-            for name in new_names:
-                if name not in defined:
-                    missing.append((f, f"new {name}()"))
-            for name in set(re.findall(r"\b(cs__\w+)\s*\(", line)):
-                if name in defined or name in new_names:
-                    continue
-                # function_exists guards are an accepted declaration of an optional
-                # dependency -- but only for the call they actually guard.
-                if _guarded(lines, i, name):
-                    continue
-                missing.append((f, f"{name}()"))
-    return missing
+    helper = Path(__file__).resolve().parent / "check-symbols.php"
+    if not helper.exists():
+        return [(theme, f"symbol analysis helper is missing: {helper}")]
+    try:
+        r = subprocess.run(
+            [PHP, str(helper), str(theme)], capture_output=True, text=True
+        )
+    except FileNotFoundError:
+        return SKIP  # no PHP on this machine; the syntax check reports the same
+    if r.returncode != 0:
+        return [(theme, f"symbol analysis failed: {r.stderr.strip() or r.returncode}")]
+    problems = []
+    for line in r.stdout.splitlines():
+        if not line.strip():
+            continue
+        try:
+            found = json.loads(line)
+        except json.JSONDecodeError:
+            problems.append((theme, f"symbol analysis emitted junk: {line.strip()}"))
+            continue
+        symbol = found.get("symbol")
+        shown = f"new {symbol}()" if found.get("kind") == "new" else f"{symbol}()"
+        problems.append((theme / found["file"], f"line {found['line']}: {shown}"))
+    return problems
 
 
 def check_escaping(theme: Path):
@@ -1215,7 +1426,7 @@ def main():
             failed += 1
             print(f"FAIL  {name}  ({len(problems)})")
             for where, what in problems[:20]:
-                print(f"        {where.name}: {what}")
+                print(f"        {_display(where, theme)}: {what}")
             if len(problems) > 20:
                 print(f"        … and {len(problems) - 20} more")
         else:
@@ -1239,11 +1450,11 @@ if __name__ == "__main__":
 python scripts/check-theme-stand.py "D:/Local/starter-theme/app/public/wp-content/themes/cs_w_000_starter-v3"; echo "exit=$?"
 ```
 
-Expected: FAIL with exit 1, and the `symbol resolution` check reporting `header.php: new cs__primary_menu_walker()`.
+Expected: FAIL with exit 1, and the `symbol resolution` check reporting `header.php: line 42: new cs__primary_menu_walker()`.
 
 If the symbol check does **not** report it, the check is wrong — fix the check, not the expectation. `php -l` passing on that same file (verified) is what makes this check the load-bearing one.
 
-**Assert the specific line, not the exit code.** v3 fails four of the five checks, not one (measured: `block.json validity` 4 problems, `symbol resolution` 2, `output escaping` 10, `build artifacts not tracked` 8). So `exit=1` proves almost nothing on its own — a stand script that had simply been broken in a way that always exits 1 would satisfy it. The oracle is only meaningful when `header.php: new cs__primary_menu_walker()` appears in the output, because that is the check `php -l` provably cannot make.
+**Assert the specific line, not the exit code.** v3 fails four of the five checks, not one (measured: `block.json validity` 4 problems, `symbol resolution` 2 — both call sites, `output escaping` 10, `build artifacts not tracked` 8). So `exit=1` proves almost nothing on its own — a stand script that had simply been broken in a way that always exits 1 would satisfy it. The oracle is only meaningful when `new cs__primary_menu_walker()` appears in the output, because that is the check `php -l` provably cannot make.
 
 - [ ] **Step 3b: Prove the gate cannot pass over nothing**
 
@@ -1268,80 +1479,137 @@ python scripts/check-theme-stand.py "<non-repo-dir>"; echo "exit=$?"           #
 
 For (c) the expected line is `SKIP  build artifacts not tracked  (could not run here)`. Skipping rather than failing is deliberate: claiming a pass would be a lie, but failing would raise a false alarm on a legitimate use — a copy of the theme that is not a git checkout.
 
-**And the guard logic must not overshoot.** A fix that closes the hole by firing on legitimate guards is not a fix. All four of these must hold, with the symbol defined nowhere in each case:
+**And the analyser must handle guard enclosure exactly.** These are the cases that defeated three rounds of regex heuristics, plus the false alarms those rounds introduced. The symbol is defined nowhere in each, and "reported" means `symbol resolution` must FAIL and name it.
 
 ```bash
-# (d) the guard's block has already closed: the later call is unguarded -> must FAIL
+# --- must be REPORTED (the call is genuinely unguarded) ---
+
+# (d) the guard's block has already closed
 #         if ( function_exists('cs__x') ) {
 #             cs__x();
 #         }
 #         if ( $cond ) {
-#             cs__x();          <- deeper-indented and in the window, but NOT guarded
+#             cs__x();          <- deeper-indented, but NOT guarded
 #         }
 
-# (e) legitimate: the call is two lines inside an open block -> must PASS
+# (e) a closer indented deeper than the guard
 #         if ( function_exists('cs__x') ) {
-#             $y = 1;
+#             cs__x();
+#                 }
+#         if ( $cond ) {
 #             cs__x();
 #         }
 
-# (f) legitimate template form with an intervening line -> must PASS
-#         <?php if ( function_exists('cs__x') ) : ?>
-#             <?php $y = 1; ?>
-#             <?php cs__x(); ?>
-#         <?php endif; ?>
+# (f) a tab/space mix between guard and closer
+#         if ( function_exists('cs__x') ) {
+#             cs__x();
+#         <tab>}
+#         if ( $cond ) {
+#             cs__x();
+#         }
 
-# (g) unguarded call after `endif;` -> must FAIL
-#         <?php if ( function_exists('cs__x') ) : ?>
-#             <?php cs__x(); ?>
-#         <?php endif; ?>
-#         <?php cs__x(); ?>
-```
-
-(d) and (g) are the hole; (e) and (f) are the reason the hole is closed by *enclosure* rather than by making the exemption narrower — proximity plus indentation alone exempts (d), because it is deeper-indented and still within the window.
-
-**Two more closers the first enclosure rule missed**, both idiomatic in WordPress templates, both of which reopen the hole. Both must FAIL:
-
-```bash
-# (h) a template brace closer written `<?php } ?>` -- the line does not *start* with `}`
+# (g) a template brace closer written `<?php } ?>`
 #         <?php if ( function_exists('cs__x') ) { ?>
 #             <?php cs__x(); ?>
 #         <?php } ?>
 #         <?php if ( $c ) { ?>
-#             <?php cs__x(); ?>      <- deeper-indented, but the guard's block is gone
+#             <?php cs__x(); ?>
 #         <?php } ?>
 
-# (i) a guard written on one line with its body -- the block opens and closes on the
-#     guard line itself, so nothing below it is inside the guard
+# (h) a closer sharing its line with a preceding statement
+#         <?php if ( function_exists('cs__x') ) { ?>
+#             <?php cs__x(); ?>
+#         <?php $z = 1; } ?>
+#         <?php if ( $c ) { ?>
+#             <?php cs__x(); ?>
+#         <?php } ?>
+
+# (i) a closer behind a comment
+#         <?php if ( function_exists('cs__x') ) { ?>
+#             <?php cs__x(); ?>
+#         <?php /* done */ } ?>
+#         <?php if ( $c ) { ?>
+#             <?php cs__x(); ?>
+#         <?php } ?>
+
+# (j) a guard written on one line with its body
 #         if ( function_exists('cs__x') ) { cs__x(); }
 #         if ( $cond ) {
 #             cs__x();
 #         }
 
-# (j) `endif` followed by a deeper-indented unguarded call -> must FAIL
+# (k) an unguarded call after `endif;` -- both at the same indent and indented deeper
 #         <?php if ( function_exists('cs__x') ) : ?>
 #             <?php cs__x(); ?>
 #         <?php endif; ?>
+#         <?php cs__x(); ?>
+
+# (l) a call in the `else` branch of the guard's own `if`
+#         if ( function_exists('cs__x') ) {
+#             cs__x();
+#         } else {
+#             cs__x();
+#         }
+
+# (m) a call after a nested block inside the guard has closed
+#         if ( function_exists('cs__x') ) {
+#             if ( $y ) {
+#                 cs__x();
+#             }
+#         }
+#         cs__x();
+
+# --- must NOT be reported (the call is genuinely guarded, or resolves) ---
+
+# (n) the call two lines inside an open block
+#         if ( function_exists('cs__x') ) {
+#             $y = 1;
+#             cs__x();
+#         }
+
+# (o) the template form with an intervening line
+#         <?php if ( function_exists('cs__x') ) : ?>
+#             <?php $y = 1; ?>
 #             <?php cs__x(); ?>
-```
+#         <?php endif; ?>
 
-**And the closer test must not fire on mere mentions of `endif`.** Both of these are legitimately guarded and must PASS — treating a comment or a variable name as a closer would report a call that is fine:
+# (p) a nested block inside the guard
+#         if ( function_exists('cs__x') ) {
+#             if ( $y ) {
+#                 cs__x();
+#             }
+#         }
 
-```bash
-# (k) a variable whose name contains `endif`, inside the guard -> must PASS
+# (q) a variable named `$endif_check` inside the guard
 #         if ( function_exists('cs__x') ) {
 #             $endif_check = 1;
 #             cs__x();
 #         }
 
-# (l) a comment mentioning `endif`, inside the guard -> must PASS
+# (r) a comment mentioning `endif` inside the guard
 #         if ( function_exists('cs__x') ) {
 #         // see endif; below
 #             cs__x();
 #         }
+
+# (s) a `}` inside a comment on the guard line
+#         if ( function_exists('cs__x') ) { // }
+#             cs__x();
+#         }
+
+# (t) a stale docblock mentioning the symbol -- a comment is not a call
+#         <?php
+#         /** @see cs__x() for the old API */
+
+# (u) the symbol is actually defined
+#         <?php
+#         function cs__x() {}
+#         cs__x();
 ```
 
-The asymmetry is deliberate: a missed closer lets a fatal through, while a spurious closer raises a false alarm. Neither is acceptable, which is why `endif` must *begin the statement* and PHP tags must be stripped before testing — not why the test should be blunt.
+`(t)` and `(u)` are two false alarms the old regex pass produced and structurally could not fix: a raw-text scan reads a docblock as a call site, and a definition has to be recognised by pattern rather than by token. Both come free once the analysis is tokenized.
+
+The asymmetry that matters: **a missed closer lets a fatal through; a spurious closer raises a false alarm.** The first is the failure that killed v3, the second is the failure that trains a team to ignore the gate. The tokenizer is the only form that is exact in both directions, which is why this task no longer tries to reconstruct PHP's block structure from text.
 
 - [ ] **Step 4: Run it against v4 — it must pass**
 
@@ -1358,7 +1626,7 @@ Add `"stand": "python scripts/check-theme-stand.py"` to `package.json` scripts.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add scripts/check-theme-stand.py package.json
+git add scripts/check-theme-stand.py scripts/check-symbols.php package.json
 git commit -m "feat: stand check script with v3 as its failing oracle"
 ```
 
