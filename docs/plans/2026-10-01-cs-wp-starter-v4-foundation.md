@@ -2849,13 +2849,16 @@ Then prove F1 with real output, not by reading the code — a menu item whose la
 ```bash
 WP="C:/Users/Admin/Documents/CSTHEME-ops/scripts/cs-wp"
 "$WP" -e '$i = new WP_Post((object) array("ID"=>999,"title"=>"Say \"Hi\" now","classes"=>array(),"attr_title"=>"","target"=>"","xfn"=>"","url"=>"/x","menu_item_parent"=>0,"object_id"=>999,"type"=>"post_type","object"=>"page","db_id"=>999));
-$w = new cs__primary_menu_walker();
-ob_start(); $w->start_el("", $i, 0, (object) array("theme_location"=>"primary"), 1); $out = ob_get_clean();
-echo $out, "\n";
-echo "well-formed: ", (str_contains($out, "&quot;") && substr_count($out, chr(34)) % 2 === 0 ? "yes" : "NO"), "\n";'
+$w = new cs__primary_menu_walker(); $out = "";
+$w->start_el($out, $i, 0, (object) array("theme_location"=>"primary"), 1);
+echo $out, "\\n";
+echo "  escaped: ", (str_contains($out, "&quot;") ? "yes" : "NO"), "\\n";
+echo "  attribute well-formed: ", (preg_match("/data-content=\"[^\"]*\"/", $out) && !str_contains($out, chr(34)." onmouseover") ? "yes" : "NO"), "\\n";'
 ```
 
 Expected: the label arrives escaped (`&quot;`) and the attribute closes where it should.
+
+**Two things the obvious form of this snippet gets wrong, both measured.** `start_el()` takes `$output` **by reference** and **appends to it** — it does not echo. So passing a literal fatals (`Argument #1 ($output) could not be passed by reference`, exit 255), and wrapping the call in `ob_start()`/`ob_get_clean()` captures nothing because nothing is printed. Declare `$out = ""`, pass the variable, and read it afterwards.
 
 Then commit and **push**:
 
