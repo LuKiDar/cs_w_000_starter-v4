@@ -60,17 +60,18 @@ function cs__customize_register( $wp_customize ){
 		'priority'			=> 102,
 	));
 
-	// The key is the slug, not the label: the social template
-	// (parts/social-networks-menu.php) reads `cs_social_{slug}` options, and it
-	// reads `cs_social_x` for Twitter/X -- v3 registered `cs_social_twitter`,
-	// which the template never looked at.
+	// The key is the slug, not the label: v3's social template read
+	// `cs_social_{slug}` options and read `cs_social_x` for Twitter/X, while v3
+	// registered `cs_social_twitter` -- the field saved to an option nothing
+	// consumed. v4 ships no social template yet, so these settings are consumed by
+	// whatever a project renders.
 	$social_networks = array(
-		'email'		=> 'Email',
-		'facebook'	=> 'Facebook',
-		'instagram'	=> 'Instagram',
-		'linkedin'	=> 'LinkedIn',
-		'x'			=> 'X (Twitter)',
-		'youtube'	=> 'YouTube',
+		'email'		=> sprintf( __( '%s', CSWP ), 'Email' ),
+		'facebook'	=> sprintf( __( '%s', CSWP ), 'Facebook' ),
+		'instagram'	=> sprintf( __( '%s', CSWP ), 'Instagram' ),
+		'linkedin'	=> sprintf( __( '%s', CSWP ), 'LinkedIn' ),
+		'x'			=> sprintf( __( '%s', CSWP ), 'X (Twitter)' ),
+		'youtube'	=> sprintf( __( '%s', CSWP ), 'YouTube' ),
 	);
 	foreach ( $social_networks as $slug => $label ){
 		$wp_customize->add_setting("cs_social_{$slug}", array(

@@ -1,6 +1,12 @@
 <?php
 /**
  * Breadcrumbs
+ *
+ * Ported from v3. Escapes are scoped: the plain-text sites (titles, the search
+ * query, tag/category names, post-type labels) are escaped, while the calls that
+ * return ready-made HTML (get_category_parents(), $breadcrumbs[$i], $homeItem)
+ * and the get_the_time() values are left as they are -- escaping those would
+ * print markup as text.
  */
 
 function cs__the_breadcrumbs( $modifier='' ){
@@ -14,9 +20,9 @@ function cs__the_breadcrumbs( $modifier='' ){
 	global $post;
 	$homeLink = get_bloginfo('url');
 
-	$homeItem = '<a href="'. $homeLink .'">'. $home .'</a> ';
+	$homeItem = '<a href="'. esc_url( $homeLink ) .'">'. esc_html( $home ) .'</a> ';
 
-	echo '<nav class="breadcrumbs'. $modifier .'">';
+	echo '<nav class="breadcrumbs'. esc_attr( $modifier ) .'">';
 
 		if ( is_front_page() ){
 			if ( $showOnHome==1 ){
@@ -25,7 +31,7 @@ function cs__the_breadcrumbs( $modifier='' ){
 
 		} else if ( is_home() ){
 			echo $homeItem .''. $delimiter;
-			echo $beforeCurrent . get_the_title(get_option('page_for_posts')) . $afterCurrent;
+			echo $beforeCurrent . esc_html( get_the_title(get_option('page_for_posts')) ) . $afterCurrent;
 
 		} else {
 			echo $homeItem .''. $delimiter;
@@ -38,7 +44,7 @@ function cs__the_breadcrumbs( $modifier='' ){
 				echo $beforeCurrent .single_cat_title('', false). $afterCurrent;
 
 			} elseif ( is_search() ){
-				echo $beforeCurrent .'Search results for: '. get_search_query() . $afterCurrent;
+				echo $beforeCurrent .'Search results for: '. esc_html( get_search_query() ) . $afterCurrent;
 
 			} elseif ( is_day() ){
 				echo '<a href="'. get_year_link(get_the_time('Y')) .'">'. get_the_time('Y') .'</a>'. $delimiter;
@@ -56,7 +62,7 @@ function cs__the_breadcrumbs( $modifier='' ){
 				if ( get_post_type()!='post' ){
 					$post_type = get_post_type();
 					$post_type_obj = get_post_type_object($post_type);
-					echo '<a href="'. get_post_type_archive_link($post_type) .'">'. $post_type_obj->labels->singular_name .'</a>';
+					echo '<a href="'. get_post_type_archive_link($post_type) .'">'. esc_html( $post_type_obj->labels->singular_name ) .'</a>';
 
 					if ( $post->post_parent ){
 						$parent_id = $post->post_parent;
@@ -77,7 +83,7 @@ function cs__the_breadcrumbs( $modifier='' ){
 					}
 
 					if ( $showCurrent==1 ){
-						echo $delimiter. $beforeCurrent .get_the_title(). $afterCurrent;
+						echo $delimiter. $beforeCurrent .esc_html( get_the_title() ). $afterCurrent;
 					}
 				} else {
 					$cat = get_the_category();
@@ -88,27 +94,27 @@ function cs__the_breadcrumbs( $modifier='' ){
 					}
 					echo $cats;
 					if ( $showCurrent==1 ){
-						echo $beforeCurrent .get_the_title(). $afterCurrent;
+						echo $beforeCurrent .esc_html( get_the_title() ). $afterCurrent;
 					}
 				}
 
 			} elseif ( !is_single() && !is_page() && get_post_type()!='post' && !is_404() ){
 				$post_type = get_post_type_object(get_post_type());
-				echo $beforeCurrent .$post_type->labels->singular_name. $afterCurrent;
+				echo $beforeCurrent .esc_html( $post_type->labels->singular_name ). $afterCurrent;
 
 			} elseif ( is_attachment() ){
 				$parent = get_post($post->post_parent);
 				$cat = get_the_category($parent->ID);
 				$cat = $cat[0];
 				echo get_category_parents($cat, true, $delimiter);
-				echo '<a href="' .get_permalink($parent). '">' .$parent->post_title. '</a>';
+				echo '<a href="' .get_permalink($parent). '">' .esc_html( $parent->post_title ). '</a>';
 				if ( $showCurrent==1 ){
-					echo $delimiter. $beforeCurrent .get_the_title(). $afterCurrent;
+					echo $delimiter. $beforeCurrent .esc_html( get_the_title() ). $afterCurrent;
 				}
 
 			} elseif ( is_page() && !$post->post_parent ){
 				if ( $showCurrent==1 ){
-					echo $beforeCurrent .get_the_title(). $afterCurrent;
+					echo $beforeCurrent .esc_html( get_the_title() ). $afterCurrent;
 				}
 
 			} elseif ( is_page() && $post->post_parent ){
@@ -127,16 +133,16 @@ function cs__the_breadcrumbs( $modifier='' ){
 					}
 				}
 				if ( $showCurrent==1 ){
-					echo $delimiter. $beforeCurrent .get_the_title(). $afterCurrent;
+					echo $delimiter. $beforeCurrent .esc_html( get_the_title() ). $afterCurrent;
 				}
 
 			} elseif ( is_tag() ){
-				echo $beforeCurrent .'Posts tagged "'. single_tag_title('', false) .'"'. $afterCurrent;
+				echo $beforeCurrent .'Posts tagged "'. esc_html( single_tag_title('', false) ) .'"'. $afterCurrent;
 
 			} elseif ( is_author() ){
 				global $author;
 				$userdata = get_userdata($author);
-				echo $beforeCurrent .'Articles posted by '. $userdata->display_name. $afterCurrent;
+				echo $beforeCurrent .'Articles posted by '. esc_html( $userdata->display_name ). $afterCurrent;
 
 			} elseif ( is_404() ){
 				echo $beforeCurrent .'Error 404'. $afterCurrent;

@@ -50,7 +50,7 @@ class cs__primary_menu_walker extends Walker_Nav_Menu {
 		$class_names = esc_attr( implode( ' ', apply_filters( 'nav_menu_css_class', array_filter( $classes ), $item, $args ) ) );
 
 		// Build html
-		$output .= $indent . '<li id="menu-item-' . $item->ID . '" class="' . $class_names . ' ' . $depth_class_names . '" data-content="' . $item->title . '">';
+		$output .= $indent . '<li id="menu-item-' . $item->ID . '" class="' . $class_names . ' ' . $depth_class_names . '" data-content="' . esc_attr( $item->title ) . '">';
 
 		// Link attributes
 		$attributes  = !empty( $item->attr_title ) ? ' title="' . esc_attr( $item->attr_title ) . '"' : '';
