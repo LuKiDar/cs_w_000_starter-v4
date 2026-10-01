@@ -8,6 +8,7 @@
 	"scripts": {
 		"start": "gulp",
 		"build": "gulp build",
+		"watch": "gulp watch",
 		"tokens": "node scripts/build-tokens.mjs"
 	},
 	"devDependencies": {
