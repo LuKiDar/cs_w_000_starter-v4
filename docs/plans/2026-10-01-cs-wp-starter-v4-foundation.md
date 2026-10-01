@@ -1901,6 +1901,7 @@ Proves the whole chain: contract, field access, `CS_Block_Styles`, per-page asse
 - Create: `inc/class-block-styles.php`
 - Create: `acf-json/group_part_block_content.json`, `acf-json/group_part_button_group.json`
 - Modify: `inc/helper-functions.php` (add `cs__render_link_group()`)
+- Modify: `assets/scss/abstracts/_functions.scss`, `_mixins.scss`, `_variables.scss` (Step 2b — Task 3 left the first two as stubs, and the block cannot compile without them)
 
 **Interfaces:**
 - Consumes: `cs__get_block_id()`, `cs__get_block_classes()`, `cs__render_link_group()`, `CS_Block_Styles::get_styles()`.
@@ -1924,6 +1925,91 @@ Add it to the always-on includes in `functions.php`:
 ```php
 require_once 'inc/class-block-styles.php';
 ```
+
+- [ ] **Step 2b: Populate the SCSS abstracts**
+
+Task 3 built the SCSS skeleton but left `assets/scss/abstracts/_functions.scss` and `_mixins.scss` as header-only stubs — 171 and 174 bytes, no definitions. The block's `style.scss` (Step 7) calls `mediaMaxWidth()` and `remc()`, so **the block cannot compile until these exist**, and the failure is quiet: gulp-sass's `.on('error', sass.logError)` logs the error and gulp still exits **0**. A `npm run build` that reports success while emitting no block stylesheet at all is the exact trap this pipeline exists to avoid.
+
+Write `assets/scss/abstracts/_functions.scss`:
+
+```scss
+/**
+ * Functions
+ */
+
+/* --- Convert px to rem --- */
+@function remc( $pxValue ){
+	@return calc($pxValue / 16 * 1rem);
+}
+```
+
+Write `assets/scss/abstracts/_mixins.scss`:
+
+```scss
+/**
+ * Mixins
+ */
+
+/* --- Media Queries --- */
+@mixin mediaMinWidth( $minWidth ){
+	@if type-of($minWidth)==string {
+		$minWidth: map-get($breakpoints, $minWidth);
+	}
+
+	@media screen and (min-width: #{$minWidth + 0px}){
+		@content;
+	}
+}
+@mixin mediaMaxWidth( $maxWidth ){
+	@if type-of($maxWidth)==string {
+		$maxWidth: map-get($breakpoints, $maxWidth);
+	}
+
+	@media screen and (max-width: #{$maxWidth + 0px}){
+		@content;
+	}
+}
+@mixin mediaBetween( $minWidth, $maxWidth ){
+	@if type-of($minWidth)==string {
+		$minWidth: map-get($breakpoints, $minWidth);
+	}
+	@if type-of($maxWidth)==string {
+		$maxWidth: map-get($breakpoints, $maxWidth);
+	}
+
+	@media screen and (min-width: #{$minWidth + 0px}) and (max-width: #{$maxWidth + 0px}){
+		@content;
+	}
+}
+```
+
+Then append the breakpoints map to `assets/scss/abstracts/_variables.scss`, after its `@import 'tokens';` line:
+
+```scss
+/* --- Breakpoints --- */
+$breakpoints: (
+	xxs:  421,
+	xs:   551,
+	sm:   782,
+	md:   1025,
+	lg:   1201,
+	xl:   1441,
+	xxl:  1921,
+	xxxl: 2560
+);
+```
+
+Verify, and **verify the build actually emitted the stylesheet** — not merely that it exited 0:
+
+```bash
+npm run build; echo "build exit=$?"
+ls -1 parts/block/cta/        # must list style.min.css and editor.min.css
+grep -o "@media screen and (max-width: [0-9]*px)" parts/block/cta/style.min.css | sort -u
+```
+
+Expected: exit 0, both `.min.css` files present, and the resolved media query printed. **An empty `grep` means the mixin did not resolve and the build silently produced nothing** — stop and report it rather than proceeding, because every later step would then be testing a stylesheet that does not exist.
+
+Port the media mixins and `remc` only. Arosa's other mixins (`iconMask`, `getStyles`, `addColorVariations`, `wpTextColors`, …) and `encodecolor()` serve Arosa's own icon and colour system; v4's blocks are meant to be light and universal, and a helper added for a need that does not exist yet is a surface with nothing behind it. Add them when a block actually needs them.
 
 - [ ] **Step 3: Add `cs__render_link_group()` to `inc/helper-functions.php`**
 
@@ -2080,14 +2166,12 @@ $block      = $data['block'] ?? array();
 if ( $heading === '' && $content === '' && empty($buttons) ){
 	return;
 }
-
-$styles = function_exists('cs__get_block_styles') ? cs__get_block_styles($block) : '';
 ?>
 
 <section
 	id="<?= esc_attr(cs__get_block_id($block)); ?>"
 	class="<?= esc_attr(cs__get_block_classes($block, 'block-cta')); ?>"
-	<?= $styles; ?>
+	<?= cs__get_block_styles($block); ?>
 >
 	<div class="block-cta__container container">
 		<?php if ( $eyebrow !== '' ): ?>
@@ -2111,7 +2195,11 @@ $styles = function_exists('cs__get_block_styles') ? cs__get_block_styles($block)
 </section>
 ```
 
-The `function_exists` guard on `cs__get_block_styles` is what makes the block survive ACF Pro being deactivated and the class not loading.
+The `<?= cs__get_block_styles($block); ?>` form is the reference theme's own, and it is deliberate in two ways.
+
+It is a **call, not a variable** — `cs__get_block_styles()` returns a complete, already-escaped attribute fragment (`CS_Block_Styles::get_styles()` ends `return 'style="' . esc_attr( implode( '; ', $styles ) ) . ';"'`), so echoing it raw is correct. Assigning it to `$styles` first and echoing the variable is what makes `npm run stand` fail: the escaping check matches `<?= $…` — an echo of a value whose provenance it cannot see — and a call to the theme's own escaping helper is not that. The check is right to be blunt; write the line the way Arosa writes it.
+
+There is **no `function_exists()` guard**, and the guard that was here before was guarding nothing: `inc/class-block-styles.php` is an always-on include in `functions.php` (Step 2), so the helper cannot be absent while the theme is loaded. A guard would only add a silent path where the block renders without its spacing — and the stand script's symbol check already fails loudly if the function is ever genuinely missing.
 
 - [ ] **Step 7: Write `parts/block/cta/style.scss`**
 
@@ -2264,9 +2352,29 @@ echo $html, "\n";
 '
 ```
 
-`render.php` early-returns when the heading, the content and the buttons are all empty, so **an empty result here is the empty path, not the render path** — it proves nothing about the markup. An ACF block's values live in meta that ACF writes from the editor, and whether they can be set from a script is for you to determine rather than assume. Find the mechanism ACF actually uses for this block — the block's `data` attribute in the comment delimiter, post meta, or `acf_setup_meta()` — and set the heading, the content and one button so the full markup is produced.
+`render.php` early-returns when the heading, the content and the buttons are all empty, so **an empty result here is the empty path, not the render path** — it proves nothing about the markup.
 
-Then assert the markup itself: the wrapper carries `block-cta` and the align class, the heading is escaped, the button group rendered through `cs__render_link_group()`, and `cs__get_block_styles()` produced the inline `style` from the block's `style` attribute. **Report which mechanism you used and paste the rendered HTML.** If none of them works, report the step as blocked with what you tried — a blocked step reported as blocked is worth more than a plausible-looking claim, and this project has already been saved twice by exactly that.
+**The mechanism, already established:** ACF carries an ACF block's field values in the block's `data` attribute, in the comment delimiter. ACF 6's `use_post_meta` defaults to **false**, so post meta is *not* the source of truth here — the values reach `get_field()` through `acf_setup_meta( $block['data'], $block['id'], true )` during the render. Put them in the delimiter:
+
+```bash
+WP="C:/Users/Admin/Documents/CSTHEME-ops/scripts/cs-wp"
+"$WP" -e '
+$id = 157;
+wp_update_post( array( "ID" => $id, "post_content" =>
+  "<!-- wp:cs/cta {\"align\":\"full\",\"data\":{" .
+  "\"eyebrow\":\"Eyebrow & test\"," .
+  "\"heading\":\"Ready <b>to</b> start?\"," .
+  "\"subheading\":\"Subheading text\"," .
+  "\"content\":\"<p>Body content.</p>\"," .
+  "\"buttons\":[" .
+  "{\"link\":{\"url\":\"https://example.com/contact\",\"title\":\"Contact us\"},\"link_type\":\"button\"}," .
+  "{\"link\":{\"url\":\"https://example.com/learn\",\"title\":\"Learn more\",\"target\":\"_blank\"},\"link_type\":\"button-outlined\"}]" .
+  "}} /-->" ) );
+echo do_blocks( get_post_field( "post_content", $id ) ), "\n";
+'
+```
+
+Assert the markup itself: the wrapper carries `block-cta` and the align class, the eyebrow and heading are **escaped** (`&` becomes `&amp;`, `<b>` becomes `&lt;b&gt;`), the content goes through `wp_kses_post()`, the buttons render through `cs__render_link_group()` with `target="_blank"` gaining `rel="noopener noreferrer"`, and `cs__get_block_styles()` produced the inline `style` from the block's `style` attribute. **Paste the rendered HTML.**
 
 - [ ] **Step 12: Prove the assets load only where the block is**
 
@@ -2306,19 +2414,26 @@ mv /tmp/group_part_block_content.json acf-json/
 
 Expected: `code=200`, and **zero** theme-related lines. The log always grows by one line per request from a pre-existing `wp-config.php` bug that defines `WP_DEBUG` twice (guarded at line 90, unguarded at line 97) — that line is not this theme's and must not be counted as a failure.
 
-**(2) The block twice on one page.** Put two blocks with explicit, distinct `id` attributes in the content so a missing `id` is distinguishable from a duplicated one:
+**(2) The block twice on one page.** Put two blocks on it, each with an `anchor` and field values, so a missing `id` is distinguishable from a duplicated one:
 
 ```bash
 "$WP" -e '
 wp_update_post( array( "ID" => 157, "post_content" =>
-  "<!-- wp:cs/cta {\"id\":\"aaa111\",\"align\":\"full\"} /--><!-- wp:cs/cta {\"id\":\"bbb222\",\"align\":\"full\"} /-->" ) );
+  "<!-- wp:cs/cta {\"anchor\":\"aaa111\",\"align\":\"full\",\"data\":{\"heading\":\"One\"}} /-->" .
+  "<!-- wp:cs/cta {\"anchor\":\"bbb222\",\"align\":\"full\",\"data\":{\"heading\":\"Two\"}} /-->" ) );
 '
 echo "stylesheet references: $(curl -k -s https://starter-theme.local/block-test/ | grep -o 'parts/block/cta/style.min.css' | wc -l)"
-echo "duplicate ids:        $(curl -k -s https://starter-theme.local/block-test/ | grep -oE 'id="(aaa111|bbb222)"' | sort | uniq -d | wc -l)"
-echo "both ids present:     $(curl -k -s https://starter-theme.local/block-test/ | grep -oE 'id="(aaa111|bbb222)"' | sort -u | wc -l)"
+echo "duplicate ids:        $(curl -k -s https://starter-theme.local/block-test/ | grep -oE 'id=\"(aaa111|bbb222)\"' | sort | uniq -d | wc -l)"
+echo "both ids present:     $(curl -k -s https://starter-theme.local/block-test/ | grep -oE 'id=\"(aaa111|bbb222)\"' | sort -u | wc -l)"
 ```
 
-Expected: `1` stylesheet reference, `0` duplicate ids, and **`2`** distinct ids present. The third assertion is what makes the second one mean something: with an empty render both would be `0` and "no duplicates" would pass vacuously. If the ids are absent, Step 11's field population did not work and this step cannot be judged — say so rather than reporting a pass.
+Expected: `1` stylesheet reference, `0` duplicate ids, and **`2`** distinct ids present.
+
+Three things about this test, and each one silently turns it into a no-op if you get it wrong:
+
+- **`anchor`, not `id`.** ACF prefixes the `id` it hands the render callback — a block's own id comes through as `block_0bc404fa2706d4c218367684fc35bccb`, so `id="aaa111"` never appears and the grep matches nothing. `cs__get_block_id()` prefers `$block['anchor']` when it is set, which is what makes the id a literal you can assert on.
+- **The field values must be present.** `render.php` early-returns on empty fields, so without `data` there is no `<section>` at all and both counts are `0` — "no duplicates" passing vacuously. The third assertion is what gives the second one meaning: if it is not `2`, Step 11's field population did not work and this step cannot be judged. Say so rather than reporting a pass.
+- **`data` is the block's field payload**, carried in the comment delimiter — the mechanism Step 11 establishes.
 
 **(3) ACF Pro deactivated.** Deactivate it, read the page, reactivate:
 
@@ -2675,6 +2790,7 @@ git commit -m "feat: accessibility layer (eyebrow heading fix, focus runtime)"
 
 **Files:**
 - Create: `readme.md`
+- Modify: `scripts/check-theme-stand.py` (Step 3b — it pins a Local PHP version instead of discovering one)
 - Modify: any file that trips a PHP 8.4 deprecation
 
 **Interfaces:**
@@ -2721,6 +2837,72 @@ cat "/d/Local/starter-theme/logs/php/error.log"
 ```
 
 Expected: empty. Fix any `Deprecated:` line it prints. Switch the site back to 8.1.23 afterwards.
+
+- [ ] **Step 3b: Make the stand script lint with the PHP the site actually runs**
+
+`find_php()`'s Local fallback pins a single version:
+
+```python
+r"C:/Users/Admin/AppData/Roaming/Local/lightning-services/php-8.1.23+0/bin/win64/php.exe",
+```
+
+**This site runs PHP 8.4.10** — `services.php.version` in Local's own registry — so every `php -l` this script has run has been checking syntax against a PHP the site does not use. A pinned version is not a fallback: it is a check that silently stops testing what you think it tests, and it is the same class of mistake as pinning the MySQL port. The lesson generalises — anything this theme resolves from the environment (PHP, Node, the site's own version) must be discovered, not remembered.
+
+Glob the installed versions and take the newest, so the fallback follows the machine. Add `re` to the imports if it is not already there:
+
+```python
+def find_php() -> str:
+    """Locate the PHP CLI, in order: $CSWP_PHP, PATH, then this machine's newest Local install.
+
+    This script ships inside the theme and the client's team is expected to run it,
+    so a hard-coded path to one developer's machine must not be the only way to
+    find PHP. The Local glob stays as the last fallback so the owner's own
+    environment keeps working without any setup.
+
+    The version is globbed, never pinned. A pinned 8.1.23 linted this theme's files
+    while the site itself ran 8.4.10, so the check was reporting on a PHP that was
+    not in use -- and it would have kept doing so silently.
+    """
+    candidates = [os.environ.get("CSWP_PHP"), shutil.which("php")]
+
+    local = Path(os.environ.get("LOCALAPPDATA", "")) / "Local" / "lightning-services"
+    if local.is_dir():
+        installs = sorted(
+            local.glob("php-*/bin/win64/php.exe"),
+            key=lambda p: [int(n) for n in re.findall(r"\d+", p.parts[-4].split("+")[0])],
+            reverse=True,
+        )
+        candidates.extend(str(p) for p in installs)
+
+    for candidate in candidates:
+        if candidate and Path(candidate).exists():
+            return candidate
+    return "php"
+```
+
+Verify it resolves 8.4 rather than 8.1, and that the override still wins:
+
+```bash
+python - <<'PY'
+import importlib.util as u
+s = u.spec_from_file_location("st", "scripts/check-theme-stand.py")
+m = u.module_from_spec(s); s.loader.exec_module(m)
+print("resolved:", m.find_php())
+PY
+```
+
+Expected: a path containing `php-8.4.10`, **not** `php-8.1.23`.
+
+```bash
+CSWP_PHP="C:/Users/Admin/AppData/Roaming/Local/lightning-services/php-8.1.23+0/bin/win64/php.exe" python - <<'PY'
+import importlib.util as u
+s = u.spec_from_file_location("st", "scripts/check-theme-stand.py")
+m = u.module_from_spec(s); s.loader.exec_module(m)
+print("override wins:", m.find_php().endswith("php-8.1.23+0/bin/win64/php.exe"))
+PY
+```
+
+Expected: `True` — the explicit override still takes precedence over the glob, which is what keeps the escape hatch usable on a machine whose Local layout differs.
 
 - [ ] **Step 4: Run the stand check one last time**
 
