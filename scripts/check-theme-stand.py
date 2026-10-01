@@ -37,6 +37,12 @@ PHP = find_php()
 
 SKIP_DIRS = {"node_modules", ".git", "vendor", "build"}
 
+# A check returns this when it could not run at all -- no git on the machine, or the
+# directory is not a working tree. It is reported as SKIP and does not fail the gate:
+# claiming a pass would be a lie, and failing would be a false alarm on a legitimate
+# use such as a delivered copy that is not a git checkout.
+SKIP = object()
+
 
 def php_files(theme: Path):
     for p in theme.rglob("*.php"):
@@ -47,6 +53,41 @@ def php_files(theme: Path):
 
 def read(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
+
+
+GUARD_WINDOW = 4  # how many lines above a call a function_exists() guard may sit
+
+
+def _indent_of(line: str) -> int:
+    return len(line) - len(line.lstrip())
+
+
+def _guarded(lines, index: int, name: str) -> bool:
+    """True when a function_exists() guard for `name` actually encloses this call.
+
+    The guard has to *enclose* the call, not merely appear somewhere in the file.
+    Testing the whole file text let one guarded call exempt every unguarded call to
+    the same symbol in that file -- which is exactly the shape of the v3 fatal this
+    check exists to catch, so the exemption could be defeated by adding the guard it
+    was written to accept.
+
+    A guard on the call's own line always counts (the one-line `if ( function_exists(
+    'x' ) ) { x(); }` form). Otherwise the guard must sit above the call within
+    GUARD_WINDOW lines AND the call must be indented deeper than the guard, which is
+    what distinguishes a call inside the guard's block from one that merely follows it.
+    """
+    needles = (f"function_exists('{name}')", f'function_exists("{name}")')
+    if any(n in lines[index] for n in needles):
+        return True
+
+    guard_indent = None
+    for j in range(index - 1, max(-1, index - GUARD_WINDOW - 1), -1):
+        if any(n in lines[j] for n in needles):
+            guard_indent = _indent_of(lines[j])
+            break
+    if guard_indent is None:
+        return False
+    return _indent_of(lines[index]) > guard_indent
 
 
 # --- checks -----------------------------------------------------------------
@@ -91,19 +132,25 @@ def check_symbols(theme: Path):
     defined = set()
     for f in php_files(theme):
         src = read(f)
-        defined |= set(re.findall(r"function\s+(cs__\w+)", src))
+        defined |= set(re.findall(r"function\s+&?\s*(cs__\w+)", src))
         defined |= set(re.findall(r"class\s+(cs__\w+|CS_\w+)", src))
 
     missing = []
     for f in php_files(theme):
-        src = read(f)
-        for name in set(re.findall(r"\bnew\s+(cs__\w+|CS_\w+)\s*\(", src)):
-            if name not in defined:
-                missing.append((f, f"new {name}()"))
-        for name in set(re.findall(r"\b(cs__\w+)\s*\(", src)):
-            if name.startswith("cs__") and name not in defined:
-                # function_exists guards are an accepted declaration of an optional dependency
-                if f"function_exists('{name}')" in src or f'function_exists("{name}")' in src:
+        lines = read(f).splitlines()
+        for i, line in enumerate(lines):
+            # Report per line so two call sites stay two findings, and so a `new`
+            # expression is not also counted again by the plain-call scan below.
+            new_names = set(re.findall(r"\bnew\s+(cs__\w+|CS_\w+)\s*\(", line))
+            for name in new_names:
+                if name not in defined:
+                    missing.append((f, f"new {name}()"))
+            for name in set(re.findall(r"\b(cs__\w+)\s*\(", line)):
+                if name in defined or name in new_names:
+                    continue
+                # function_exists guards are an accepted declaration of an optional
+                # dependency -- but only for the call they actually guard.
+                if _guarded(lines, i, name):
                     continue
                 missing.append((f, f"{name}()"))
     return missing
@@ -120,11 +167,14 @@ def check_escaping(theme: Path):
 
 
 def check_build_artifacts(theme: Path):
-    r = subprocess.run(
-        ["git", "-C", str(theme), "ls-files"], capture_output=True, text=True
-    )
+    try:
+        r = subprocess.run(
+            ["git", "-C", str(theme), "ls-files"], capture_output=True, text=True
+        )
+    except FileNotFoundError:
+        return SKIP  # no git on this machine
     if r.returncode != 0:
-        return []
+        return SKIP  # not a git working tree
     bad = [
         line for line in r.stdout.splitlines()
         if line.endswith((".min.css", ".min.js", ".map"))
@@ -145,12 +195,21 @@ def main():
     theme = Path(sys.argv[1] if len(sys.argv) > 1 else os.getcwd()).resolve()
     print(f"Stand check: {theme}\n")
 
+    # Without this guard a typo, a wrong cwd or a failed checkout iterates an empty
+    # tree, every check finds nothing wrong, and the gate reports success over nothing.
+    if not theme.is_dir():
+        print(f"FAIL  theme directory not found: {theme}")
+        return 1
+
     failed = 0
     for name, fn in CHECKS:
         try:
             problems = fn(theme)
         except Exception as e:  # a crashing check is a failing check
             problems = [(theme, f"check raised {type(e).__name__}: {e}")]
+        if problems is SKIP:
+            print(f"SKIP  {name}  (could not run here)")
+            continue
         if problems:
             failed += 1
             print(f"FAIL  {name}  ({len(problems)})")
