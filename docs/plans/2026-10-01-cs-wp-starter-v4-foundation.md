@@ -2187,7 +2187,13 @@ $block      = $data['block'] ?? array();
 // with the block's own padding, as an empty band on the page.
 $has_button = false;
 foreach ( (array) $buttons as $row ){
-	if ( ! empty($row['link']['url']) && ! empty($row['link']['title']) ){
+	// Mirror cs__render_link_group()'s own row test EXACTLY. It skips a row when url or
+	// title is '' after a `?? ''` default, so `! empty()` here would disagree with it on
+	// "0", 0 and false -- and a button whose visible label is literally "0" would be
+	// dropped while the renderer would happily emit it.
+	$url   = $row['link']['url'] ?? '';
+	$title = $row['link']['title'] ?? '';
+	if ( $url !== '' && $title !== '' ){
 		$has_button = true;
 		break;
 	}
@@ -2433,7 +2439,22 @@ echo "bytes=", strlen(trim($h)), "\n", trim($h), "\n";
 
 Expected: **`bytes=0`**. A non-empty `$buttons` array is not the same as a block with a button: `cs__render_link_group()` skips a row with no url, but the wrapper is still emitted — and with the block's own `attributes.style.default` padding that is a blank band on the page. The `link` sub-field is `required: 0` in the field group, so this is reachable from the editor.
 
+```bash
+# (c) a button whose label is "0" must still count -- the guard must agree with the renderer
+"$WP" -e '
+wp_update_post( array( "ID" => 157, "post_content" => "<!-- wp:cs/cta {\"data\":{\"buttons\":[{\"link\":{\"url\":\"/x\",\"title\":\"0\"},\"link_type\":\"button\"}]}} /-->" ) );
+echo "title \"0\" alone => bytes=", strlen(trim(do_blocks(get_post_field("post_content",157)))), "\n";
+'
+```
+
+Expected: **non-zero**, and the markup contains `<a class="block-links__item button" href="/x">0</a>`. `cs__render_link_group()` skips a row only when url or title is `''` after a `?? ''` default — so the guard in `render.php` must use the same test, not `empty()`, which would treat `"0"` as absent and drop the button while the renderer would emit it.
+
 Restore page 157 to empty content after these.
+
+**Two limits, measured, deliberately not guarded.** Both were found by review, both were reproduced, and neither gets a guard — the rule on this project is that protection against a case not shown to occur is a surface with nothing behind it. Recorded so nobody re-discovers them:
+
+- **A preset background chosen through the legacy `backgroundColor` attribute does nothing.** `block.json` declares `supports.color.background: true`, so WP registers a `backgroundColor` attribute (confirmed in the registered attribute list) and the editor offers a background control. `cs__get_block_classes()` emits `has-background` from `$block['style']['color']['background']` only, and `CS_Block_Styles` reads the same path. Measured: `backgroundColor: "primary"` → `class="block-cta alignnone"`, no style, nothing painted; `style.color.background` (custom or `var:preset|color|primary`) → class **and** inline style, both correct. The modern editor writes `style.color.background`, which works, so this bites only content carrying the legacy attribute — of which none exists. If it ever does, the fix is a two-line addition to `CS_Block_Styles` resolving the slug to `var(--wp--preset--color--<slug>)`.
+- **An explicit empty `alignText` swallows a valid `align_text`.** `$block['alignText'] ?? $block['align_text'] ?? ''` — `??` only falls through on `null`, so `"alignText": ""` wins over a real `align_text`. Measured: `alignText=''` + `align_text='right'` → no class, while `class-block-styles.php` still emits `text-align: right`, so the two disagree. **Not reachable from the editor:** ACF's back-compat copy overwrites `align_text` from `alignText` whenever `alignText` is non-empty, so the state needs `"alignText":""` written into the saved JSON by hand.
 
 - [ ] **Step 12: Prove the assets load only where the block is**
 
