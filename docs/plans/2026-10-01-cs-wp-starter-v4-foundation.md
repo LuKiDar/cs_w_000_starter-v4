@@ -807,7 +807,9 @@ exports.build = gulp.series(tokens, gulp.parallel(compileSass, compileBlockSass)
 exports.default = gulp.series(tokens, gulp.parallel(compileSass, compileBlockSass), watchFiles);
 ```
 
-Add to `package.json`: `"start": "gulp"`, `"build": "gulp build"`, `"tokens": "node scripts/build-tokens.mjs"`, and devDependencies `gulp ^5.0.0`, `gulp-sass ^6.0.0`, `sass ^1.85.1`, `gulp-autoprefixer ^8.0.0`, `gulp-clean-css ^4.3.0`, `gulp-rename ^2.0.0`, `gulp-sourcemaps ^3.0.0`, `browser-sync ^3.0.3`, `glob ^11.0.1`.
+Add to `package.json`: `"start": "gulp"`, `"build": "gulp build"`, `"watch": "gulp watch"`, `"tokens": "node scripts/build-tokens.mjs"`, and devDependencies `gulp ^5.0.0`, `gulp-sass ^6.0.0`, `sass ^1.85.1`, `gulp-autoprefixer ^8.0.0`, `gulp-clean-css ^4.3.0`, `gulp-rename ^2.0.0`, `gulp-sourcemaps ^3.0.0`, `browser-sync ^3.0.3`, `glob ^11.0.1`.
+
+`"watch"` binds to `exports.watch` in the gulpfile below. It is easy to omit because this step's prose names only three scripts while the task's Interfaces line promises four — keep the two in agreement.
 
 - [ ] **Step 5: Wire the build — Vite branch**
 
