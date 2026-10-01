@@ -975,9 +975,21 @@ It prints one JSON object per line for every `cs__` call that resolves nowhere, 
  *
  * Why a tokenizer and not a regex: PHP's block structure is neither indentation-based
  * nor line-based, so whether a call sits inside a `function_exists()` guard cannot be
- * decided by scanning text. Three rounds of regex heuristics each missed new spellings
+ * decided by scanning text. Four rounds of regex heuristics each missed new spellings
  * -- an over-indented closer, a tab/space mix, `<?php } ?>`, a closer behind a comment,
  * a one-line guard -- and introduced false alarms of their own. Tokens do not guess.
+ *
+ * What counts as a guard. A `function_exists()` test protects a call only when the
+ * test actually guarantees the symbol exists at that point:
+ *   - every `function_exists('cs__x')` in the condition contributes, not just the last,
+ *     because `&&`-joined tests all hold when the body runs;
+ *   - a `||` anywhere in the condition destroys that guarantee for every operand, so a
+ *     `||`-joined test protects nothing and is not treated as a guard;
+ *   - the guarded body may be a `{ ... }` block, a template `: ... endif;` region, a
+ *     brace-less single statement, or a `? :` consequent;
+ *   - a test used as a plain value (`$x = function_exists('cs__x');`) guards nothing.
+ * Both directions matter: a missed closer lets a fatal through, and a false alarm
+ * trains a team to ignore the gate.
  */
 
 declare(strict_types=1);
@@ -1030,6 +1042,26 @@ function is_skippable(mixed $t): bool
     return is_array($t) && in_array($t[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true);
 }
 
+function is_cs_symbol(string $name): bool
+{
+    return str_starts_with($name, 'cs__') || str_starts_with($name, 'CS_');
+}
+
+/**
+ * Is $name protected by one of the guard scopes currently open?
+ *
+ * @param list<array{names: list<string>, depth: int, kind: string}> $open
+ */
+function guarded(array $open, string $name): bool
+{
+    foreach ($open as $g) {
+        if (in_array($name, $g['names'], true)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 /**
  * One file: what it defines, and which of its `cs__` uses resolve nowhere.
  *
@@ -1043,143 +1075,155 @@ function analyze(string $src): array
     $defined = [];
     $reported = [];
 
-    $depth = 0;
-    $openGuards = [];       // stack of ['name' => string, 'depth' => int, 'alt' => bool]
-    $pendingGuard = null;   // a function_exists('cs__x') seen, awaiting its block opener
-    $pendingTernary = false;
-    $prevSig = null;        // last significant token, for call context
+    $depth = 0;          // brace depth
+    $paren = 0;          // paren depth
+    $open = [];          // guard scopes: names + the depth they cover + their kind
+    $pending = [];       // function_exists('cs__x') names seen in the current condition
+    $pendingParen = -1;  // paren depth at the outermost such test
+    $sawOr = false;      // the condition is `||`-joined, so it guarantees nothing
+    $condOr = false;     // a `||` seen inside the enclosing parens, guard or not
+    $prevSig = null;     // last significant token, for call context
 
     for ($i = 0; $i < $n; $i++) {
         $t = $tokens[$i];
 
-        // --- single-character tokens -----------------------------------------
-        if (!is_array($t)) {
-            switch ($t) {
-                case '{':
-                    $depth++;
-                    if ($pendingGuard !== null) {
-                        $openGuards[] = ['name' => $pendingGuard, 'depth' => $depth, 'alt' => false];
-                        $pendingGuard = null;
-                    }
-                    break;
-
-                case '}':
-                    while ($openGuards && !end($openGuards)['alt'] && end($openGuards)['depth'] === $depth) {
-                        array_pop($openGuards);
-                    }
-                    $depth--;
-                    break;
-
-                case ':':
-                    // Alternative syntax (`if ( ... ) : ... endif;`). A ternary never
-                    // opens a block, and `?` before the `:` is what tells them apart.
-                    if ($pendingGuard !== null && !$pendingTernary) {
-                        $openGuards[] = ['name' => $pendingGuard, 'depth' => $depth + 1, 'alt' => true];
-                    }
-                    $pendingGuard = null;
-                    break;
-
-                case '?':
-                    $pendingTernary = true;
-                    break;
-
-                case ';':
-                    $pendingGuard = null;
-                    $pendingTernary = false;
-                    break;
-            }
-            $prevSig = $t;
-            continue;
-        }
-
-        // --- tokens we ignore -------------------------------------------------
         if (is_skippable($t)) {
             continue;
         }
 
-        switch ($t[0]) {
-            case T_ENDIF:
-                if ($openGuards && end($openGuards)['alt']) {
-                    array_pop($openGuards);
-                }
-                break;
+        // --- 1. paren bookkeeping, before anything that depends on it ---------
+        if ($t === '(') {
+            $paren++;
+        } elseif ($t === ')') {
+            $paren--;
+        }
 
-            case T_FUNCTION:
-                $nx = next_significant($tokens, $i);
-                if ($nx === '&') {
-                    $nx = next_significant($tokens, $i + 1);
-                }
-                if (is_array($nx) && $nx[0] === T_STRING
-                    && (str_starts_with($nx[1], 'cs__') || str_starts_with($nx[1], 'CS_'))) {
-                    $defined[$nx[1]] = true;
-                }
-                break;
+        // --- 2. a `||` in the condition destroys the guarantee ----------------
+        // It counts wherever it sits: `$b || function_exists('cs__x')` guarantees
+        // no more about cs__x than the other order does, and the old code missed
+        // exactly that ordering.
+        if (is_array($t) && ($t[0] === T_BOOLEAN_OR || $t[0] === T_LOGICAL_OR)) {
+            if ($paren > 0) {
+                $condOr = true;
+            }
+            if ($pending) {
+                $sawOr = true;
+            }
+        }
 
-            case T_CLASS:
-            case T_INTERFACE:
-            case T_TRAIT:
-                $nx = next_significant($tokens, $i);
-                if (is_array($nx) && $nx[0] === T_STRING
-                    && (str_starts_with($nx[1], 'cs__') || str_starts_with($nx[1], 'CS_'))) {
-                    $defined[$nx[1]] = true;
+        // --- 3. the condition has closed: this token opens, or is, its body ---
+        // `$paren < $pendingParen` when the test sits inside an enclosing group
+        // (`if ( ... )`); `$pendingParen === 0` means the test is the whole expression
+        // (`function_exists('cs__x') ? ... : ...`), which closes on its own `)`.
+        $closed = $paren < $pendingParen || ($pendingParen === 0 && $paren === 0);
+        if ($pending && $closed && $t !== ')') {
+            $kind = 'stmt';
+            if ($t === '{') {
+                $kind = 'block';
+                $depth++;
+            } elseif ($t === ':') {
+                $kind = 'alt';
+            } elseif ($t === ';' || $t === ',') {
+                $kind = null;       // the test was used as a value, not as a guard
+            }
+            if ($kind !== null && !$sawOr) {
+                $open[] = [
+                    'names' => $pending,
+                    'depth' => $kind === 'alt' ? $depth + 1 : $depth,
+                    'kind'  => $kind,
+                ];
+            }
+            $pending = [];
+            $pendingParen = -1;
+            $sawOr = false;
+            $condOr = false;
+            if ($kind === 'block' || $kind === 'alt') {
+                $prevSig = $t;
+                continue;           // `{` is already counted; `:` opens nothing else
+            }
+            // a brace-less body or a `?` consequent: fall through and treat this
+            // token normally, so a call on it is seen with the guard already open
+        }
+
+        // --- 4. ordinary token handling ---------------------------------------
+        if ($t === '{') {
+            $depth++;
+            $condOr = false;
+        } elseif ($t === '}') {
+            while ($open && end($open)['kind'] !== 'alt' && end($open)['depth'] === $depth) {
+                array_pop($open);
+            }
+            $depth--;
+            $condOr = false;
+        } elseif ($t === ';') {
+            while ($open && end($open)['kind'] === 'stmt' && end($open)['depth'] === $depth) {
+                array_pop($open);
+            }
+            $pending = [];
+            $sawOr = false;
+            $condOr = false;
+        } elseif ($t === ':') {
+            while ($open && end($open)['kind'] === 'stmt') {
+                array_pop($open);   // the `?` consequent ends here
+            }
+        } elseif (is_array($t) && $t[0] === T_ENDIF) {
+            if ($open && end($open)['kind'] === 'alt') {
+                array_pop($open);
+            }
+        } elseif (is_array($t) && ($t[0] === T_FUNCTION || $t[0] === T_CLASS
+            || $t[0] === T_INTERFACE || $t[0] === T_TRAIT)) {
+            $nx = next_significant($tokens, $i);
+            if ($nx === '&') {
+                $nx = next_significant($tokens, $i + 1);
+            }
+            if (is_array($nx) && $nx[0] === T_STRING && is_cs_symbol($nx[1])) {
+                $defined[$nx[1]] = true;
+            }
+        } elseif (is_array($t) && $t[0] === T_NEW) {
+            $nx = next_significant($tokens, $i);
+            if (is_array($nx) && $nx[0] === T_STRING && is_cs_symbol($nx[1])) {
+                $reported[] = [$nx[2], $nx[1], 'new'];
+            }
+        } elseif (is_array($t) && ($t[0] === T_STRING || $t[0] === T_NAME_FULLY_QUALIFIED)) {
+            // PHP 8 lexes `\cs__x` as a single T_NAME_FULLY_QUALIFIED token rather
+            // than T_NS_SEPARATOR + T_STRING, so a leading separator has to be
+            // stripped here or a fully qualified global call goes unseen.
+            $name = ltrim($t[1], '\\');
+
+            if ($name === 'function_exists') {
+                $j = $i + 1;
+                while ($j < $n && is_skippable($tokens[$j])) {
+                    $j++;
                 }
-                break;
-
-            case T_NEW:
-                $nx = next_significant($tokens, $i);
-                if (is_array($nx) && $nx[0] === T_STRING
-                    && (str_starts_with($nx[1], 'cs__') || str_starts_with($nx[1], 'CS_'))) {
-                    $reported[] = [$nx[2], $nx[1], 'new'];
-                }
-                break;
-
-            case T_STRING:
-                $name = $t[1];
-
-                if ($name === 'function_exists') {
-                    $j = $i + 1;
-                    while ($j < $n && is_skippable($tokens[$j])) {
-                        $j++;
+                if ($j < $n && $tokens[$j] === '(') {
+                    $k = $j + 1;
+                    while ($k < $n && is_skippable($tokens[$k])) {
+                        $k++;
                     }
-                    if ($j < $n && $tokens[$j] === '(') {
-                        $k = $j + 1;
-                        while ($k < $n && is_skippable($tokens[$k])) {
-                            $k++;
-                        }
-                        if ($k < $n && is_array($tokens[$k]) && $tokens[$k][0] === T_CONSTANT_ENCAPSED_STRING) {
-                            $inner = trim($tokens[$k][1], "'\"");
-                            if (str_starts_with($inner, 'cs__') || str_starts_with($inner, 'CS_')) {
-                                $pendingGuard = $inner;
-                                $pendingTernary = false;
+                    if ($k < $n && is_array($tokens[$k]) && $tokens[$k][0] === T_CONSTANT_ENCAPSED_STRING) {
+                        $inner = trim($tokens[$k][1], "'\"");
+                        if (is_cs_symbol($inner)) {
+                            if (!$pending) {
+                                $pendingParen = $paren;
+                                $sawOr = $condOr;
                             }
+                            $pending[] = $inner;
                         }
                     }
-                    break;
                 }
-
-                if (!str_starts_with($name, 'cs__')) {
-                    break;
-                }
-                // A call, not a definition or a method: `cs__x(` with no `function`,
-                // `new`, `->` or `::` in front of it.
-                if (next_significant($tokens, $i) !== '(') {
-                    break;
-                }
-                if (is_array($prevSig)
-                    && in_array($prevSig[0], [T_FUNCTION, T_NEW, T_OBJECT_OPERATOR, T_DOUBLE_COLON, T_NS_SEPARATOR], true)) {
-                    break;
-                }
-                $guarded = false;
-                foreach ($openGuards as $g) {
-                    if ($g['name'] === $name) {
-                        $guarded = true;   // inside a guard for this very symbol
-                        break;
-                    }
-                }
-                if (!$guarded) {
-                    $reported[] = [$t[2], $name, 'call'];
-                }
-                break;
+            } elseif (is_cs_symbol($name)
+                && next_significant($tokens, $i) === '('
+                && !(is_array($prevSig) && in_array(
+                    $prevSig[0],
+                    [T_FUNCTION, T_NEW, T_OBJECT_OPERATOR, T_DOUBLE_COLON],
+                    true
+                ))
+                && !guarded($open, $name)) {
+                // A call, not a definition or a method. `\cs__x()` is included on
+                // purpose: a leading separator means the global function, which is
+                // exactly what this check is about.
+                $reported[] = [$t[2], $name, 'call'];
+            }
         }
 
         $prevSig = $t;
@@ -1608,6 +1652,62 @@ For (c) the expected line is `SKIP  build artifacts not tracked  (could not run 
 ```
 
 `(t)` and `(u)` are two false alarms the old regex pass produced and structurally could not fix: a raw-text scan reads a docblock as a call site, and a definition has to be recognised by pattern rather than by token. Both come free once the analysis is tokenized.
+
+**And the test must actually guarantee something.** A `function_exists()` test protects a call only when it makes the symbol's existence *certain* at that point. The first tokenizer got five of these wrong, in both directions — the re-review caught them, and they are the reason this block exists:
+
+```bash
+# --- must NOT be reported (the test genuinely guarantees the symbol) ---
+
+# (v) a brace-less body, on the guard's own line
+#         if ( function_exists('cs__x') ) cs__x();
+
+# (w) a brace-less body on the next line, and a brace-less body behind `echo`
+#         if ( function_exists('cs__x') )
+#             cs__x();
+#         if ( function_exists('cs__x') ) echo cs__x();
+
+# (x) two tests joined by `&&` -- both hold when the body runs
+#         if ( function_exists('cs__a') && function_exists('cs__b') ) {
+#             cs__a();
+#             cs__b();
+#         }
+
+# (y) a `? :` consequent
+#         function_exists('cs__x') ? cs__x() : null;
+
+# (z) a test used as a plain value guards nothing and must not leak into what
+#     follows it
+#         $x = function_exists('cs__x');
+#         foo( function_exists('cs__x') );
+#         if ( function_exists('cs__x') && is_admin() ) { cs__x(); }
+
+# --- must be REPORTED (the test guarantees nothing) ---
+
+# (aa) two tests joined by `||` -- either one may be false when the body runs,
+#      so the body is not protected at all
+#         if ( function_exists('cs__a') || function_exists('cs__b') ) {
+#             cs__a();
+#             cs__b();
+#         }
+
+# (ab) a `||` operand that is not a test, written BEFORE the test -- the ordering
+#      is what makes this one easy to miss
+#         if ( $b || function_exists('cs__x') ) {
+#             cs__x();
+#         }
+
+# (ac) a fully qualified call: `\cs__x` is the global function, and PHP 8 lexes
+#      it as a single token rather than a separator plus a name
+#         \cs__x();
+
+# --- neither of these is a global call at all ---
+
+# (ad) a method and a static method
+#         $o->cs__m();
+#         Foo::cs__m();
+```
+
+`(x)` and `(aa)` are the pair that shows why the exemption cannot be approximated by proximity: the same shape is a guard with `&&` and a non-guard with `||`, and only the operator distinguishes them.
 
 The asymmetry that matters: **a missed closer lets a fatal through; a spurious closer raises a false alarm.** The first is the failure that killed v3, the second is the failure that trains a team to ignore the gate. The tokenizer is the only form that is exact in both directions, which is why this task no longer tries to reconstruct PHP's block structure from text.
 
