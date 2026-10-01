@@ -1,10 +1,20 @@
 // -----------------------------------------------------------------------------
 // Main stylesheet entry point.
-// Task 3 wires the build; imports below are the spine only.
+//
+// Compiled by Gulp to assets/css/main.min.css.
+// Order: abstracts -> base -> components -> layout -> pages -> parts.
 // -----------------------------------------------------------------------------
 
+// Abstracts — tokens, functions and mixins. No CSS is emitted for these.
 @use 'abstracts/functions';
 @use 'abstracts/variables';
 @use 'abstracts/mixins';
 
+// Base
 @use 'base/base';
+
+// The layers below are added as the theme grows. Keep this order.
+// @use 'components/…';
+// @use 'layout/…';
+// @use 'pages/…';
+// @use 'parts/…';

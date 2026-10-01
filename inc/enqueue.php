@@ -29,5 +29,16 @@ function cs__enqueue_editor_assets(){
 	if ( file_exists($editor_css) ){
 		add_editor_style('assets/css/editor.min.css');
 	}
+
+	$block_styles_js = '/assets/js/block-styles.js';
+	if ( file_exists(get_template_directory() . $block_styles_js) ){
+		wp_enqueue_script(
+			'theme-block-styles',
+			get_template_directory_uri() . $block_styles_js,
+			array('wp-blocks', 'wp-dom-ready', 'wp-edit-post'),
+			filemtime(get_template_directory() . $block_styles_js),
+			true
+		);
+	}
 }
 add_action('enqueue_block_editor_assets', 'cs__enqueue_editor_assets');

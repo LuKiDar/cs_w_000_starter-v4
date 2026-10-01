@@ -1,3 +1,10 @@
 // -----------------------------------------------------------------------------
 // Variables
+//
+// The design tokens are generated from theme.json into _tokens.scss
+// (gitignored — run `npm run tokens`). Importing them here makes
+// $color_*, $fontSize_*, $spacing_*, $borderRadius_* and $layout_* available to
+// every partial that loads this file.
 // -----------------------------------------------------------------------------
+
+@import 'tokens';

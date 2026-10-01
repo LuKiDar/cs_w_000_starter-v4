@@ -1,0 +1,10 @@
+// -----------------------------------------------------------------------------
+// Editor stylesheet entry point.
+//
+// Compiled by Gulp to assets/css/editor.min.css and registered with
+// add_editor_style() so the block editor matches the front end.
+// -----------------------------------------------------------------------------
+
+@use 'abstracts/functions';
+@use 'abstracts/variables';
+@use 'abstracts/mixins';

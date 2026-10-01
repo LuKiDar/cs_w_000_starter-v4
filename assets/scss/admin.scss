@@ -1,0 +1,9 @@
+// -----------------------------------------------------------------------------
+// Admin stylesheet entry point.
+//
+// Compiled by Gulp to assets/css/admin.min.css. Loaded only on admin screens.
+// -----------------------------------------------------------------------------
+
+@use 'abstracts/functions';
+@use 'abstracts/variables';
+@use 'abstracts/mixins';
