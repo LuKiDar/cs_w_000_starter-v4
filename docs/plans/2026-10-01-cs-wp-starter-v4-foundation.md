@@ -1247,6 +1247,38 @@ python scripts/check-theme-stand.py "<non-repo-dir>"; echo "exit=$?"           #
 
 For (c) the expected line is `SKIP  build artifacts not tracked  (could not run here)`. Skipping rather than failing is deliberate: claiming a pass would be a lie, but failing would raise a false alarm on a legitimate use — a copy of the theme that is not a git checkout.
 
+**And the guard logic must not overshoot.** A fix that closes the hole by firing on legitimate guards is not a fix. All four of these must hold, with the symbol defined nowhere in each case:
+
+```bash
+# (d) the guard's block has already closed: the later call is unguarded -> must FAIL
+#         if ( function_exists('cs__x') ) {
+#             cs__x();
+#         }
+#         if ( $cond ) {
+#             cs__x();          <- deeper-indented and in the window, but NOT guarded
+#         }
+
+# (e) legitimate: the call is two lines inside an open block -> must PASS
+#         if ( function_exists('cs__x') ) {
+#             $y = 1;
+#             cs__x();
+#         }
+
+# (f) legitimate template form with an intervening line -> must PASS
+#         <?php if ( function_exists('cs__x') ) : ?>
+#             <?php $y = 1; ?>
+#             <?php cs__x(); ?>
+#         <?php endif; ?>
+
+# (g) unguarded call after `endif;` -> must FAIL
+#         <?php if ( function_exists('cs__x') ) : ?>
+#             <?php cs__x(); ?>
+#         <?php endif; ?>
+#         <?php cs__x(); ?>
+```
+
+(d) and (g) are the hole; (e) and (f) are the reason the hole is closed by *enclosure* rather than by making the exemption narrower — proximity plus indentation alone exempts (d), because it is deeper-indented and still within the window.
+
 - [ ] **Step 4: Run it against v4 — it must pass**
 
 ```bash
