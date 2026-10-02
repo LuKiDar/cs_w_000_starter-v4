@@ -3165,7 +3165,8 @@ git commit -m "feat: base template hierarchy and the post card contract"
 ## Task 9: Accessibility layer
 
 **Files:**
-- Create: `inc/a11y-block-fixes.php`, `assets/js/src/a11y-runtime.js`
+- Create: `inc/a11y-block-fixes.php`, `assets/js/src/a11y-runtime.js`, `assets/js/src/main.js`
+  (`assets/js/src/` is the JS source root — `gulpfile.js:25` compiles `assets/js/src/**/*.js` into `assets/js/dist/`, and `inc/enqueue.php:18` loads `dist/main.min.js`. No JS source exists yet, so `main.js` is the entry point this task creates.)
 - Modify: `functions.php` (uncomment the include), `inc/enqueue.php` (enqueue the runtime)
 
 **Interfaces:**
@@ -3217,22 +3218,57 @@ Uncomment `require_once 'inc/a11y-block-fixes.php';` in `functions.php`, and enq
 
 - [ ] **Step 5: Test it on a real page**
 
+Use **`block-test` (page 157)** — the test page this project created for exactly this — and **never the front page**. `/sample-page/` is page 2, which *is* the front page, so it answers **301 to `/`**, and a `curl` without `-L` returns an empty 301 body: both greps would read `0` and a working fix would look broken. Measured:
+
+```
+/sample-page/ -> 301, followed: https://starter-theme.local/
+```
+
+Page 2 is also the fixture Task 8's front-page fix depends on, so editing it would break a check in another task. Put the H6 on 157 and leave page 2 alone.
+
 ```bash
+WP="C:/Users/Admin/Documents/CSTHEME-ops/scripts/cs-wp"
+"$WP" -e '
+$id = 157;
+$c = get_post($id)->post_content;
+if ( strpos($c, "wp-block-heading") === false ) {
+	$c .= "\n<!-- wp:heading {\"level\":6} -->\n<h6 class=\"wp-block-heading\">Eyebrow test</h6>\n<!-- /wp:heading -->\n";
+	wp_update_post(array("ID" => $id, "post_content" => $c));
+}
+echo "  content length: ", strlen(get_post($id)->post_content), "\n";'
+
 npm run build
-# add an H6 heading block as an "eyebrow" to the sample page, then:
-curl -k -s "https://starter-theme.local/sample-page/" | grep -o '<h6 class="wp-block-heading"' | wc -l
-curl -k -s "https://starter-theme.local/sample-page/" | grep -o '<p class="wp-block-heading"' | wc -l
+curl -k -s "https://starter-theme.local/block-test/" | grep -o '<h6 class="wp-block-heading"' | wc -l
+curl -k -s "https://starter-theme.local/block-test/" | grep -o '<p class="wp-block-heading"' | wc -l
 ```
 
-Expected: `0` then `1` — the H6 was rewritten, its class preserved.
+Expected: `0` then `1` — the H6 rewritten, its class preserved.
 
-- [ ] **Step 6: Test relevance — if it does nothing, remove it**
+**Restore the fixture when you are done** — remove the block you appended and confirm page 157's length is back to what it was. A test page that accumulates test markup stops being a clean fixture.
 
-```bash
-curl -k -s "https://starter-theme.local/sample-page/" | grep -c "a11y-runtime\|a11y"
-```
+- [ ] **Step 6: Test relevance — in a browser, not by grepping for the filename**
 
-If the runtime produces no observable change on any template in the theme, delete it and record why in the design doc. Shipping a file that never does anything is the "checkbox accessibility" the spec rejects.
+The question is whether the runtime changes anything. A `grep -c "a11y"` over the page HTML answers a different question: it shows the script is enqueued, not that it runs or that it does anything.
+
+Load a real page in the browser and measure the DOM. Two claims to check:
+
+1. **Positive `tabindex` is stripped.** The theme emits none today, so plant one from the console — not in a file:
+
+   ```js
+   const probe = document.createElement('div');
+   probe.id = 'a11y-probe';
+   probe.setAttribute('tabindex', '3');
+   probe.textContent = 'probe';
+   document.body.appendChild(probe);
+   ```
+
+   Then observe whether the attribute is removed. **Watch for this**: if the runtime runs only once on `DOMContentLoaded`, a probe appended afterwards is never touched, and the probe will appear to fail while the code is correct. Establish how the runtime is invoked before concluding anything, and if it is one-shot, say so — that is a real limitation of the design and it belongs in the report rather than being papered over with a re-run.
+
+2. **Focusable elements inside `aria-hidden="true"` containers receive `tabindex="-1"`.** The theme already emits this pattern: `parts/content/post-card.php` wraps the thumbnail link in `aria-hidden="true"` with `tabindex="-1"` set. Find a container on a real page where it is *not* already set, or state plainly that none exists.
+
+Then decide, and say which way it went:
+
+**If the runtime produces no observable change on any template in the theme, delete it and record why in the design doc.** Shipping a file that never does anything is the "checkbox accessibility" the spec rejects. This is a legitimate outcome, not a failure — and on this theme it is the likely one, because the markup already carries the attributes the runtime would add.
 
 - [ ] **Step 7: Commit**
 
