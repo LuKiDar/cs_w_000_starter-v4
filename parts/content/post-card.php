@@ -22,9 +22,9 @@ if ( $modifier !== '' ){
 	<?php endif; ?>
 
 	<div class="card-post__body">
-		<h3 class="card-post__title">
+		<h2 class="card-post__title">
 			<a class="card-post__link" href="<?= esc_url(get_permalink($post_id)); ?>"><?= esc_html(get_the_title($post_id)); ?></a>
-		</h3>
+		</h2>
 
 		<div class="card-post__excerpt"><?= wp_kses_post(get_the_excerpt($post_id)); ?></div>
 
