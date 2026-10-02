@@ -60,7 +60,7 @@ A throwaway probe answering three questions. Output is a decision, not code — 
 - Modify: `docs/design/2026-10-01-cs-wp-starter-v4-design.md` (§13, record the outcome)
 
 **Interfaces:**
-- Produces: a recorded decision — `VITE` or `GULP` — that Task 3 implements. The theme's output layout is fixed either way: `parts/block/<slug>/style.min.css`, `parts/block/<slug>/editor.min.css`, `assets/css/{main,editor,admin}.min.css`, `assets/js/dist/main.min.js`.
+- Produces: a recorded decision — `VITE` or `GULP` — that Task 3 implements. The theme's output layout is fixed either way: `parts/block/<slug>/style.min.css`, `parts/block/<slug>/editor.min.css`, `assets/css/{main,editor,admin}.min.css`, `assets/js/dist/main.min.js`. **The JS artifact is the one the Task 3 pipeline does not actually build:** `gulpfile.js` declares `paths.scripts` but no gulp task consumes it, so `main.min.js` is never emitted. Harmless in the shipped state — `inc/enqueue.php:19` guards the enqueue with `file_exists()`, so no `<script src>` renders and no 404 is reachable — but latent, and it belongs to Phase 2, where the first real JS source appears.
 
 - [ ] **Step 1: State the question**
 
@@ -3166,7 +3166,7 @@ git commit -m "feat: base template hierarchy and the post card contract"
 
 **Files:**
 - Create: `inc/a11y-block-fixes.php`, `assets/js/src/a11y-runtime.js`, `assets/js/src/main.js`
-  (`assets/js/src/` is the JS source root — `gulpfile.js:25` compiles `assets/js/src/**/*.js` into `assets/js/dist/`, and `inc/enqueue.php:18` loads `dist/main.min.js`. No JS source exists yet, so `main.js` is the entry point this task creates.)
+  (`assets/js/src/` is the intended JS source root. **`gulpfile.js:25` only *declares* `paths.scripts` — no gulp task consumes it and `package.json` carries no bundler, so `npm run build` emits no JS at all.** This task's implementer found that and hand-wrote a throwaway `assets/js/dist/main.min.js` to measure against, then deleted it. `inc/enqueue.php:19` guards the enqueue with `file_exists()`, so the absence is harmless. Build the JS pipeline when Phase 2 first needs it.)
 - Modify: `functions.php` (uncomment the include), `inc/enqueue.php` (enqueue the runtime)
 
 **Interfaces:**

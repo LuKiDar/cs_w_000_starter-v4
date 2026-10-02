@@ -22,6 +22,10 @@ const { execSync } = require('child_process');
 
 const paths = {
 	styles:  { src: 'assets/scss/*.scss', dest: 'assets/css' },
+	// No task consumes `scripts` yet: nothing compiles assets/js/src/**, and package.json
+	// carries no bundler. Declared for Phase 2, which adds the first JS source. Until then
+	// `npm run build` emits no JS and assets/js/dist/ holds only .gitkeep — harmless,
+	// because inc/enqueue.php:19 guards its enqueue with file_exists().
 	scripts: { src: 'assets/js/src/**/*.js', dest: 'assets/js/dist' },
 };
 

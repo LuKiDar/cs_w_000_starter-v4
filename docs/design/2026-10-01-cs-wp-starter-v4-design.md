@@ -592,14 +592,23 @@ two was kept; the other was built, measured against every template, and deleted 
    eyebrow as an H6 for its look, but an H6 before an H2 is a heading-order violation
    flagged by Lighthouse and axe. The class is preserved, so the visual result is
    unchanged and only the semantic lie is removed.
+   **The filter is indiscriminate.** It fires on every `core/heading` level-6 block, so a
+   genuine H6 heading an author meant as a heading becomes a `<p>` too. An H6 block carries
+   nothing that distinguishes an eyebrow from a real heading, so the filter cannot tell them
+   apart. This is a known limitation of the approach rather than a defect to fix, and it is
+   why the fix is a filter and not a block variation.
 2. ~~**`assets/js/a11y-runtime.js`**~~ — **built, measured, and deleted (Task 9).** The
    runtime (strip positive `tabindex` values; set `tabindex="-1"` on focusable content
    inside `aria-hidden="true"` containers) was implemented and enqueued, then measured in
-   a real browser against every template in the theme. It produced **no observable change
-   on any of them**: the theme emits no positive `tabindex` anywhere, and every
-   `aria-hidden="true"` container's focusable content already carries `tabindex="-1"` in
-   the markup (`parts/content/post-card.php`'s `card-post__media` thumbnail link), while
-   the other containers (`nav-toggle__bar` spans) hold nothing focusable. It is also
+   a real browser over eleven URLs (front page, blog, page, two singles, author, category,
+   date archive, search, 404). It produced **no observable change on any of them**: the theme
+   emits no positive `tabindex` anywhere, and the only two `aria-hidden="true"` elements it
+   emits are `header.php:44`'s `nav-toggle__bar` span, which holds nothing focusable, and
+   `parts/content/post-card.php:19`'s `card-post__media` anchor — which **is itself**
+   the aria-hidden element and carries `tabindex="-1"` on its own tag. That second one is the
+   sharper reason to delete: the runtime sets `tabindex="-1"` on *descendants* of
+   `[aria-hidden="true"]`, so it would never have touched the theme's actual pattern even had
+   the attribute been missing. It is also
    **one-shot** — it scans once at script execution and never re-scans, so a node added
    afterwards is never fixed. Shipping a file that changes nothing on this theme would be
    the checkbox accessibility this section rejects, so it was removed. The same applies to
