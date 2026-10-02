@@ -3473,7 +3473,7 @@ Add the script:
 "lint:css": "stylelint \"assets/scss/**/*.scss\" \"parts/block/**/*.scss\" \"!parts/block/_*/**\""
 ```
 
-**The exclusion is required, not tidiness.** `parts/block/_skeleton/style.scss` and `editor.scss` each carry two `{{...}}` placeholders — it is the template every block is generated from, not a block — so stylelint reports a parse error on a legitimate file. Measured: both files contain `{{`. The stand's `php_files()` skips underscore-prefixed folders for the same reason, and `cs__get_blocks()` excludes them from registration too. **Confirm stylelint still lints a real block** (`parts/block/cta/style.scss`) — a filter that silently excludes everything also reports no errors.
+**The exclusion is required, not tidiness.** `parts/block/_skeleton/style.scss` and `editor.scss` each carry two `{{...}}` placeholders — it is the template every block is generated from, not a block — so stylelint reports a parse error on a legitimate file. Measured: both files contain `{{`. The stand's `php_files()` skips underscore-prefixed folders for the same reason, and `cs__get_blocks()` excludes them from registration too. **Confirm the exclusion did not swallow everything, and do it by measurement, not by the absence of errors.** Stylelint does not report a glob that matches no files, so a script that excludes too much is silent. Run both: `npx stylelint "parts/block/_skeleton/style.scss"` must **report a parse error** (that is the file's designed state), and `npm run lint:css` must report **none**. Then prove coverage positively — `npx stylelint --formatter json "parts/block/**/*.scss" "!parts/block/_*/**"` and confirm the file count is non-zero and includes `cta/style.scss`. If the `!` pattern is not honoured by this stylelint version, the run will name `_skeleton` — switch to the documented mechanism (`ignoreFiles` in `.stylelintrc.json`, or the CLI's `--ignore-pattern`) rather than dropping the exclusion.
 
 - [ ] **Step 4: Run stylelint**
 
@@ -3499,13 +3499,22 @@ echo "using: $PHP"
 SETUP="$(cygpath -m "$TMPDIR")/composer-setup.php"
 curl -sS https://getcomposer.org/installer -o "$SETUP"
 "$PHP" "$SETUP" --install-dir=. --filename=composer.phar
+
+# `dealerdirect/phpcodesniffer-composer-installer` is a Composer *plugin*, and since
+# Composer 2.2 plugins must be explicitly allowed or they are not activated. Running
+# `composer require` non-interactively answers that prompt with the default, which is
+# **No** -- the plugin silently stays inactive and `phpcs -i` below then does not list
+# the WordPress standard. Create composer.json first and allow the plugin, then require.
+"$PHP" composer.phar init --no-interaction --name="cstheme/starter-theme" \
+	--description="Development tooling for the CStheme starter theme."
+"$PHP" composer.phar config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
 "$PHP" composer.phar require --dev \
 	squizlabs/php_codesniffer \
 	wp-coding-standards/wpcs \
 	dealerdirect/phpcodesniffer-composer-installer
 ```
 
-Verify the standard registered:
+Verify the standard registered **and that the plugin actually ran** — if the WordPress standard is missing, the most likely cause is the plugin above, not the packages:
 
 ```bash
 "$PHP" vendor/bin/phpcs -i
@@ -3540,7 +3549,10 @@ Expected: the list includes `WordPress`, `WordPress-Core`, `WordPress-Extra`.
 		<exclude name="WordPress.NamingConventions.PrefixAllGlobals"/>
 	</rule>
 
-	<config name="minimum_supported_wp_version" value="6.5"/>
+	<!-- Must track style.css's "Requires at least". It said 6.5 while theme.json was already
+	     version 3, which is a WordPress 6.6 feature; both were raised to 6.6. If one moves,
+	     move the other. -->
+	<config name="minimum_supported_wp_version" value="6.6"/>
 	<config name="testVersion" value="8.1-"/>
 </ruleset>
 ```
