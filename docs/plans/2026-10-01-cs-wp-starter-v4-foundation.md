@@ -3304,31 +3304,53 @@ Required sections, in plain English, for a developer who has never seen the them
 1. **What this is** — a hybrid starter theme: PHP templates plus server-rendered ACF Pro blocks. Not a block theme, not a page builder.
 2. **Requirements** — WordPress 6.5+, PHP 8.1+, ACF Pro, Node 18+, and a local environment (Local by Flywheel).
 3. **Install** — clone, `npm install`, activate.
-4. **Commands** — every script in `package.json`, what it does, and when to run it (`start`, `build`, `tokens`, `make:block`, `stand`).
+4. **Commands** — every script in `package.json`, what it does, and when to run it. There are **six**, and a list of five is wrong: `start`, `build`, `watch`, `tokens`, `make:block`, `stand`. (`watch` was added when the build was corrected; read the file rather than trusting this list, and if the two disagree the file wins.
 5. **Adding a block** — `npm run make:block <slug> "<Title>"`, then what to edit in each generated file, then `npm run build`.
 6. **Adding a page template** — copy `templates/_skeleton.php`, rename, set the `Template Name` header.
 7. **Where content definitions live** — CPTs and taxonomies through the ACF Pro UI; definitions are stored in the database and mirrored to `acf-json/` for version control. Explain the theme-switch and ACF-deactivation consequences.
 8. **The commented toolbox** — list every commented include in `functions.php`, what it provides, and any dependency between them.
 9. **The stand check** — what it verifies, how to run it, what a failure means.
 10. **CSS conventions** — the adapted BEM rules, with a short annotated example.
-11. **Known limitations** — the `card-list` contract limit, the ACF Pro dependency, the map component being absent by design.
+11. **Known limitations** — the `card-list` contract limit, the ACF Pro dependency, the map component being absent by design. **Three more were measured after this list was written and belong here, because the client's team will meet them:**
+    - **`npm run build` compiles no JS.** `gulpfile.js` declares `paths.scripts` but no task consumes it and `package.json` carries no bundler, so `assets/js/dist/` holds only `.gitkeep`. Harmless today — `inc/enqueue.php:19` guards its enqueue with `file_exists()`, so no `<script src>` renders and no 404 is reachable — but the pipeline must be built before the first real JS source.
+    - **The `h6` eyebrow filter is indiscriminate.** It rewrites every `core/heading` level-6 block to a `<p>`, so a genuine H6 heading an author meant as a heading is rewritten too; an H6 block carries nothing that distinguishes the two.
+    - **The stand check resolves symbols by "defined somewhere in the theme" and does not trace `require_once`.** A symbol behind a commented-out include therefore passes while the page would fatal — the exact v3 failure. The stand catches the definition file being absent, not the include being off.
 
 - [ ] **Step 3: Run the PHP 8.4 compatibility pass**
 
 ```bash
-PHP84="C:/Users/Admin/AppData/Roaming/Local/lightning-services/php-8.4.10+0/bin/win64/php.exe"
-find . -name '*.php' -not -path './node_modules/*' -print0 | xargs -0 -n1 "$PHP84" -l
+# Resolve PHP the way scripts/check-theme-stand.py's find_php() does -- $CSWP_PHP, then
+# PATH, then this machine's newest Local install. Never pin a version path.
+PHP="${CSWP_PHP:-$(command -v php || true)}"
+[ -n "$PHP" ] || PHP=$(ls -d "$APPDATA"/Local/lightning-services/php-*/bin/win64/php.exe 2>/dev/null | sort -V | tail -1)
+echo "linting with: $PHP"
+
+# Exclude underscore-prefixed folders. parts/block/_skeleton/ is the template every block
+# is generated from: callback.php carries {{FUNC}} placeholders and is NOT parseable PHP.
+# Linting it reports a parse error on a legitimate file, and xargs then aborts with status
+# 255 and never reaches the rest of the tree. scripts/check-theme-stand.py's php_files()
+# skips the same folders for the same reason, and cs__get_blocks() excludes them too.
+find . -name '*.php' -not -path './node_modules/*' -not -path '*/_*/**' -print0 \
+  | xargs -0 -n1 "$PHP" -l 2>&1 | grep -v '^No syntax errors detected' || true
 ```
 
-Expected: PASS. `-l` will not surface deprecations, so also switch the local site's PHP version to 8.4 in Local, load the templates, and read the log:
+Expected: **no output, and 38 files linted** -- `php -l` prints `No syntax errors detected` for every good file, so grepping that away leaves only real errors. Confirm the count too, because a filter that silently excludes everything also produces no output: `find . -name '*.php' -not -path './node_modules/*' -not -path '*/_*/**' | wc -l` must print **38** (40 PHP files total, 2 of them the skeleton).
+
+**Do not pin the PHP path.** `find_php()` already globs Local's installed versions and takes the newest, and `$CSWP_PHP` still wins -- Step 3b below records why pinning is the bug, so pinning here would reintroduce it one step later. Verified: this resolution yields `php-8.4.10+0`, the version the site actually runs. `-l` will not surface deprecations, so also switch the local site's PHP version to 8.4 in Local, load the templates, and read the log:
 
 ```bash
 : > "/d/Local/starter-theme/logs/php/error.log"
-curl -k -s -o /dev/null "https://starter-theme.local/" && curl -k -s -o /dev/null "https://starter-theme.local/sample-page/"
+curl -k -s -o NUL "https://starter-theme.local/"
+curl -k -s -o NUL "https://starter-theme.local/blog/"
+curl -k -s -o NUL "https://starter-theme.local/block-test/"
 cat "/d/Local/starter-theme/logs/php/error.log"
 ```
 
-Expected: empty. Fix any `Deprecated:` line it prints. Switch the site back to 8.1.23 afterwards.
+**Expected: exactly the known `WP_DEBUG` line once per request, and nothing else.** `wp-config.php` defines `WP_DEBUG` twice (line 90 under a guard, line 97 without one), so every request adds one `Constant WP_DEBUG already defined in .../wp-config.php on line 97` -- measured: **2 lines for 2 requests**. An empty log is not achievable and asserting it would fail on a healthy site.
+
+So assert the two halves separately: **zero** lines mentioning `Deprecated`, and **zero** lines naming the theme. The known `WP_DEBUG` line is pre-existing and belongs to `wp-config.php`, not to this theme -- do not fix it here, and say so in the report. Fix any `Deprecated:` line the log prints.
+
+Note on the site's PHP: it **already runs 8.4.10** (measured). Do not switch it, and do not switch it back -- there is nothing to switch, and the PHP version is a Local GUI setting no script here can change. The `README`'s requirement stays "PHP 8.1+", which 8.4 satisfies.
 
 - [ ] **Step 3b: (moved) the stand script's PHP resolution was fixed in Task 7 Step 1b**
 
@@ -3345,12 +3367,18 @@ Expected: exit 0.
 - [ ] **Step 5: Commit and push**
 
 ```bash
+git status --short
 git add readme.md  # by path, never -A: it has swept .hermes-tmp.*/ and .superpowers/ in here before
+# If Step 3 fixed a deprecation, stage that file by name too -- `git add readme.md` alone
+# would leave the fix uncommitted while the commit message claims PHP 8.4 compatibility.
+git add <each modified .php file, by explicit path>
 git commit -m "docs: README for the client support team, PHP 8.4 compatibility"
 git push
 git ls-remote origin refs/heads/main | cut -f1
 git rev-parse HEAD
 ```
+
+Expected: the two hashes match, and `git status --short` is clean afterwards. **A dirty tree here means a fix was left behind** -- check before reporting done.
 
 Expected: the two hashes match.
 
