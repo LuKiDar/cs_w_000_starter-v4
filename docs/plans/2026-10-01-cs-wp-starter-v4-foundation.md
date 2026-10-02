@@ -3095,6 +3095,64 @@ Expected: **2** lines appended (one per request), every one of them the `WP_DEBU
 
 The double `WP_DEBUG` definition is not this theme's and is not fixed here; it is reported to the owner separately.
 
+- [ ] **Step 8: Fix round 1 — the review found three things**
+
+The Task 8 review was interrupted before it wrote its report, but its transcript carries the measurements it had already made, and all three findings are confirmed independently.
+
+**F1 — Important: `front-page.php` throws away a static front page's content.**
+
+The template is written as an archive: header, card loop, pagination. It never calls `the_content()`. On this install the front page is a **static page** — `page_on_front=2`, and page 2 holds 19,918 characters of block content — so `/` renders a list of post cards and the page the owner actually built is never shown. Measured before the site went down: `/` and `/sample-page/` were byte-identical at 38,441, and the review's own probe found `article.card-post` on `/`.
+
+`front-page.php` covers two different WordPress settings, and the template has to tell them apart:
+
+```php
+<?php if ( is_home() ): ?>
+	<!-- front page shows the latest posts: the card list is correct -->
+<?php else: ?>
+	<!-- front page is a static page: render its content, as page.php would -->
+<?php endif; ?>
+```
+
+So: keep the card loop for the "latest posts" setting, and for a static front page render the page — title, content, pagination on a paginated page. A front page template that ignores `the_content()` is a template that silently discards whatever the client built, and nothing in a status code or a byte count reveals it.
+
+**F2 — Important: heading order skips a level on every list page.**
+
+Measured across the whole document, not just `<main>`:
+
+```
+/blog/                 h1 Blog            -> h3 Sodales interdum mi   SKIP: h1 -> h3 (missing h2)
+/?s=test               h1 Search results  -> h3 Block Test            SKIP: h1 -> h3 (missing h2)
+/category/uncategorized/  same
+```
+
+`parts/content/post-card.php` uses `<h3 class="card-post__title">` while the only heading above it is the `<h1>` archive title. Change the card's title to `<h2>`, which is what it is: a top-level item under the page's single `<h1>`.
+
+Do **not** add a `heading_level` argument for it. Phase 2's `card-list` may eventually nest cards under its own heading and want a level knob; when it does, it can add one. Adding it now is building for a caller that does not exist.
+
+**F3 — Minor: the stated reason for the title choice is wrong, the choice is right.**
+
+The implementer used `get_the_title(get_queried_object_id())` in `front-page.php` and `home.php` instead of `the_archive_title()`, reporting that the latter "returns empty in those contexts and would print an empty `<h1>`". It does not return empty — core defaults it to the literal string:
+
+```php
+// wp-includes/general-template.php:1957
+function get_the_archive_title() {
+	$title  = __( 'Archives' );
+```
+
+So `the_archive_title()` would have printed `<h1>Archives</h1>` on the blog page and the front page — not empty, just wrong. The choice stands, and the reason is now recorded correctly. `archive.php`, `category.php`, `tag.php`, `date.php` and `author.php` do use `the_archive_title()` and should keep it: those are the contexts it exists for.
+
+Verify, once Local is running:
+
+```bash
+for u in "/" "/blog/" "/?s=test" "/category/uncategorized/"; do
+  echo "--- $u"
+  curl -k -s -L "https://starter-theme.local$u" | grep -oE "<h[1-6][^>]*>" | sed 's/.*<\(h[1-6]\).*/  \1/' | tr '\n' ' '; echo
+done
+curl -k -s -L "https://starter-theme.local/" | grep -c "wp-block-group\|wp-block-columns"
+```
+
+Expected: every sequence is `h1 h2 h2 h2 ...` with no skip, and `/` contains the front page's own blocks. If `/` shows no blocks, F1 is not fixed.
+
 - [ ] **Step 7: Commit**
 
 ```bash
