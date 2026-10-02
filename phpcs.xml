@@ -14,12 +14,19 @@
 	<arg name="basepath" value="."/>
 
 	<rule ref="WordPress">
-		<!-- Theme templates deliberately mix PHP and HTML heavily. -->
+		<!-- WordPress expects class files named class-my-class.php and templates
+		     hyphenated and lowercase; the theme deliberately does not follow those
+		     conventions (inc/class-block-styles.php, inc/menu-walker.php,
+		     templates/_skeleton.php). -->
 		<exclude name="WordPress.Files.FileName"/>
-		<!-- The theme's own escaping helpers are used where the sniff cannot see through them. -->
-		<exclude name="WordPress.Security.EscapeOutput.OutputNotEscaped"/>
-		<!-- Adapted BEM and the cs__ prefix are project conventions. -->
-		<exclude name="WordPress.NamingConventions.PrefixAllGlobals"/>
+	</rule>
+
+	<!-- parts/block/cta/render.php:45 prints cs__get_block_styles(), which returns
+	     'style="' . esc_attr( implode( '; ', $styles ) ) . ';"'
+	     (inc/class-block-styles.php:51). The value is escaped where the sniff cannot
+	     follow it, so this one site is silenced, not the EscapeOutput category. -->
+	<rule ref="WordPress.Security.EscapeOutput.OutputNotEscaped">
+		<exclude-pattern>*/parts/block/cta/render.php</exclude-pattern>
 	</rule>
 
 	<!-- Must track style.css's "Requires at least". It said 6.5 while theme.json was already

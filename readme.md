@@ -310,3 +310,32 @@ Accepted, documented limits — not defects to fix in passing:
   It catches the definition file being *absent*, not the include being *off*
   (§9, check 3). The failure it misses is loud and immediate: a fatal naming the
   class the moment the include is toggled, on the developer's own machine.
+
+- **PHPCS is not part of `npm run lint`, and its backlog is a baseline, not a
+  regression.** `npm run lint` runs `lint:css` and `stand`; `lint:php` is a
+  separate script, and `php` is not on `PATH` on this machine. PHPCS has never
+  been run against the theme, so its first run reports a baseline of roughly
+  **3114 errors / 202 warnings across 40 files**, about 86% auto-fixable and
+  dominated by whitespace and alignment sniffs. The substantive items are the
+  `parts/block/_skeleton/callback.php` placeholder syntax error (a template
+  artifact, the same class as the SCSS `_skeleton` placeholders) and the
+  `inc/admin.php` input-handling findings, on a handler whose `add_action` is
+  commented out. Clearing the backlog is out of scope for the foundation task.
+
+- **The stylelint config disables rules as project conventions.** Thirteen
+  rules are off to match the theme's deliberately compact house style; a
+  fourteenth, `block-no-empty`, was resolved by deleting the dead CSS it was
+  hiding rather than by silencing the rule. The substantive ones are
+  `scss/dollar-variable-pattern` (tokens are `$layout_block_gap` /
+  `$borderRadius_medium`), `scss/at-mixin-pattern` (mixins are camelCase, e.g.
+  `mediaMinWidth`), `custom-property-pattern` (`--wp--preset--*` /
+  `--wp--custom--*` are WordPress-generated) and `scss/no-global-function-names`
+  (the legacy pipeline uses `map-get()` / `type-of()`). Each is disabled in
+  `.stylelintrc.json`; the reasons are in the Task 11 commit message.
+
+- **The stand's escaping pass is a narrow regex, not a guard.** It matches only
+  the `<?= $var` shape, so it is blind to `echo $var;` and to
+  `<?= function( … ) ?>`. PHPCS's `EscapeOutput` sniff is the real guard for
+  unescaped output; one false positive is silenced for
+  `parts/block/cta/render.php:45`, where the value is escaped inside
+  `cs__get_block_styles()`.

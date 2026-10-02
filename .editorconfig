@@ -8,8 +8,9 @@ trim_trailing_whitespace = true
 indent_style = tab
 indent_size = 4
 
-[*.{json,yml,yaml,md,scss,css,js,mjs}]
-indent_style = tab
+[*.py]
+indent_style = space
+indent_size = 4
 
 [*.md]
 trim_trailing_whitespace = false

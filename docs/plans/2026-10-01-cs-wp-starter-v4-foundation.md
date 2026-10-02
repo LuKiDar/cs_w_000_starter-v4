@@ -3434,14 +3434,15 @@ trim_trailing_whitespace = true
 indent_style = tab
 indent_size = 4
 
-[*.{json,yml,yaml,md,scss,css,js,mjs}]
-indent_style = tab
+[*.py]
+indent_style = space
+indent_size = 4
 
 [*.md]
 trim_trailing_whitespace = false
 ```
 
-Note: the theme's PHP and SCSS both use tabs. `.editorconfig` enforces that rather than leaving it to each editor.
+Note: the theme's PHP and SCSS both use tabs. `.editorconfig` enforces that rather than leaving it to each editor. Python is the exception: `scripts/check-theme-stand.py` is the repo's only Python file and uses 4 spaces, so `[*.py]` overrides the tab default. The `[*.{json,yml,...}]` section only repeated the `[*]` tab setting, so it was folded away.
 
 - [ ] **Step 3: Install and configure stylelint**
 
@@ -3541,12 +3542,19 @@ Expected: the list includes `WordPress`, `WordPress-Core`, `WordPress-Extra`.
 	<arg name="basepath" value="."/>
 
 	<rule ref="WordPress">
-		<!-- Theme templates deliberately mix PHP and HTML heavily. -->
+		<!-- WordPress expects class files named class-my-class.php and templates
+		     hyphenated and lowercase; the theme deliberately does not follow those
+		     conventions (inc/class-block-styles.php, inc/menu-walker.php,
+		     templates/_skeleton.php). -->
 		<exclude name="WordPress.Files.FileName"/>
-		<!-- The theme's own escaping helpers are used where the sniff cannot see through them. -->
-		<exclude name="WordPress.Security.EscapeOutput.OutputNotEscaped"/>
-		<!-- Adapted BEM and the cs__ prefix are project conventions. -->
-		<exclude name="WordPress.NamingConventions.PrefixAllGlobals"/>
+	</rule>
+
+	<!-- parts/block/cta/render.php:45 prints cs__get_block_styles(), which returns
+	     'style="' . esc_attr( implode( '; ', $styles ) ) . ';"'
+	     (inc/class-block-styles.php:51). The value is escaped where the sniff cannot
+	     follow it, so this one site is silenced, not the EscapeOutput category. -->
+	<rule ref="WordPress.Security.EscapeOutput.OutputNotEscaped">
+		<exclude-pattern>*/parts/block/cta/render.php</exclude-pattern>
 	</rule>
 
 	<!-- Must track style.css's "Requires at least". It said 6.5 while theme.json was already
@@ -3557,7 +3565,7 @@ Expected: the list includes `WordPress`, `WordPress-Core`, `WordPress-Extra`.
 </ruleset>
 ```
 
-The `EscapeOutput` exclusion is deliberate and carries a cost: it means the stand check's own escaping pass (Task 4) is the guard for that class of bug. Do not also silence the stand check.
+`EscapeOutput` is enabled and is the guard for unescaped output. The only site it is silenced for is `parts/block/cta/render.php:45`, where `cs__get_block_styles()` returns an already-`esc_attr()`-escaped `style="…"` string (`inc/class-block-styles.php:51`) that the sniff cannot follow. The stand check's own escaping pass (Task 4) is **not** a substitute: it is a narrow regex that matches only the `<?= $var` shape, so it is blind to `echo $var;` and to `<?= function( … ) ?>`. Do not describe it as covering this class of bug, and do not also silence the stand check.
 
 - [ ] **Step 7: Run PHPCS**
 
@@ -3567,7 +3575,7 @@ PHP="${CSWP_PHP:-$(command -v php || true)}"
 "$PHP" vendor/bin/phpcs
 ```
 
-Expected: it runs and reports a finite list. Fix the errors that are real; leave warnings. Do **not** add blanket exclusions to silence a category without recording the reason in the commit message.
+Expected: it runs and reports a finite list. The theme has never been linted, so the first run reports a baseline of roughly **3114 errors / 202 warnings across 40 files**, about 86% of them auto-fixable and dominated by whitespace and alignment sniffs. The substantive items are the `parts/block/_skeleton/callback.php` placeholder syntax error (a template artifact, the same class as the SCSS `_skeleton` placeholders) and the `inc/admin.php` input-handling findings, on a handler whose `add_action` is commented out. Clearing that backlog is **out of scope for this task** and belongs to a task that owns those files. Do **not** add blanket exclusions to silence a category without recording the reason in the commit message.
 
 - [ ] **Step 8: Add the scripts and gitignore entries**
 

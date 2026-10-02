@@ -14,7 +14,6 @@
 		"scss/comment-no-empty": null,
 		"at-rule-empty-line-before": null,
 		"rule-empty-line-before": null,
-		"selector-not-notation": null,
-		"block-no-empty": null
+		"selector-not-notation": null
 	}
 }
