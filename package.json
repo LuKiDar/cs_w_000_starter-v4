@@ -11,7 +11,10 @@
 		"watch": "gulp watch",
 		"tokens": "node scripts/build-tokens.mjs",
 		"make:block": "node scripts/make-block.mjs",
-		"stand": "python scripts/check-theme-stand.py"
+		"stand": "python scripts/check-theme-stand.py",
+		"lint:css": "stylelint \"assets/scss/**/*.scss\" \"parts/block/**/*.scss\" \"!parts/block/_*/**\"",
+		"lint:php": "php vendor/bin/phpcs",
+		"lint": "npm run lint:css && npm run stand"
 	},
 	"devDependencies": {
 		"browser-sync": "^3.0.3",
@@ -22,6 +25,8 @@
 		"gulp-rename": "^2.0.0",
 		"gulp-sass": "^6.0.0",
 		"gulp-sourcemaps": "^3.0.0",
-		"sass": "^1.85.1"
+		"sass": "^1.85.1",
+		"stylelint": "^17.16.0",
+		"stylelint-config-standard-scss": "^17.0.0"
 	}
 }

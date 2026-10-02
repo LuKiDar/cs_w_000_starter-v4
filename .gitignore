@@ -1,5 +1,8 @@
 # Dependencies
 node_modules/
+vendor/
+composer.phar
+tools/
 
 # Compiled assets — sources only in git (see docs/design/)
 assets/css/*.min.css
