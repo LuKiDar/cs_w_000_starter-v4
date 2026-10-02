@@ -6,7 +6,7 @@
 
 **Architecture:** A hybrid WordPress theme — PHP template hierarchy plus server-rendered ACF Pro blocks. Each block is a self-contained folder (`block.json` + `callback.php` + `render.php` + `style.scss` + `editor.scss` + optional `script.js`) auto-discovered from `parts/block/`. `theme.json` is the single source of truth for design tokens and a build step generates the SCSS token mirror. Block CSS/JS is declared in `block.json` with `file:` references so WordPress loads it only on pages that render the block.
 
-**Tech Stack:** PHP 8.1 (Local by Flywheel, `php-8.1.23+0`), WordPress 6.x, ACF Pro 6.8.6, `theme.json` v3, SCSS (Dart Sass), Node 24.19.0 / npm 10.9.0, Python 3.14.3 for the stand script. Build tool decided by Task 1 (Vite or Gulp 5).
+**Tech Stack:** PHP 8.4.10 (Local by Flywheel; glob it -- do not pin, see Task 7 Step 1b), WordPress 7.1.2, ACF Pro 6.3.12, `theme.json` v3, SCSS (Dart Sass), Node 24.19.0 / npm 10.9.0, Python 3.14.3 for the stand script. Build tool decided by Task 1 (Vite or Gulp 5).
 
 **Spec:** `docs/design/2026-10-01-cs-wp-starter-v4-design.md`
 
@@ -30,7 +30,7 @@
 - Repository: `https://github.com/LuKiDar/cs_w_000_starter-v4`, branch `main`. Commit after every task.
 - All code, comments, docs and commit messages in **English**. Conversation with the owner is Ukrainian.
 - PHP prefix `cs__` for functions, `CSWP` for the text domain, `'cswp'` in `style.css`.
-- PHP binary for linting: `"C:/Users/Admin/AppData/Roaming/Local/lightning-services/php-8.1.23+0/bin/win64/php.exe"` — not on `PATH`, always quote it.
+- PHP binary for linting: **resolve it, never pin it** — `"${CSWP_PHP:-$(command -v php || true)}"`, else the newest `"$APPDATA"/Local/lightning-services/php-*/bin/win64/php.exe`. Not on `PATH`, so always quote it. A pinned version lints against a PHP the site does not run (Task 7 Step 1b).
 - Local site URL: `https://starter-theme.local` (self-signed cert — always `curl -k`).
 - `package.json` `"name"` must be `cs_w_000_starter-v4`, never a client project name.
 - No `apiVersion: 2` blocks — `apiVersion: 3` only.
@@ -137,7 +137,8 @@ The skeleton: identity, the `inc/` spine, the block loader, and enough templates
 
 ```bash
 cd "D:/Local/starter-theme/app/public/wp-content/themes/cs_w_000_starter-v4"
-PHP="C:/Users/Admin/AppData/Roaming/Local/lightning-services/php-8.1.23+0/bin/win64/php.exe"
+PHP="${CSWP_PHP:-$(command -v php || true)}"
+[ -n "$PHP" ] || PHP=$(ls -d "$APPDATA"/Local/lightning-services/php-*/bin/win64/php.exe 2>/dev/null | sort -V | tail -1)
 "$PHP" -l functions.php
 ```
 
@@ -635,7 +636,8 @@ Task 3 replaces this with the full token set.
 - [ ] **Step 15: Run the lint test**
 
 ```bash
-PHP="C:/Users/Admin/AppData/Roaming/Local/lightning-services/php-8.1.23+0/bin/win64/php.exe"
+PHP="${CSWP_PHP:-$(command -v php || true)}"
+[ -n "$PHP" ] || PHP=$(ls -d "$APPDATA"/Local/lightning-services/php-*/bin/win64/php.exe 2>/dev/null | sort -V | tail -1)
 find . -name '*.php' -not -path './node_modules/*' -print0 | xargs -0 -n1 "$PHP" -l
 ```
 
@@ -1229,7 +1231,16 @@ def find_php() -> str:
     candidates = [
         os.environ.get("CSWP_PHP"),
         shutil.which("php"),
-        r"C:/Users/Admin/AppData/Roaming/Local/lightning-services/php-8.1.23+0/bin/win64/php.exe",
+        # The version is globbed, never pinned: a pinned 8.1.23 linted this theme's
+        # files while the site ran 8.4.10, so the check reported on a PHP that was not
+        # in use. Both env roots are checked, because discovery must not depend on one
+        # of them being set.
+        _installs = []
+        for _base in (os.environ.get("APPDATA"), os.environ.get("LOCALAPPDATA")):
+            _d = Path(_base) / "Local" / "lightning-services" if _base else None
+            if _d and _d.is_dir():
+                _installs.extend(_d.glob("php-*/bin/win64/php.exe"))
+        candidates = [os.environ.get("CSWP_PHP"), shutil.which("php"), *sorted(_installs, reverse=True)]
     ]
     for candidate in candidates:
         if candidate and Path(candidate).exists():
@@ -2613,7 +2624,16 @@ Do this **first**, because every later step here leans on `npm run stand` to tel
 `find_php()` in `scripts/check-theme-stand.py` pins one Local version:
 
 ```python
-r"C:/Users/Admin/AppData/Roaming/Local/lightning-services/php-8.1.23+0/bin/win64/php.exe",
+# The version is globbed, never pinned: a pinned 8.1.23 linted this theme's
+# files while the site ran 8.4.10, so the check reported on a PHP that was not
+# in use. Both env roots are checked, because discovery must not depend on one
+# of them being set.
+_installs = []
+for _base in (os.environ.get("APPDATA"), os.environ.get("LOCALAPPDATA")):
+    _d = Path(_base) / "Local" / "lightning-services" if _base else None
+    if _d and _d.is_dir():
+        _installs.extend(_d.glob("php-*/bin/win64/php.exe"))
+candidates = [os.environ.get("CSWP_PHP"), shutil.which("php"), *sorted(_installs, reverse=True)]
 ```
 
 **This site runs PHP 8.4.10** — `services.php.version` in Local's own registry — so every `php -l` the script has run has checked syntax against a PHP the site does not use. A pinned version is not a fallback: it is a check that silently stops testing what you think it tests, the same class of mistake as pinning the MySQL port. **Anything resolved from the environment must be discovered, not remembered.**
@@ -2671,7 +2691,8 @@ PY
 Expected: a path containing `php-8.4.10`, **not** `php-8.1.23`. Then confirm the explicit override still wins:
 
 ```bash
-CSWP_PHP="C:/Users/Admin/AppData/Roaming/Local/lightning-services/php-8.1.23+0/bin/win64/php.exe" python - <<'PY'
+CSWP_PHP="${CSWP_PHP:-$(command -v php || true)}"
+[ -n "$PHP" ] || PHP=$(ls -d "$APPDATA"/Local/lightning-services/php-*/bin/win64/php.exe 2>/dev/null | sort -V | tail -1) python - <<'PY'
 import importlib.util as u
 s = u.spec_from_file_location("st", "scripts/check-theme-stand.py")
 m = u.module_from_spec(s); s.loader.exec_module(m)
@@ -3380,8 +3401,6 @@ git rev-parse HEAD
 
 Expected: the two hashes match, and `git status --short` is clean afterwards. **A dirty tree here means a fix was left behind** -- check before reporting done.
 
-Expected: the two hashes match.
-
 ---
 
 ## Task 11: Lint and editor configuration
@@ -3448,7 +3467,13 @@ npm install --save-dev stylelint stylelint-config-standard-scss
 
 `selector-class-pattern` is off because the theme's adapted BEM (`.block-x__el`, `.is-state`, `.has-state`) is deliberate and not standard BEM. `at-rule-no-unknown` is off for the same reason in reverse — `@import` is intentionally used over `@use`.
 
-Add the script: `"lint:css": "stylelint \"assets/scss/**/*.scss\" \"parts/block/**/*.scss\""`.
+Add the script:
+
+```json
+"lint:css": "stylelint \"assets/scss/**/*.scss\" \"parts/block/**/*.scss\" \"!parts/block/_*/**\""
+```
+
+**The exclusion is required, not tidiness.** `parts/block/_skeleton/style.scss` and `editor.scss` each carry two `{{...}}` placeholders — it is the template every block is generated from, not a block — so stylelint reports a parse error on a legitimate file. Measured: both files contain `{{`. The stand's `php_files()` skips underscore-prefixed folders for the same reason, and `cs__get_blocks()` excludes them from registration too. **Confirm stylelint still lints a real block** (`parts/block/cta/style.scss`) — a filter that silently excludes everything also reports no errors.
 
 - [ ] **Step 4: Run stylelint**
 
@@ -3460,13 +3485,20 @@ Expected: no errors. Fix any real errors it reports; if a rule fights the theme'
 
 - [ ] **Step 5: Install PHPCS with WordPress Coding Standards**
 
-`php` is not on `PATH`, and Composer is not installed — so both are bootstrapped locally with the Local PHP binary:
+`php` is not on `PATH`, and Composer is not installed — so both are bootstrapped locally with the Local PHP binary.
+
+**Do not pin the version.** `php-8.1.23+0` does exist on this machine, so a pinned path *works* — which is exactly why it is dangerous: it lints against a PHP the site does not run, and it is the bug Task 7 Step 1b fixed in the stand script (`find_php()` globbed 8.1.23 while the site ran 8.4.10, so every `php -l` reported on the wrong interpreter, silently). Resolve it the way Task 10 Step 3 and the stand do:
 
 ```bash
-PHP="C:/Users/Admin/AppData/Roaming/Local/lightning-services/php-8.1.23+0/bin/win64/php.exe"
+PHP="${CSWP_PHP:-$(command -v php || true)}"
+[ -n "$PHP" ] || PHP=$(ls -d "$APPDATA"/Local/lightning-services/php-*/bin/win64/php.exe 2>/dev/null | sort -V | tail -1)
+echo "using: $PHP"
 
-curl -sS https://getcomposer.org/installer -o "$TMPDIR/composer-setup.php"
-"$PHP" "$TMPDIR/composer-setup.php" --install-dir=. --filename=composer.phar
+# $TMPDIR is an MSYS path (/tmp) and native php.exe does NOT translate it: PHP resolves
+# "/tmp/x" as C:\tmp\x, so the installer would not be found there. Convert before use.
+SETUP="$(cygpath -m "$TMPDIR")/composer-setup.php"
+curl -sS https://getcomposer.org/installer -o "$SETUP"
+"$PHP" "$SETUP" --install-dir=. --filename=composer.phar
 "$PHP" composer.phar require --dev \
 	squizlabs/php_codesniffer \
 	wp-coding-standards/wpcs \
@@ -3518,7 +3550,8 @@ The `EscapeOutput` exclusion is deliberate and carries a cost: it means the stan
 - [ ] **Step 7: Run PHPCS**
 
 ```bash
-PHP="C:/Users/Admin/AppData/Roaming/Local/lightning-services/php-8.1.23+0/bin/win64/php.exe"
+PHP="${CSWP_PHP:-$(command -v php || true)}"
+[ -n "$PHP" ] || PHP=$(ls -d "$APPDATA"/Local/lightning-services/php-*/bin/win64/php.exe 2>/dev/null | sort -V | tail -1)
 "$PHP" vendor/bin/phpcs
 ```
 
@@ -3536,7 +3569,9 @@ Expected: it runs and reports a finite list. Fix the errors that are real; leave
 `php` is **not** on this machine's `PATH`, so `npm run lint:php` will not work as written until PHP is added to it. Until then, run PHPCS directly:
 
 ```bash
-"C:/Users/Admin/AppData/Roaming/Local/lightning-services/php-8.1.23+0/bin/win64/php.exe" vendor/bin/phpcs
+PHP="${CSWP_PHP:-$(command -v php || true)}"
+[ -n "$PHP" ] || PHP=$(ls -d "$APPDATA"/Local/lightning-services/php-*/bin/win64/php.exe 2>/dev/null | sort -V | tail -1)
+"$PHP" vendor/bin/phpcs
 ```
 
 Do **not** commit a machine-specific absolute PHP path into `package.json` — the repo is handed to the client's team, whose machines resolve `php` differently. Add PHP to `PATH` locally instead, and leave the script portable.
@@ -3552,7 +3587,11 @@ tools/
 - [ ] **Step 9: Commit**
 
 ```bash
-git add .editorconfig .stylelintrc.json phpcs.xml .gitignore package.json package-lock.json  # by path, never -A: it has swept .hermes-tmp.*/ and .superpowers/ in here before
+# `composer.json` and `composer.lock` are created by Step 5's `composer require --dev`. Stage
+# them: they are the dependency manifest and belong in version control. `vendor/` and
+# `composer.phar` stay ignored (Step 8).
+git add .editorconfig .stylelintrc.json phpcs.xml .gitignore package.json package-lock.json composer.json composer.lock  # by path, never -A: it has swept .hermes-tmp.*/ and .superpowers/ in here before
+git status --short  # a dirty tree here means something was left behind
 git commit -m "chore: editorconfig, stylelint and PHPCS with WordPress standards"
 ```
 
