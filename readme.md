@@ -30,7 +30,7 @@ and a US map component (see §11).
 
 ## 2. Requirements
 
-- **WordPress** 6.5 or newer
+- **WordPress** 6.6 or newer
 - **PHP** 8.1 or newer
 - **Advanced Custom Fields (ACF) Pro** — a hard dependency, not optional. CPTs,
   taxonomies and field groups are registered through it (see §7).
@@ -98,9 +98,15 @@ Finally:
 npm run build   # compiles style.min.css and editor.min.css for the new block
 ```
 
-A folder whose name starts with `_` (`_skeleton`, `_base-block`) is a template
-and is excluded from block registration by `cs__get_blocks()` — do not name a
-real block that way.
+`cs__get_blocks()` skips an **exact list of names** — `_skeleton`, `_base-block`
+and the OS entries (`..`, `.`, `.DS_Store`) — so only those folders are left out
+of block registration. A folder named anything else with a leading underscore
+(`_my-block`) **would** be registered. That makes `cs__get_blocks()` the odd one
+out: the stand check (`scripts/check-theme-stand.py:75`) and the gulp glob
+(`parts/block/_*/**`) both use a **prefix** rule, and that prefix rule is the
+convention this project intends. Until `cs__get_blocks()` is widened to match,
+treat a leading underscore as reserved by convention: do not name a real block
+`_something`.
 
 ## 6. Adding a page template
 
@@ -117,8 +123,9 @@ dropdown. The skeleton is a starting point, not a live template.
 ## 7. Where content definitions live
 
 Custom post types, taxonomies and field groups are **registered through the
-ACF Pro UI**, not in theme code. The theme deliberately does not disable ACF's
-post-type feature (that line lives in the commented toolbox).
+ACF Pro UI**, not in theme code. The theme leaves ACF's `enable_post_types`
+filter alone; `inc/plugin-acf.php` records that in a prose comment — there is
+no code line for it.
 
 - The definitions are stored as **posts in the WordPress database** — that is
   where ACF reads them from at runtime.
@@ -212,11 +219,12 @@ Adapted BEM, used consistently across every block and partial:
   &__item { }
 
   // Modifiers                     // section headers are comments; the rules are live
-  &.alignfull { }
-  &.has-background { }
+  &.alignfull { }                 // core-emitted class: the theme styles it where it occurs
+  &.has-background { }            // core-emitted (block supports) -- `has-` is core's prefix
+  &.is-featured { }               // a modifier this theme names itself -> `is-`
 
   // States
-  &.is-playing { }
+  &.has-video-playing { }         // a state this theme names itself -> `has-`
 
   // Frontend only styles
   body:not(.wp-admin) & { }
@@ -233,7 +241,12 @@ Rules:
    `flex-flow`, `gap`, `margin`) — for fast lookup when editing.
 3. **Modifiers (`is-*`) and states (`has-*`) go at the end of the block**, under
    the `// Modifiers` / `// States` headers. The code is live; only the header is
-   a comment.
+   a comment. A class **the theme names itself** uses `is-` for a modifier and
+   `has-` for a state. Some classes that sit in those sections are not the
+   theme's: `alignfull`, `has-background` and `has-text-align-center` /
+   `has-text-align-right` are **WordPress core** class names emitted by block
+   supports, so the theme styles them where they occur and their prefix is
+   core's, not this convention.
 4. **Media queries live inside the element they modify**, never collected at the
    bottom.
 5. Block SCSS imports the shared abstracts:
@@ -243,10 +256,12 @@ Rules:
 7. Spacing and colour per instance come from Gutenberg native supports, emitted
    by `CS_Block_Styles` as an inline `style` attribute — not per-instance
    `<style>` tags.
-8. **Card partials** live one per file in
-   `assets/scss/parts/content/_<type>-card.scss` and are imported by **exactly
-   one entry point** — the narrowest one covering every consumer (the block's
-   `style.scss` if only one block uses it, or `main.scss` if a PHP
+8. **Card partials** (Phase 2) will live one per file in
+   `assets/scss/parts/content/_<type>-card.scss` — a directory this foundation
+   does not create yet (`assets/scss/` holds only `abstracts/` and `base/`; the
+   partials arrive with the `card-list` block, see §11) — and are imported by
+   **exactly one entry point** — the narrowest one covering every consumer (the
+   block's `style.scss` if only one block uses it, or `main.scss` if a PHP
    template/archive renders it too). Never import the same partial from both
    `main.scss` and a block file: that emits duplicate CSS on pages carrying the
    block.
@@ -260,12 +275,14 @@ SCSS never hardcodes a colour, font size or radius; it references
 
 Accepted, documented limits — not defects to fix in passing:
 
-- **The `card-list` contract.** `card-list` (and the ten project-specific block
-  names it replaces) resolves a card partial by post type and calls it with a
-  fixed `$args` contract: `post_id` and `modifier`. Every card partial must
-  share that contract. It covers roughly 80% of cases; lists with bespoke
-  filtering stay as project-specific blocks. The contract is small, so removing
-  the block is cheap if it does not fit.
+- **The `card-list` contract (Phase 2).** `card-list` is **not part of this
+  foundation** — `parts/block/` ships only `_skeleton` and `cta`. Phase 2 adds
+  it, and it (plus the eleven project-specific block names it replaces) resolves
+  a card partial by post type and calls it with a fixed `$args` contract:
+  `post_id` and `modifier`. Every card partial must share that contract. It
+  covers roughly 80% of cases; lists with bespoke filtering stay as
+  project-specific blocks. The contract is small, so removing the block is
+  cheap if it does not fit.
 - **ACF Pro is a hard dependency.** CPTs, taxonomies and field groups are
   registered through ACF Pro; deactivating it makes every CPT post "Invalid post
   type". See §7.
