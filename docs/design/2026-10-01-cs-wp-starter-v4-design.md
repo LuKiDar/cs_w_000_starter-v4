@@ -180,8 +180,9 @@ Verified on ACF Pro 6.8.6:
 **Decision:** CPTs and taxonomies are registered through ACF Pro's Post Types and
 Taxonomies UI. No custom site plugin is written for this purpose. The theme simply stops
 disabling the feature (v3/arosa/millburn/nucleux/corazon all call
-`add_filter('acf/settings/enable_post_types', '__return_false')`; in v4 that line sits in
-the commented toolbox).
+`add_filter('acf/settings/enable_post_types', '__return_false')`; v4 leaves that filter
+alone, and `inc/plugin-acf.php` records that in a prose comment — there is no code line
+for it).
 
 ### 6.1 Where the definitions actually live
 

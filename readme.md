@@ -219,12 +219,12 @@ Adapted BEM, used consistently across every block and partial:
   &__item { }
 
   // Modifiers                     // section headers are comments; the rules are live
-  &.alignfull { }                 // core-emitted class: the theme styles it where it occurs
-  &.has-background { }            // core-emitted (block supports) -- `has-` is core's prefix
-  &.is-featured { }               // a modifier this theme names itself -> `is-`
+  &.alignfull { }                 // a core class name; the theme's helper emits it here
+  &.has-background { }            // a core class name -- `has-` is core's prefix
+  &.is-featured { }               // illustrative example: a theme-named modifier -> `is-`
 
   // States
-  &.has-video-playing { }         // a state this theme names itself -> `has-`
+  &.has-video-playing { }         // illustrative example: a theme-named state -> `has-`
 
   // Frontend only styles
   body:not(.wp-admin) & { }
@@ -244,9 +244,11 @@ Rules:
    a comment. A class **the theme names itself** uses `is-` for a modifier and
    `has-` for a state. Some classes that sit in those sections are not the
    theme's: `alignfull`, `has-background` and `has-text-align-center` /
-   `has-text-align-right` are **WordPress core** class names emitted by block
-   supports, so the theme styles them where they occur and their prefix is
-   core's, not this convention.
+   `has-text-align-right` are **WordPress core** class names, so the theme
+   styles them where they occur and their prefix is core's, not this
+   convention. In this theme they are emitted by the theme's own helper
+   (`cs__get_block_classes()` in `inc/helper-functions.php`), not by core block
+   supports, which do not run for an ACF block here.
 4. **Media queries live inside the element they modify**, never collected at the
    bottom.
 5. Block SCSS imports the shared abstracts:
@@ -258,8 +260,10 @@ Rules:
    `<style>` tags.
 8. **Card partials** (Phase 2) will live one per file in
    `assets/scss/parts/content/_<type>-card.scss` — a directory this foundation
-   does not create yet (`assets/scss/` holds only `abstracts/` and `base/`; the
-   partials arrive with the `card-list` block, see §11) — and are imported by
+   does not create yet (`assets/scss/` holds no `parts/` directory, only
+   `abstracts/`, `base/` and the entry points `main.scss`, `admin.scss`,
+   `editor.scss`; the partials arrive with the `card-list` block, see §11) — and
+   are imported by
    **exactly one entry point** — the narrowest one covering every consumer (the
    block's `style.scss` if only one block uses it, or `main.scss` if a PHP
    template/archive renders it too). Never import the same partial from both
