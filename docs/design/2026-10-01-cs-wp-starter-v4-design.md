@@ -584,16 +584,26 @@ Sources only in git; build output is generated.
 ## 15. Accessibility
 
 Two small, generic fixes carried over from arosa. Proportionate, not a framework —
-approximately 40 lines total, and tested for relevance before being kept.
+approximately 40 lines total, and tested for relevance before being kept. One of the
+two was kept; the other was built, measured against every template, and deleted (2).
 
 1. **`inc/a11y-block-fixes.php`** — a `render_block` filter rewriting
    `<h6 class="wp-block-heading">Eyebrow</h6>` to `<p>Eyebrow</p>`. Designers style an
    eyebrow as an H6 for its look, but an H6 before an H2 is a heading-order violation
    flagged by Lighthouse and axe. The class is preserved, so the visual result is
    unchanged and only the semantic lie is removed.
-2. **`assets/js/a11y-runtime.js`** — strips positive `tabindex` values and removes
-   focusable elements from `aria-hidden` slider slides (off-screen clones otherwise stay
-   focusable, so keyboard users tab into invisible content).
+2. ~~**`assets/js/a11y-runtime.js`**~~ — **built, measured, and deleted (Task 9).** The
+   runtime (strip positive `tabindex` values; set `tabindex="-1"` on focusable content
+   inside `aria-hidden="true"` containers) was implemented and enqueued, then measured in
+   a real browser against every template in the theme. It produced **no observable change
+   on any of them**: the theme emits no positive `tabindex` anywhere, and every
+   `aria-hidden="true"` container's focusable content already carries `tabindex="-1"` in
+   the markup (`parts/content/post-card.php`'s `card-post__media` thumbnail link), while
+   the other containers (`nav-toggle__bar` spans) hold nothing focusable. It is also
+   **one-shot** — it scans once at script execution and never re-scans, so a node added
+   afterwards is never fixed. Shipping a file that changes nothing on this theme would be
+   the checkbox accessibility this section rejects, so it was removed. The same applies to
+   the `assets/js/src/main.js` entry point that existed only to call it.
 
 General standard: semantic HTML, real landmarks, keyboard-operable interactive components,
 visible focus. No ARIA added purely for a checklist.
