@@ -67,7 +67,6 @@ require_once 'inc/a11y-block-fixes.php';
 // require_once 'inc/pagination.php';
 // require_once 'inc/shortcodes.php';
 // require_once 'inc/widgets.php';
-// require_once 'inc/post-types.php';
 // require_once 'inc/cpt-post.php';
 // require_once 'inc/admin.php';
 // require_once 'inc/customize.php';

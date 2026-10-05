@@ -18,7 +18,7 @@
 4. **The stand script** — `scripts/check-theme-stand.py`, validated against v3 (must fail) and v4 (must pass).
 5. **Block system** — `parts/block/_skeleton/`, the generator (`npm run make:block`), the field-group convention.
 6. **Reference block `cta`** — proves the whole chain: registration, per-page asset loading, escaping, guards.
-7. **The toolbox** — `inc/menu-walker.php`, breadcrumbs, pagination, shortcodes, widgets, `cpt-post.php`, `post-types.php`, `plugin-acf.php`, plus the commented-include map.
+7. **The toolbox** — `inc/menu-walker.php`, breadcrumbs, pagination, shortcodes, widgets, `cpt-post.php`, `plugin-acf.php`, plus the commented-include map.
 8. **Base templates** — archives, search, `templates/_skeleton.php`, `parts/content/` cards.
 9. **Accessibility layer** — the two a11y files and their enqueue.
 10. **README and PHP 8.4 compatibility** — the document the client's team works from.
@@ -232,7 +232,6 @@ require_once 'inc/gutenberg.php';
 // require_once 'inc/pagination.php';
 // require_once 'inc/shortcodes.php';
 // require_once 'inc/widgets.php';
-// require_once 'inc/post-types.php';
 // require_once 'inc/cpt-post.php';
 // require_once 'inc/admin.php';
 // require_once 'inc/customize.php';
@@ -2595,12 +2594,14 @@ git commit -m "feat: cta reference block proving the full block contract"
 Every commented include in `functions.php` gets a real, working file.
 
 **Files:**
-- Create: `inc/menu-walker.php`, `inc/breadcrumbs.php`, `inc/pagination.php`, `inc/shortcodes.php`, `inc/widgets.php`, `inc/post-types.php`, `inc/cpt-post.php`, `inc/admin.php`, `inc/customize.php`, `inc/plugin-acf.php`
+- Create: `inc/menu-walker.php`, `inc/breadcrumbs.php`, `inc/pagination.php`, `inc/shortcodes.php`, `inc/widgets.php`, `inc/cpt-post.php`, `inc/admin.php`, `inc/customize.php`, `inc/plugin-acf.php`
 - Modify: `functions.php` (uncomment the `menu-walker` include), `header.php` (wire the walker into both `wp_nav_menu` calls), `scripts/check-theme-stand.py` (Step 1b)
 
 **Interfaces:**
 - Consumes: `DEFAULT_CPT_ARGS` and friends from `inc/constants.php`; `cs__get_template_page_ID()` from `inc/helper-functions.php`.
-- Produces: `cs__primary_menu_walker`, `cs__footer_menu_walker`, `cs__the_breadcrumbs()`, `cs__the_pagination()`, `cs__register_post_types()`, `cs__register_taxonomies()`.
+- Produces: `cs__primary_menu_walker`, `cs__footer_menu_walker`, `cs__the_breadcrumbs()`, `cs__the_pagination()`.
+
+**Post types and taxonomies are registered through the ACF Pro UI, not in theme code** (design §6.1) — so this task ships no declarative CPT/taxonomy registrar (`cs__register_post_types()` / `cs__register_taxonomies()` and their `inc/post-types.php`) and none should be re-added. A case ACF's UI cannot express (custom capabilities, `register_post_meta()`, a post type owned by a plugin) belongs in a dedicated site plugin (design §6.3).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -2706,9 +2707,9 @@ Expected: `True`.
 
 Port `arosa/inc/menu-walker.php` (87 lines) — a `Walker_Nav_Menu` subclass emitting `.sub-menu`, `.menu-depth-N`, `.menu-item-trigger` and caret markup, plus a `cs__footer_menu_walker` variant if the arosa file has one. This is the file whose absence killed v3.
 
-- [ ] **Step 3: Port `inc/breadcrumbs.php`, `inc/pagination.php`, `inc/post-types.php`, `inc/cpt-post.php`**
+- [ ] **Step 3: Port `inc/breadcrumbs.php`, `inc/pagination.php`, `inc/cpt-post.php`**
 
-From `cs_w_000_starter-v3/inc/` and `arosa/inc/` — breadcrumbs (159 lines in v3), pagination, the declarative CPT/taxonomy registrar, and the Posts-CPT tweaks. Keep the `cs__` prefix and the `DEFAULT_*` constants.
+From `cs_w_000_starter-v3/inc/` and `arosa/inc/` — breadcrumbs (159 lines in v3), pagination, and the Posts-CPT tweaks. Keep the `cs__` prefix and the `DEFAULT_*` constants.
 
 - [ ] **Step 4: Write `inc/shortcodes.php` and `inc/widgets.php`**
 
@@ -2750,7 +2751,7 @@ The question is "does the site survive when the feature is switched on", so the 
 
 ```bash
 # every file exists and every check is green before anything is switched on
-for f in menu-walker breadcrumbs pagination shortcodes widgets post-types cpt-post admin customize plugin-acf; do
+for f in menu-walker breadcrumbs pagination shortcodes widgets cpt-post admin customize plugin-acf; do
   [ -f "inc/$f.php" ] || echo "MISSING: inc/$f.php"
 done
 npm run stand 2>&1 | grep -E "^(PASS|FAIL)"
@@ -2925,7 +2926,7 @@ git commit -m "feat: toolbox files behind commented includes"
 ## Task 8: Base templates
 
 **Files:**
-- Create: `front-page.php`, `home.php`, `archive.php`, `category.php`, `tag.php`, `date.php`, `author.php`, `search.php`
+- Create: `front-page.php`, `home.php`, `archive.php`, `category.php`, `search.php`
 - Create: `templates/_skeleton.php`
 - Create: `parts/content/post-card.php`
 - Modify: `inc/gutenberg.php` (Step 4b — filter the generator skeleton out of the page-template registry)
@@ -2937,7 +2938,7 @@ git commit -m "feat: toolbox files behind commented includes"
 - [ ] **Step 1: Write the failing test**
 
 ```bash
-for t in front-page home archive category tag date author search; do
+for t in front-page home archive category search; do
   [ -f "$t.php" ] && echo "$t: present" || echo "$t: MISSING"
 done
 ```
@@ -2987,7 +2988,7 @@ if ( $modifier !== '' ){
 
 - [ ] **Step 3: Write the archive templates**
 
-`archive.php`, `category.php`, `tag.php`, `date.php`, `author.php` share one shape — an archive header, `if ( have_posts() )` loop rendering `get_template_part('parts/content/post-card', '', ['post_id' => get_the_ID()])`, then `cs__the_pagination()`. `home.php` and `front-page.php` do the same without the pagination difference. `search.php` adds the result count.
+`archive.php` and `category.php` share one shape — an archive header, `if ( have_posts() )` loop rendering `get_template_part('parts/content/post-card', '', ['post_id' => get_the_ID()])`, then `cs__the_pagination()`. WordPress resolves author, date and tag archives to `archive.php` (there is no dedicated template for them). `home.php` and `front-page.php` do the same without the pagination difference. `search.php` adds the result count.
 
 Each must be guarded so the theme never fatals when a toolbox include is commented out:
 
@@ -3160,7 +3161,7 @@ function get_the_archive_title() {
 	$title  = __( 'Archives' );
 ```
 
-So `the_archive_title()` would have printed `<h1>Archives</h1>` on the blog page and the front page — not empty, just wrong. The choice stands, and the reason is now recorded correctly. `archive.php`, `category.php`, `tag.php`, `date.php` and `author.php` do use `the_archive_title()` and should keep it: those are the contexts it exists for.
+So `the_archive_title()` would have printed `<h1>Archives</h1>` on the blog page and the front page — not empty, just wrong. The choice stands, and the reason is now recorded correctly. `archive.php` (which WordPress also resolves for author, date and tag archives) and `category.php` do use `the_archive_title()` and should keep it: those are the contexts it exists for.
 
 Verify, once Local is running:
 
@@ -3177,7 +3178,7 @@ Expected: every sequence is `h1 h2 h2 h2 ...` with no skip, and `/` contains the
 - [ ] **Step 7: Commit**
 
 ```bash
-git add front-page.php home.php archive.php category.php tag.php date.php author.php search.php templates/ parts/content/post-card.php inc/gutenberg.php  # by path, never -A: it has swept .hermes-tmp.*/ and .superpowers/ in here before, and a bare `*.php` would sweep any stray probe left in the theme root
+git add front-page.php home.php archive.php category.php search.php templates/ parts/content/post-card.php inc/gutenberg.php  # by path, never -A: it has swept .hermes-tmp.*/ and .superpowers/ in here before, and a bare `*.php` would sweep any stray probe left in the theme root
 git commit -m "feat: base template hierarchy and the post card contract"
 ```
 

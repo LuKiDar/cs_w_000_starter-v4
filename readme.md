@@ -11,9 +11,9 @@ whose markup is rendered by PHP, not JavaScript.
 ## 1. What this is
 
 - **PHP templates** for every base view: `front-page.php`, `home.php`,
-  `index.php`, `archive.php`, `category.php`, `tag.php`, `date.php`,
-  `author.php`, `search.php`, `404.php`, `page.php`, `single.php`, plus
-  `header.php` and `footer.php`.
+  `index.php`, `archive.php`, `category.php`, `search.php`, `404.php`,
+  `page.php`, `single.php`, plus `header.php` and `footer.php`. Author, date
+  and tag archives resolve to `archive.php` through the template hierarchy.
 - **Server-rendered blocks** under `parts/block/<slug>/`. Each block is a
   standard `block.json` block whose `renderCallback` is a PHP function, so the
   front end and the editor preview run the same PHP. No React block code is
@@ -144,8 +144,8 @@ Two consequences worth knowing before you touch anything:
   is a permanent, paid dependency on every project; keep it active.
 
 For cases ACF's UI cannot express (custom capabilities, `register_post_meta()`,
-a post type owned by a plugin), use the declarative registrar in the commented
-toolbox — `inc/post-types.php` with the `DEFAULT_CPT_ARGS` constants (see §8).
+a post type owned by a plugin), register the type from a dedicated site plugin
+(design §6.3). The theme ships no code registrar for post types or taxonomies.
 
 ## 8. The commented toolbox
 
@@ -157,11 +157,10 @@ the file exists, and here it does.)
 
 | Commented include | Provides | Notes / dependencies |
 |---|---|---|
-| `inc/breadcrumbs.php` | `cs__the_breadcrumbs()` — the breadcrumb trail. | Already called, behind `function_exists()` guards, by the archive, author, category, date, front-page, home, search and tag templates. Uncommenting lights them up. |
+| `inc/breadcrumbs.php` | `cs__the_breadcrumbs()` — the breadcrumb trail. | Already called, behind `function_exists()` guards, by the archive, category, front-page, home and search templates; author, date and tag archives resolve to `archive.php`. Uncommenting lights them up. |
 | `inc/pagination.php` | `cs__the_pagination()` — Previous/Next bookended pagination. | Guarded the same way by the same archive-style templates. |
 | `inc/shortcodes.php` | The `[cs-year]` shortcode (current year in the site timezone). | None. |
 | `inc/widgets.php` | Registers the `cs-sidebar` sidebar and `cs__the_sidebar()`. | None. |
-| `inc/post-types.php` | `cs__register_post_types()` / `cs__register_taxonomies()` — a declarative registrar for CPTs and taxonomies. | **Depends on `inc/constants.php`**, which always loads: it reads `DEFAULT_CPT_ARGS`, `DEFAULT_CPT_LABELS` and `DEFAULT_TAXONOMY_ARGS`. Use it only for what ACF's UI cannot express (§7). |
 | `inc/cpt-post.php` | Removes the built-in Posts post type from the admin. | None. |
 | `inc/admin.php` | Reorders the wp-admin menu. | None. |
 | `inc/customize.php` | Customizer settings: header button and social links. | This is the **primary** settings surface. |
