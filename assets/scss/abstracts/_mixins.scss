@@ -2,10 +2,17 @@
  * Mixins
  */
 
+// Media-query mixins resolve breakpoint names against $breakpoints, which is
+// declared in _variables.scss. Under `@use` a mixin body is scoped to the module
+// that defines it, so that file must be loaded here. It is loaded with a
+// namespace (not `as *`): a block that legacy-`@import`s both files must not see
+// the variables module's members arrive twice.
+@use 'variables' as vars;
+
 /* --- Media Queries --- */
 @mixin mediaMinWidth( $minWidth ){
 	@if type-of($minWidth)==string {
-		$minWidth: map-get($breakpoints, $minWidth);
+		$minWidth: map-get(vars.$breakpoints, $minWidth);
 	}
 
 	@media screen and (min-width: #{$minWidth + 0px}){
@@ -14,7 +21,7 @@
 }
 @mixin mediaMaxWidth( $maxWidth ){
 	@if type-of($maxWidth)==string {
-		$maxWidth: map-get($breakpoints, $maxWidth);
+		$maxWidth: map-get(vars.$breakpoints, $maxWidth);
 	}
 
 	@media screen and (max-width: #{$maxWidth + 0px}){
@@ -23,13 +30,96 @@
 }
 @mixin mediaBetween( $minWidth, $maxWidth ){
 	@if type-of($minWidth)==string {
-		$minWidth: map-get($breakpoints, $minWidth);
+		$minWidth: map-get(vars.$breakpoints, $minWidth);
 	}
 	@if type-of($maxWidth)==string {
-		$maxWidth: map-get($breakpoints, $maxWidth);
+		$maxWidth: map-get(vars.$breakpoints, $maxWidth);
 	}
 
 	@media screen and (min-width: #{$minWidth + 0px}) and (max-width: #{$maxWidth + 0px}){
 		@content;
+	}
+}
+
+/* --- Get styles ---
+ * Emit a style map as declarations: a map of property -> value. */
+@mixin getStyles( $styles, $screen:'' ){
+	@each $name, $value in $styles {
+		#{$name}: #{$value};
+	}
+}
+
+/* Emit a map of per-breakpoint style maps: a 'default' key emits unconditionally,
+ * any breakpoint key wraps its styles in a mediaMaxWidth() query. */
+@mixin getStylesBreakpoints( $styles ){
+	@if type-of($styles)=='map' {
+		@each $itemScreen, $itemStyles in $styles {
+			@if $itemScreen=='xl' or $itemScreen=='lg' or $itemScreen=='md' or $itemScreen=='sm' or $itemScreen=='xs'{
+				@include mediaMaxWidth( $itemScreen ){
+					@include getStyles( $itemStyles, $itemScreen );
+				}
+			} @else if $itemScreen=='default' {
+				@include getStyles( $itemStyles, $itemScreen );
+			}
+		}
+	}
+}
+
+/* --- Placeholder ---
+ * Style an input's placeholder text across engines. */
+/* stylelint-disable selector-no-vendor-prefix -- these vendor-prefixed
+ * pseudo-elements are the point of the mixin; autoprefixer does not add them. */
+@mixin placeholder {
+	&.placeholder { @content; }
+	&:-ms-input-placeholder { @content; }
+	&:-moz-placeholder { @content; }
+	&::-moz-placeholder { @content; }
+	&::-webkit-input-placeholder { @content; }
+}
+/* stylelint-enable selector-no-vendor-prefix */
+
+/* --- Block cover ---
+ * Creates a block that covers the full width/height of a positioned parent. */
+@mixin blockCover(){
+	content: '';
+	display: block;
+	height: 100%;
+	left: 0;
+	position: absolute;
+	top: 0;
+	width: 100%;
+	z-index: 1;
+}
+
+/* --- Icon mask ---
+ * Creates a mask for an icon.
+ * Usage: @include iconMask($icons, after, $color_black, 20px); */
+@mixin iconMask( $icons, $position: both, $color: currentColor, $size: 1rem ){
+	$selector: '::before, ::after';
+	@if $position == before {
+		$selector: '::before';
+	} @else if $position == after {
+		$selector: '::after';
+	}
+
+	&[class*="has-icon-"]#{$selector} {
+		background: $color;
+		content: '';
+		display: inline-block;
+		height: $size;
+		mask-position: 50% 50%;
+		mask-repeat: no-repeat;
+		mask-size: contain;
+		position: absolute;
+		top: 50%;
+		transform: translateY(-50%);
+		width: $size;
+		z-index: 5;
+	}
+
+	@each $icon in $icons {
+		&.has-icon-#{$icon}#{$selector} {
+			mask-image: url('../../assets/images/icons/icon-#{$icon}.svg');
+		}
 	}
 }
