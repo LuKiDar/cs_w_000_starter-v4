@@ -30,6 +30,11 @@
 @use 'layout/navigation';
 @use 'layout/footer';
 
-// The layers below are added as the theme grows. Keep this order.
-// @use 'pages/…';
-// @use 'parts/…';
+// Pages
+@use 'pages/archive';
+@use 'pages/single';
+@use 'pages/page';
+@use 'pages/404' as page-404;
+
+// Parts
+@use 'parts/content/post-card';

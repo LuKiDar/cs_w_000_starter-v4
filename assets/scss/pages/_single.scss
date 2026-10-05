@@ -1,0 +1,43 @@
+// -----------------------------------------------------------------------------
+// Single post
+//
+// Targets single.php: `<article id="post-…" class="post …">`
+// (`post_class()`, L19) wrapping `.entry-title` (L20) and `.entry-content`
+// (L21). The `post_class()` output carries WordPress's own classes
+// (`post`, `type-post`, `status-publish`, `format-standard`, `hentry`,
+// `category-*`); only the two contract classes are styled here.
+//
+// Written new: Arosa pages/_post-single.scss:1-144 is the pattern adapted, but
+// its root class is `.post-single`, which single.php never emits, and its
+// `__header`/`__meta`/`__footer`/`__categories` children do not exist in v4's
+// markup. `$teal` -> `$color_primary`, `remc()` -> `fn.remc()`.
+//
+// The title's top spacing is padding, not margin: base/_typography.scss:29 sets
+// `h1:first-child { margin-top: 0 }`, which outranks a plain `.entry-title`
+// class rule, so a margin would be silently dropped.
+// -----------------------------------------------------------------------------
+
+@use '../abstracts/functions' as fn;
+@use '../abstracts/mixins' as mx;
+@use '../abstracts/variables' as vars;
+
+.entry-title {
+	font-size: vars.$fontSize_huge;
+	line-height: vars.$lineHeight_base;
+	margin: 0 0 vars.$layout_block_gap;
+	overflow-wrap: anywhere;
+	padding-top: calc(vars.$layout_padding * 4);
+
+	@include mx.mediaMaxWidth(xs) {
+		font-size: vars.$fontSize_xx_large;
+	}
+}
+
+.entry-content {
+	line-height: vars.$lineHeight_base;
+	padding-bottom: calc(vars.$layout_padding * 4);
+
+	> :last-child {
+		margin-bottom: 0;
+	}
+}

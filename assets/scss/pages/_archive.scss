@@ -1,0 +1,66 @@
+// -----------------------------------------------------------------------------
+// Archive (index, blog, category, tag, author, search)
+//
+// Targets the listing contract: `<header class="archive-header">` with
+// `.archive-header__title` and `.archive-header__description`
+// (archive.php:11,13), `.archive-header__query` and `.archive-header__count`
+// (search.php:20,25), the `.card-list` wrapper (archive.php:19, home.php,
+// front-page.php, search.php) and `.no-results` (archive.php:31). The blog index
+// (home.php:15) and the posts-for-front-page branch (front-page.php) emit
+// `.archive-header` with only `__title`.
+//
+// Written new: no v3 file (pages/_blog.scss is 0 bytes) and no reference theme
+// matches. Arosa styles `.blog-page…`, corazon `.news-feed…`; `.archive-header`
+// and `.card-list` are targeted by nothing in either. `.card-list` is the grid
+// that lays out the `.card-post` cards from parts/content/_post-card.scss.
+// -----------------------------------------------------------------------------
+
+@use '../abstracts/functions' as fn;
+@use '../abstracts/mixins' as mx;
+@use '../abstracts/variables' as vars;
+
+.archive-header {
+	padding: calc(vars.$layout_padding * 4) 0 0;
+
+	&__title {
+		font-size: vars.$fontSize_huge;
+		line-height: vars.$lineHeight_base;
+		margin: 0;
+		overflow-wrap: anywhere;
+	}
+
+	&__description,
+	&__count {
+		color: vars.$color_gray_500;
+		line-height: vars.$lineHeight_base;
+		margin: vars.$layout_block_gap 0 0;
+
+		> :last-child {
+			margin-bottom: 0;
+		}
+	}
+
+	&__count {
+		font-size: vars.$fontSize_small;
+	}
+
+	&__query {
+		color: vars.$color_primary;
+	}
+}
+
+.card-list {
+	display: grid;
+	gap: vars.$layout_block_gap;
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, fn.remc(320)), 1fr));
+	margin: calc(vars.$layout_padding * 4) 0 0;
+
+	@include mx.mediaMinWidth(md) {
+		grid-template-columns: repeat(auto-fill, minmax(min(100%, fn.remc(360)), 1fr));
+	}
+}
+
+.no-results {
+	color: vars.$color_gray_500;
+	margin: calc(vars.$layout_padding * 4) 0 0;
+}
