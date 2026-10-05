@@ -1920,7 +1920,7 @@ Proves the whole chain: contract, field access, `CS_Block_Styles`, per-page asse
 **Files:**
 - Create: `parts/block/cta/block.json`, `callback.php`, `render.php`, `style.scss`, `editor.scss`
 - Create: `inc/class-block-styles.php`
-- Create: `acf-json/group_part_block_content.json`, `acf-json/group_part_button_group.json`
+- Create: `acf-json/group_part_block_content.json`, `acf-json/group_part_button_group.json` *(both later removed, 2026-10-05 — see Step 9)*
 - Modify: `inc/helper-functions.php` (add `cs__render_link_group()`)
 - Modify: `assets/scss/abstracts/_functions.scss`, `_mixins.scss`, `_variables.scss` (Step 2b — Task 3 left the first two as stubs, and the block cannot compile without them)
 
@@ -2368,11 +2368,22 @@ Follow the conventions exactly — elements in architectural order, `// Modifier
 
 - [ ] **Step 9: Write the two optional clone field groups**
 
-`acf-json/group_part_block_content.json` — title `Part: Block Content`, fields `eyebrow` (text), `heading` (text), `subheading` (text), `content` (wysiwyg), `location: [[{"param":"widget","operator":"==","value":"all"}]]`.
+`acf-json/group_part_block_content.json` — title `Part: Block Content`, fields `eyebrow` (text), `heading` (text), `subheading` (text), `content` (wysiwyg), `location: [[{"param":"widget","operator":"==","value":"all"}]]`. *(removed 2026-10-05 — see note below)*
 
-`acf-json/group_part_button_group.json` — title `Part: Button Group`, field `buttons` (repeater → `link` link, `link_type` select with `button` / `button-outlined` / `link-arrow`), same `widget:all` location.
+`acf-json/group_part_button_group.json` — title `Part: Button Group`, field `buttons` (repeater → `link` link, `link_type` select with `button` / `button-outlined` / `link-arrow`), same `widget:all` location. *(removed 2026-10-05 — see note below)*
 
 Use the key format from `arosa/acf-json/group_*.json` so the shapes stay identical to what the ACF UI writes.
+
+> **Removed 2026-10-05.** These two groups (`Part: Block Content` and `Part: Button Group`)
+> were built as described above and later deleted — from both `acf-json/` and the database,
+> through ACF's own `acf_delete_field_group()` — because the block generator
+> (`scripts/make-block.mjs` + `parts/block/_skeleton/group.json`) now stamps the base field set
+> (`eyebrow`/`heading`/`subheading`/`content`/`buttons`) into every new block's own group.
+> Cloning the parts was considered and rejected: the generator already emits the fields, so a
+> clone source would only add a dependency between groups. This step is kept as history — do not
+> create these files. Their new names, had they survived, would have been the group-key filenames
+> `group_69792d9b87a04.json` / `group_69792ce20bded.json` (ruling: local JSON is named after the
+> group key).
 
 - [ ] **Step 10: Build, and prove the block registers**
 
@@ -2520,15 +2531,15 @@ WP="C:/Users/Admin/Documents/CSTHEME-ops/scripts/cs-wp"
 LOG="/d/Local/starter-theme/logs/php/error.log"
 ```
 
-**(1) The field group JSON is missing.** The local JSON is a mirror, not the source of truth, so removing it must change nothing:
+**(1) The field group JSON is missing.** The local JSON is a mirror, not the source of truth, so removing it must change nothing *(this test moved `group_part_block_content.json`, which was removed 2026-10-05 along with the group itself — kept as history)*:
 
 ```bash
-mv acf-json/group_part_block_content.json /tmp/
+mv acf-json/group_part_block_content.json /tmp/   # file removed 2026-10-05
 before=$(wc -l < "$LOG")
 curl -k -s -o NUL -w "code=%{http_code}\n" https://starter-theme.local/block-test/
 after=$(wc -l < "$LOG")
 tail -n $((after - before)) "$LOG" | grep -ci "cs_w_000_starter-v4" | sed 's/^/theme-related lines: /'
-mv /tmp/group_part_block_content.json acf-json/
+mv /tmp/group_part_block_content.json acf-json/    # file removed 2026-10-05
 ```
 
 Expected: `code=200`, and **zero** theme-related lines. The log always grows by one line per request from a pre-existing `wp-config.php` bug that defines `WP_DEBUG` twice (guarded at line 90, unguarded at line 97) — that line is not this theme's and must not be counted as a failure.
@@ -2580,7 +2591,7 @@ Expected: `code=200`, no fatal, no theme-related line. Every field read goes thr
 - [ ] **Step 14: Commit**
 
 ```bash
-git add parts/block/cta inc/class-block-styles.php inc/helper-functions.php functions.php acf-json/group_part_block_content.json acf-json/group_part_button_group.json
+git add parts/block/cta inc/class-block-styles.php inc/helper-functions.php functions.php acf-json/group_part_block_content.json acf-json/group_part_button_group.json   # the two acf-json files were removed 2026-10-05
 git status --short          # read it: the staged set must be exactly those paths
 git commit -m "feat: cta reference block proving the full block contract"
 ```

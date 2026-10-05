@@ -47,9 +47,13 @@ all under `D:/Local/<name>/app/public/wp-content/themes/<name>/assets/scss`.
 ## The owner's rulings for this phase (2026-10-05)
 
 1. **Gulp stays.** The Vite spike was measured and rejected (design doc §13); no migration.
-2. **A field group per block.** The two `Part: …` groups stay exactly as they are — inactive,
-   widget-located, reusable parts — and every ACF block gets its own **separate, self-contained,
-   active** group bound to `block == <namespace>/<slug>`.
+2. **A field group per block.** One **separate, self-contained, active** group per ACF block,
+   bound to `block == <namespace>/<slug>`, with the base field set (`eyebrow`/`heading`/
+   `subheading`/`content`/`buttons`) stamped into it by the generator
+   (`scripts/make-block.mjs` + `parts/block/_skeleton/group.json`). The two shared `Part: …`
+   groups (`Part: Block Content`, `Part: Button Group`) are **removed** — owner's decision,
+   2026-10-05. Cloning them was considered and rejected: the generator already emits the base
+   set, so a clone source would only add a dependency between groups.
 3. **ACF local-JSON files are named after the group key** (`<group-key>.json`), never a readable
    title, because ACF saves to `<key>.json` regardless of the existing filename and a readable name
    becomes a stale duplicate the first time the group is edited in wp-admin. The block generator must

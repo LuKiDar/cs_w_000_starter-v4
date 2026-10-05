@@ -115,10 +115,14 @@ approach work — arosa uses `render_block()` in 10 template locations.
 - **Spacing and colour come from Gutenberg natively.** `supports.spacing.margin/padding`
   plus `attributes.style.default` using `var:preset|spacing|40` etc. This is what the
   arosa `cta` block does. No custom "Style" tab.
-- `Part: Block Content` (`eyebrow`, `heading`, `subheading`, `content`) and
-  `Part: Button Group` (`buttons`) are shipped as **optional clone sources**
-  (`location: widget:all`) for blocks whose design happens to fit them. They are not
-  forced onto every block.
+- **The base field set is stamped into every block's own group.** The generator
+  (`scripts/make-block.mjs` + `parts/block/_skeleton/group.json`) emits `eyebrow`,
+  `heading`, `subheading`, `content` and `buttons` into each new block's group, so no block
+  declares them by hand. Two shared `Part: …` groups (`Part: Block Content` with the four
+  content fields and `Part: Button Group` with `buttons`, both `location: widget:all`) were
+  built for the same fields, then **removed on 2026-10-05**. Cloning them was considered and
+  rejected: the generator already emits the base set, so a clone source would only add a
+  dependency between groups. The groups are gone from both `acf-json/` and the database.
 - Block field groups live with their block. CPT and options field groups live outside the
   theme (§6).
 
@@ -157,7 +161,7 @@ One block replacing ten. Fields:
 | `count` | number of items |
 | `orderby` / `order` | query ordering |
 | `layout` | `grid` / `list` / `slider` |
-| `heading`, `subheading` | from the optional `Part: Block Content` clone |
+| `heading`, `subheading` | stamped into the block's own group by the generator (the `Part: Block Content` clone source was removed 2026-10-05) |
 
 The card partial is resolved by post type:
 `get_template_part('parts/content/' . $post_type . '-card', '', ['post_id' => $id, 'modifier' => $modifier])`
