@@ -1,0 +1,64 @@
+// -----------------------------------------------------------------------------
+// Button base
+//
+// The shared button shell and its two variants. Both the block layer
+// (base/_blocks-base.scss) and `components/_buttons.scss` (Task 16) extend these
+// three classes rather than re-declaring them. Ported from cs_w_000_starter-v3
+// assets/scss/base/_button-base.scss:5-51 with the token names rewritten
+// (`$borderRadius_small`/`$fontSize_small`/`$lineHeight_base` are unchanged in
+// v4; `$primary` -> `$color_primary`, `$black` -> `$color_black`,
+// `$white` -> `$color_white`).
+// -----------------------------------------------------------------------------
+
+@use '../abstracts/variables' as vars;
+
+.button-base {
+	background: transparent;
+	border: 2px solid transparent;
+	border-radius: vars.$borderRadius_small;
+	box-shadow: none;
+	display: inline-block;
+	cursor: pointer;
+	font-size: vars.$fontSize_small;
+	font-weight: 600;
+	letter-spacing: 0;
+	line-height: vars.$lineHeight_base;
+	padding: 0.375rem 1.125rem;
+	text-align: center;
+	text-decoration: none;
+	transition: all 0.2s;
+
+	&:hover,
+	&:focus-visible {
+		text-decoration: underline;
+	}
+
+	&:focus-visible {
+		outline: 2px solid vars.$color_black;
+		outline-offset: 2px;
+	}
+}
+
+.button-default {
+	background: vars.$color_primary;
+	color: vars.$color_white;
+
+	&:hover,
+	&:focus-visible {
+		background: vars.$color_black;
+		color: vars.$color_white;
+	}
+}
+
+.button-outlined {
+	background: transparent;
+	border-color: currentcolor;
+	color: vars.$color_primary;
+
+	&:hover,
+	&:focus-visible {
+		background: vars.$color_black;
+		border-color: vars.$color_black;
+		color: vars.$color_white;
+	}
+}

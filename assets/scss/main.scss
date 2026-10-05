@@ -11,7 +11,13 @@
 @use 'abstracts/mixins';
 
 // Base
+@use 'base/grid';
 @use 'base/base';
+@use 'base/button-base';
+@use 'base/typography';
+@use 'base/content-formats';
+@use 'base/blocks-base';
+@use 'base/blocks-styles';
 
 // The layers below are added as the theme grows. Keep this order.
 // @use 'components/…';

@@ -1,3 +1,109 @@
 // -----------------------------------------------------------------------------
 // Base
+//
+// Global element resets and the page shell: selection, the admin-bar guard, the
+// html/body box model, the `.site-container` column, the skip link and the
+// overlay. Ported from cs_w_000_starter-v3 assets/scss/base/_base.scss:5-92 with
+// every token rewritten to v4's generated vocabulary (`$gray_500` ->
+// `$color_gray_500`, `$white` -> `$color_white`, `$black` -> `$color_black`) and
+// the media mixin namespaced.
 // -----------------------------------------------------------------------------
+
+@use '../abstracts/variables' as vars;
+@use '../abstracts/mixins' as mx;
+
+::selection {
+	background: vars.$color_gray_500;
+	color: vars.$color_white;
+}
+
+#wpadminbar * {
+	min-width: 0;
+}
+
+html {
+	box-sizing: border-box;
+	height: 100%;
+
+	*,
+	*::before,
+	*::after {
+		box-sizing: inherit;
+	}
+}
+
+body {
+	overflow-x: hidden;
+	overflow-wrap: break-word;
+
+	&.is-menu-active,
+	&.is-modal-active {
+		overflow: hidden;
+	}
+}
+
+.site-container {
+	display: flex;
+	flex-flow: column nowrap;
+	min-height: 100vh; // Fallback for browsers that don't support dvh
+	min-height: 100dvh;
+
+	.screen-reader-shortcut {
+		position: absolute;
+		top: -1000em;
+
+		&:focus-visible {
+			background: #f0f0f1;
+			box-shadow: 0 0 2px 2px rgb(0 0 0 / 60%);
+			color: #000;
+			display: block;
+			font-size: 14px;
+			font-weight: 600;
+			height: auto;
+			left: 6px;
+			line-height: normal;
+			outline-offset: -1px;
+			padding: 15px 23px 14px;
+			text-decoration: none;
+			top: 7px;
+			width: auto;
+			z-index: 100000;
+		}
+	}
+
+	body.admin-bar & {
+		min-height: calc(100vh - 32px); // Fallback for browsers that don't support dvh
+		min-height: calc(100dvh - 32px);
+
+		@include mx.mediaMaxWidth(782) {
+			min-height: calc(100vh - 46px); // Fallback for browsers that don't support dvh
+			min-height: calc(100dvh - 46px);
+		}
+		@include mx.mediaMaxWidth(600) {
+			min-height: 100vh; // Fallback for browsers that don't support dvh
+			min-height: 100dvh;
+		}
+	}
+
+	body.is-header-fixed & {
+		padding-top: vars.$header_height;
+	}
+}
+
+.site-overlay {
+	background: vars.$color_black;
+	display: none;
+	height: 100dvh;
+	left: 0;
+	opacity: 0.5;
+	position: fixed;
+	top: 0;
+	transition: opacity 0.3s ease;
+	width: 100%;
+	z-index: 100;
+
+	body.is-menu-active &,
+	body.is-modal-active & {
+		display: block;
+	}
+}

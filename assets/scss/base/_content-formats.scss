@@ -1,0 +1,35 @@
+// -----------------------------------------------------------------------------
+// Content formats
+//
+// List and list-item rhythm inside post content. Ported unchanged from
+// cs_w_000_starter-v3 assets/scss/base/_content-formats.scss:5-26 — the literals
+// are the measured source values, and the source referenced no variables, so
+// there is no token name to rewrite.
+// -----------------------------------------------------------------------------
+
+ul,
+ol {
+	margin-bottom: 1rem;
+	margin-top: 1rem;
+	padding: 0 0 0 1.5em;
+
+	li {
+		margin: 0 0 0.5rem;
+
+		&:first-child {
+			margin-top: 0;
+		}
+
+		&:last-child {
+			margin-bottom: 0;
+		}
+	}
+
+	&:first-child {
+		margin-top: 0;
+	}
+
+	&:last-child {
+		margin-bottom: 0;
+	}
+}

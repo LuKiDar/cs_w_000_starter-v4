@@ -1,0 +1,109 @@
+// -----------------------------------------------------------------------------
+// Typography
+//
+// Element-level defaults: headings, paragraphs, links, lists, buttons and media.
+// Written new for v4 — v3's base/_typography.scss is 8 lines (`mark` only), so
+// Arosa base/_typography.scss is the structural reference and every value here
+// is re-expressed in v4's generated tokens.
+//
+// No `!important`: WordPress emits its block-gap and theme.json element margins
+// through `:where()`, which carries zero specificity, so a plain element selector
+// already wins. Arosa needed `!important` for the same resets; dropping it here
+// is deliberate, not an omission.
+//
+// `button`'s family is the WordPress preset custom property
+// (`--wp--preset--font-family--primary`, theme.json:130) rather than a Sass
+// token — v4 generates `$fontSize_*`/`$color_*` but no `$fontFamily_*`.
+// -----------------------------------------------------------------------------
+
+@use '../abstracts/variables' as vars;
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	margin: calc(vars.$layout_padding * 4) 0 vars.$layout_block_gap;
+
+	&:first-child {
+		margin-top: 0;
+	}
+
+	&:last-child {
+		margin-bottom: 0;
+	}
+}
+
+h3,
+h4 {
+	margin-top: calc(vars.$layout_padding * 3);
+}
+
+h5,
+h6 {
+	margin-top: calc(vars.$layout_padding * 2);
+}
+
+p {
+	margin: 0 0 1em;
+
+	&:first-child {
+		margin-top: 0;
+	}
+
+	&:last-child {
+		margin-bottom: 0;
+	}
+}
+
+ul,
+ol {
+	margin-block: 1em;
+	padding-left: 1.2em;
+
+	li {
+		margin: 0 0 0.25em;
+
+		&:last-child {
+			margin-bottom: 0;
+		}
+	}
+
+	&:first-child {
+		margin-top: 0;
+	}
+
+	&:last-child {
+		margin-bottom: 0;
+	}
+}
+
+a {
+	&.builtin {
+		text-decoration: none;
+
+		&:is(:hover, :focus-within) {
+			text-decoration: underline;
+		}
+	}
+}
+
+button {
+	font-family: var(--wp--preset--font-family--primary);
+	font-size: vars.$fontSize_large;
+	font-weight: 700;
+	line-height: vars.$lineHeight_base;
+}
+
+mark {
+	color: vars.$color_gray_900;
+	font-style: inherit;
+	font-weight: inherit;
+}
+
+img {
+	height: auto;
+	max-width: 100%;
+	width: 100%;
+}

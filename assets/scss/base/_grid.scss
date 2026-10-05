@@ -1,0 +1,158 @@
+// -----------------------------------------------------------------------------
+// Grid
+//
+// `.container` is the five-column CSS grid with the `full`/`wide`/`content` line
+// names every v4 template wraps in (header.php:17, footer.php, page templates).
+//
+// The `.grid`/`.col` flex half is refactored toward Arosa
+// (base/_grid.scss:27-122): closure mixins and `gap: $layout_block_gap`, so the
+// column maths subtracts the gap instead of v3's negative-margin + padding model.
+// `.container` itself is the v3 shape (base/_grid.scss:5-25) — the two sources
+// agree on it.
+//
+// Token names: v3's `$layout_padding`/`$layout_content`/`$layout_breakout` and
+// `$layout_columns` are canonical in v4 (the first three generated, the last two
+// declared in abstracts/_variables.scss); v3's `$layout_blockGap` is
+// `$layout_block_gap` here.
+// -----------------------------------------------------------------------------
+
+@use '../abstracts/variables' as vars;
+@use '../abstracts/mixins' as mx;
+
+.container {
+	display: grid;
+	grid-template-columns:
+		[full-start] minmax(vars.$layout_padding, 1fr)
+		[wide-start] minmax(0, vars.$layout_breakout)
+		[content-start] minmax(min(100% - vars.$layout_padding * 4, vars.$layout_content), 1fr) [content-end]
+		minmax(0, vars.$layout_breakout) [wide-end]
+		minmax(vars.$layout_padding, 1fr) [full-end];
+	margin: 0 auto;
+	width: 100%;
+
+	> *:not(.alignwide):not(.alignfull) {
+		grid-column: content;
+	}
+
+	> .alignwide {
+		grid-column: wide;
+	}
+
+	> .alignfull {
+		grid-column: full;
+	}
+}
+
+.grid {
+	display: flex;
+	flex-flow: row wrap;
+	gap: vars.$layout_block_gap;
+
+	&--ai-start {
+		align-items: flex-start;
+	}
+
+	&--ai-center {
+		align-items: center;
+	}
+
+	&--ai-end {
+		align-items: flex-end;
+	}
+
+	&--jc-start {
+		justify-content: flex-start;
+	}
+
+	&--jc-center {
+		justify-content: center;
+	}
+
+	&--jc-end {
+		justify-content: flex-end;
+	}
+
+	// Equal columns: `.grid--{n} > .col`. The gap is subtracted so n columns
+	// and their (n - 1) gutters fill the row exactly.
+	// `$base` is the selector prefix: `&--` for the unconditional tier,
+	// `&--{modifier}-` for the responsive ones. Built by concatenation rather
+	// than the deprecated Sass `if()` function.
+	@mixin grid-widths($modifier: '') {
+		$base: '&--';
+		@if $modifier != '' {
+			$base: '&--#{$modifier}-';
+		}
+
+		@for $i from 1 through vars.$layout_columns {
+			#{$base}#{$i} > .col {
+				flex: 0 0 calc(100% / $i - vars.$layout_block_gap * ($i - 1) / $i);
+				max-width: calc(100% / $i - vars.$layout_block_gap * ($i - 1) / $i);
+			}
+		}
+	}
+
+	@include grid-widths; // .grid--{n} at every width
+
+	@include mx.mediaBetween(lg, xl) {
+		@include grid-widths('xl'); // .grid--xl-{n}
+	}
+
+	@include mx.mediaBetween(md, lg) {
+		@include grid-widths('lg'); // .grid--lg-{n}
+	}
+
+	@include mx.mediaBetween(sm, md) {
+		@include grid-widths('md'); // .grid--md-{n}
+	}
+
+	@include mx.mediaBetween(xs, sm) {
+		@include grid-widths('sm'); // .grid--sm-{n}
+	}
+
+	@include mx.mediaMaxWidth(xs) {
+		@include grid-widths('xs'); // .grid--xs-{n}
+	}
+}
+
+.col {
+	flex: 1 0 auto;
+	max-width: 100%;
+
+	// Span columns: `.col--{n}`. Out of `$layout_columns` tracks, the (columns -
+	// n) empty tracks' worth of gap is removed from the total.
+	@mixin col-widths($modifier: '') {
+		$base: '&--';
+		@if $modifier != '' {
+			$base: '&--#{$modifier}-';
+		}
+
+		@for $i from 1 through vars.$layout_columns {
+			#{$base}#{$i} {
+				flex: 0 0 calc(100% / vars.$layout_columns * $i - vars.$layout_block_gap * (vars.$layout_columns - $i) / vars.$layout_columns);
+				max-width: calc(100% / vars.$layout_columns * $i - vars.$layout_block_gap * (vars.$layout_columns - $i) / vars.$layout_columns);
+			}
+		}
+	}
+
+	@include col-widths; // .col--{n} at every width
+
+	@include mx.mediaBetween(lg, xl) {
+		@include col-widths('xl'); // .col--xl-{n}
+	}
+
+	@include mx.mediaBetween(md, lg) {
+		@include col-widths('lg'); // .col--lg-{n}
+	}
+
+	@include mx.mediaBetween(sm, md) {
+		@include col-widths('md'); // .col--md-{n}
+	}
+
+	@include mx.mediaBetween(xs, sm) {
+		@include col-widths('sm'); // .col--sm-{n}
+	}
+
+	@include mx.mediaMaxWidth(xs) {
+		@include col-widths('xs'); // .col--xs-{n}
+	}
+}
