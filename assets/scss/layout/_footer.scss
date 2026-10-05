@@ -1,0 +1,47 @@
+// -----------------------------------------------------------------------------
+// Footer
+//
+// `.site-footer` shell from cs_w_000_starter-v3 layout/_footer.scss:5-11, token
+// names rewritten ($gray_900 -> $color_gray_900, $white -> $color_white). The
+// `.footer-menu` list inside it is styled in layout/_navigation.scss with the
+// other navigation.
+//
+// `.site-footer__inner`, `.site-footer__navigation` and `.site-footer__copyright`
+// (footer.php:9,11,21) are styled in no reference theme: arosa's footer is a
+// project-specific `__top`/`__bottom` structure and does not match v4's
+// two-element shell, so these three are new rules here.
+// -----------------------------------------------------------------------------
+
+@use '../abstracts/mixins' as mx;
+@use '../abstracts/variables' as vars;
+
+.site-footer {
+	background: vars.$color_gray_900;
+	color: vars.$color_white;
+	margin-top: auto; // sticky footer
+	padding: calc(vars.$layout_padding * 2) 0;
+	width: 100%;
+
+	&__inner {
+		align-items: center;
+		display: flex;
+		flex-flow: row wrap;
+		gap: vars.$layout_padding vars.$layout_block_gap;
+		justify-content: space-between;
+
+		@include mx.mediaMaxWidth( md ){
+			align-items: flex-start;
+			flex-flow: column nowrap;
+		}
+	}
+	&__navigation {
+		display: flex;
+		flex-flow: row wrap;
+		gap: vars.$layout_padding vars.$layout_block_gap;
+	}
+	&__copyright {
+		font-size: vars.$fontSize_small;
+		line-height: vars.$lineHeight_base;
+		margin: 0;
+	}
+}

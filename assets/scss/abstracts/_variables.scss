@@ -42,6 +42,16 @@ $layout_breakout: calc((var(--wp--custom--layout--wide) - var(--wp--custom--layo
 // base/_button-base.scss and layout/_header.scss.
 $lineHeight_base: var(--wp--custom--line-height--base);
 
+// $lineHeight_huge is used by layout/_header.scss (v3 layout/_header.scss:27,
+// `.site-logo`). No v3 file defines it and no reference theme carries that name;
+// v3 cannot have compiled as written (see Task 14 finding 3). theme.json
+// declares only line-height.base, so there is no token to rewrite it to.
+// millburn's largest display step, $lineHeight_xxlarge = 1 (millburn
+// abstracts/_variables.scss:51), is the measured value for the biggest type and
+// is the closest source for the logo step, so it is declared here with that
+// value rather than invented. Flagged to the owner in the Task 17 report.
+$lineHeight_huge: 1;
+
 /* --- Header --- */
 // Custom properties v3 declares in its :root block, with their 80rem/275rem
 // measurements. --header--height is consumed by layout/_header.scss and, for the

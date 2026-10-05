@@ -25,7 +25,11 @@
 @use 'components/pagination';
 @use 'components/searchform';
 
+// Layout
+@use 'layout/header';
+@use 'layout/navigation';
+@use 'layout/footer';
+
 // The layers below are added as the theme grows. Keep this order.
-// @use 'layout/…';
 // @use 'pages/…';
 // @use 'parts/…';

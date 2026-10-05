@@ -1,0 +1,250 @@
+// -----------------------------------------------------------------------------
+// Navigation
+//
+// The walker inc/menu-walker.php emits `<ul class="primary-menu">` whose items
+// carry `.menu-item` / `.main-menu-item` / `.sub-menu-item` /
+// `.menu-item-has-children` (menu-walker.php:40-45), a `.menu-item-trigger`
+// wrapper plus `.caret` for an item with children (menu-walker.php:67), and a
+// `<ul class="sub-menu menu-odd menu-depth-1">` dropdown (menu-walker.php:21-25).
+// The dropdown rules are ported from arosa layout/_navigation.scss:13-238 — its
+// `.menu` base layer and `.header-primary-menu` block target exactly those walker
+// classes. Arosa's own menu classes (`header-primary-menu`,
+// `header-auxiliary-menu`, `footer-primary-menu`, `footer-auxiliary-menu`) are
+// not emitted by v4 and are not ported; they collapse into the single
+// `.primary-menu` v4 emits. The flat `.footer-menu` block is v3
+// layout/_navigation.scss:100-127.
+//
+// Token rewrites: arosa `$teal` -> `$color_primary`, `$white` -> `$color_white`,
+// `$layout_blockGap` -> `$layout_block_gap`; v3 `$black` -> `$color_black`,
+// `$white` -> `$color_white`, `$primary` -> `$color_primary`. Arosa's
+// `$lineHeight_heading` (1.2) and `$teal_light` have no v4 counterpart
+// (theme.json declares only line-height.base and one primary), so the base step
+// is used and the hover state resolves to `$color_primary`, `$color_black` or
+// `$color_gray_900` as noted. `remc()` and the media mixins are namespaced.
+//
+// The mobile link colours are v3's `.mobile-navigation` link rules
+// (layout/_header.scss:112-121): v3's `$beaver` and `$graphite` have no v4
+// palette entry (millburn abstracts/_variables.scss:28,30 carries them as
+// #9B7A68 / #3E4349), so they resolve to the nearest canonical neutral pair,
+// `$color_gray_500` and `$color_gray_900` — the same base/current pair the
+// breadcrumbs use. Flagged to the owner.
+// -----------------------------------------------------------------------------
+
+@use '../abstracts/functions' as fn;
+@use '../abstracts/mixins' as mx;
+@use '../abstracts/variables' as vars;
+
+.primary-menu {
+	display: flex;
+	flex-wrap: wrap;
+	gap: vars.$layout_padding vars.$layout_block_gap;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+
+	@include mx.mediaMinWidth( md ){
+		flex-flow: row nowrap;
+		justify-content: flex-end;
+	}
+	@include mx.mediaMinWidth( lg ){
+		gap: vars.$layout_padding calc(vars.$layout_padding * 3);
+	}
+	@include mx.mediaMaxWidth( md ){
+		align-items: flex-start;
+		flex-flow: column nowrap;
+	}
+
+	> .menu-item {
+		margin: 0;
+		position: relative;
+
+		> a,
+		> .menu-item-trigger > a {
+			display: block;
+			text-decoration: none;
+
+			@include mx.mediaMinWidth( md ){
+				color: vars.$color_black;
+				font-size: vars.$fontSize_medium;
+				font-weight: 700;
+				line-height: vars.$lineHeight_base;
+			}
+			@include mx.mediaMaxWidth( md ){
+				color: vars.$color_gray_500;
+				font-size: vars.$fontSize_small;
+				font-weight: 700;
+				letter-spacing: .3em;
+				line-height: vars.$lineHeight_base;
+				text-transform: uppercase;
+			}
+
+			&:is(:hover, :focus-within) {
+				text-decoration: underline;
+				text-decoration-thickness: fn.remc(2);
+				text-underline-offset: .1em;
+
+				@include mx.mediaMinWidth( md ){
+					color: vars.$color_primary;
+				}
+				@include mx.mediaMaxWidth( md ){
+					color: vars.$color_gray_900;
+				}
+			}
+		}
+		.menu-item-trigger {
+			align-items: center;
+			display: flex;
+			gap: fn.remc(8);
+			max-width: 100%;
+
+			> .caret {
+				@include mx.mediaMinWidth( md ){
+					color: vars.$color_primary;
+				}
+			}
+		}
+		.caret {
+			border-color: transparent currentcolor currentcolor transparent;
+			border-style: solid;
+			border-width: 0 fn.remc(2) fn.remc(2) 0;
+			display: inline-block;
+			height: fn.remc(10);
+			margin: -.3em 0 0 fn.remc(8);
+			rotate: 45deg;
+			transition: all .3s ease;
+			vertical-align: middle;
+			width: fn.remc(10);
+
+			@include mx.mediaMaxWidth( md ){
+				display: none;
+			}
+		}
+
+		// States
+		&:is(:hover, :focus-within) {
+			> a,
+			> .menu-item-trigger > a,
+			> .menu-item-trigger > .caret {
+				@include mx.mediaMinWidth( md ){
+					color: vars.$color_primary;
+				}
+			}
+		}
+		&.current-menu-item {
+			> a,
+			> .menu-item-trigger > a {
+				text-decoration: underline;
+			}
+		}
+	}
+
+	.sub-menu {
+		flex-flow: column nowrap;
+		gap: fn.remc(4) 0;
+		list-style: none;
+		margin: 0;
+		padding: 0;
+
+		@include mx.mediaMinWidth( md ){
+			background: vars.$color_white;
+			border: fn.remc(1) solid vars.$color_primary;
+			border-radius: vars.$borderRadius_medium;
+			display: none;
+			left: 0;
+			max-width: fn.remc(200);
+			min-width: fn.remc(160);
+			padding: fn.remc(20) vars.$layout_block_gap;
+			position: absolute;
+			top: 100%;
+			width: max-content;
+			z-index: 999;
+		}
+		@include mx.mediaMaxWidth( md ){
+			padding: fn.remc(12) 0;
+		}
+
+		> .menu-item {
+			display: block;
+			width: 100%;
+
+			> a {
+				display: block;
+				padding: fn.remc(4) 0;
+				text-decoration: none;
+				width: 100%;
+
+				@include mx.mediaMinWidth( md ){
+					color: vars.$color_black;
+					font-size: vars.$fontSize_small;
+					font-weight: 500;
+					line-height: vars.$lineHeight_base;
+
+					&:is(:hover, :focus-within) {
+						color: vars.$color_primary;
+					}
+				}
+				@include mx.mediaMaxWidth( md ){
+					color: vars.$color_gray_500;
+					font-size: vars.$fontSize_small;
+					font-weight: 400;
+					line-height: vars.$lineHeight_base;
+
+					&:is(:hover, :focus-within) {
+						color: vars.$color_gray_900;
+					}
+				}
+			}
+		}
+
+		// Arosa guards a nested sub-menu with `display: none !important`
+		// (layout/_navigation.scss:104). header.php caps the menu at depth 2
+		// (header.php:37,55), so no `.sub-menu > .sub-menu` is ever emitted and
+		// the guard — and its `!important` — is not carried.
+	}
+
+	.menu-item-has-children {
+		&:is(:hover, :focus-within) {
+			> .menu-item-trigger .caret {
+				margin: .1em 0 0 fn.remc(8);
+				rotate: -135deg;
+			}
+			> .sub-menu {
+				@include mx.mediaMinWidth( md ){
+					display: flex;
+				}
+			}
+		}
+	}
+}
+
+// Flat footer list — v3 layout/_navigation.scss:100-127. footer.php renders it
+// at depth 1 (footer.php:16), so no sub-menu is emitted; v3's
+// `> .sub-menu { display: none !important }` (L121) is dropped rather than kept
+// without its reason — the dropdown rules above are scoped to `.primary-menu`
+// and cannot reach `.footer-menu`.
+.footer-menu {
+	display: flex;
+	flex-flow: row wrap;
+	gap: 20px 30px;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+
+	> .menu-item {
+		position: relative;
+
+		a {
+			color: vars.$color_white;
+			text-decoration: none;
+
+			&:hover,
+			&:focus-visible {
+				color: vars.$color_primary;
+			}
+		}
+
+		&.current-menu-item {
+			font-weight: 700;
+		}
+	}
+}
