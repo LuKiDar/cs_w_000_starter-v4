@@ -77,6 +77,10 @@ all under `D:/Local/<name>/app/public/wp-content/themes/<name>/assets/scss`.
    `$beaver → $color_gray_500`. `layout/_navigation.scss` names both reference hexes and the mapping
    in its comment, so a later reader sees a decision and not an accident. **Kept as-is.** If the brand
    palette ever needs these colours, the route is `theme.json`, not a hex constant in SCSS.
+8. **The hero heading stays `<h1>`** (ruled 2026-10-05, after `hero` landed). It opens the page, as the
+   millburn reference does. The consequence is accepted deliberately rather than overlooked: a page
+   carrying more than one hero carries more than one `<h1>`. If that ever becomes a problem, it is a
+   block-level decision, not a reason to change the skeleton.
 
 ## Controller rulings (delegated by the owner, 2026-10-05)
 
@@ -383,6 +387,30 @@ need JS. Eleven separate tasks would be eleven copies of the same steps.
   `accordion`/`tabs` additionally need Task 20's pipeline and a keyboard pass (they are interactive).
 - [ ] **Step 6: Commit per block or per small group, never one giant commit** — a block that renders
   wrong is far easier to find in a small diff.
+
+### Task 21 findings that change the remaining batches (recorded 2026-10-05, after `hero`)
+
+`hero` is the first block and it exposed two defects **in the skeleton**, not in itself. Both are the
+same shape as the `"script": ""` defect fixed in `806975d` — a skeleton default that is wrong rather
+than honest — and every block generated from `parts/block/_skeleton/` inherits them. The owner ruled to
+**leave them for the next session** rather than spend credits now; the fix belongs in the skeleton, not
+in each block, and the remaining batches must not hand-edit around them silently.
+
+1. **`_skeleton/block.json` defaults `"align": "none"` and `"alignText": "none"`.** Neither is a valid
+   value: `cs__get_block_classes()` / `cs__get_block_styles()` then emit `alignnone`,
+   `has-text-align-none` and an **invalid `style="text-align: none;"` into the page markup**. `hero`
+   hand-changed its own defaults to `""`; a child who does not notice ships invalid CSS.
+2. **`_skeleton/render.php` omits `cs__get_block_styles($block)`**, which the `cta` reference contract
+   includes, so a generated block silently ignores its own block.json spacing/margin/padding supports.
+
+Also: **design doc §6 says a block's field group lives under `parts/block/<slug>/`, but the generator
+writes `acf-json/<group-key>.json`** — which is what ruling 3 requires and what the existing `cta` group
+does. The generator is right; the design doc sentence needs correcting.
+
+**Verification that `hero` passed and the rest must match:** `acf_get_field_groups()` returns the
+block's own group `active`, bound to `block == cs/<slug>`, with a non-empty `acf_get_fields()`; a render
+with real values puts them in the HTML; **all fields empty renders 0 bytes**; the local JSON is named
+after the group key; `build`/`lint:css`/`stand` all green.
 
 ---
 
