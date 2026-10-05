@@ -59,7 +59,7 @@ These are established, working conventions. v4 reproduces them.
 | PHP layout | `inc/` one file per concern; `parts/{block,content,section}/`; `templates/` |
 | Asset versioning | `filemtime()` as the `$ver` argument on every enqueue |
 | Token flow | `theme.json` → CSS custom properties → SCSS variables (one direction only) |
-| CPT/taxonomy registration | **Not the primary path** — see §6. The declarative registrar (`DEFAULT_CPT_ARGS` / `DEFAULT_CPT_LABELS` / `DEFAULT_TAXONOMY_ARGS` constants plus `cs__register_post_types()`) ships in the commented toolbox, for the cases ACF's UI cannot express: custom capabilities, `register_post_meta()`, or a post type owned by a plugin |
+| CPT/taxonomy registration | **ACF Pro's UI only** — see §6. The theme ships no declarative registrar: the `DEFAULT_CPT_ARGS` / `DEFAULT_CPT_LABELS` / `DEFAULT_TAXONOMY_ARGS` constants and `cs__register_post_types()` (with them `inc/post-types.php`) were deliberately removed, so a case ACF's UI cannot express — custom capabilities, `register_post_meta()`, or a post type owned by a plugin — belongs in a dedicated site plugin, not in the theme |
 | Nav menus | Custom `Walker_Nav_Menu` subclass + `nav_menu_css_class` cleanup |
 | Editor curation | `assets/js/block-styles.js` unregisters unused core blocks; core patterns and the block directory removed |
 | Cleanup layer | `inc/wordpress-cleanup.php` — clean head, whitelisted body/nav classes, emoji and comments off |
@@ -386,7 +386,10 @@ check, fatal page.)
 Toolbox files to ship, commented in `functions.php`:
 
 `breadcrumbs.php`, `pagination.php`, `shortcodes.php`, `widgets.php`, `cpt-post.php`,
-`plugin-acf.php` (options-page fallback), `post-types.php`.
+`plugin-acf.php` (options-page fallback).
+
+`post-types.php` is **no longer shipped** — with the ACF-only decision in §6 the
+declarative registrar it held is gone from the theme, so it is not a toolbox item.
 
 **Always-on, not toolbox:** `menu-walker.php` — `header.php` wires it into both
 `wp_nav_menu` calls, so it loads with the theme. Arosa already contains a working
@@ -623,10 +626,13 @@ visible focus. No ARIA added purely for a checklist.
 v1 had `front-page.php`, `home.php`, `category.php`; v3 dropped them. v4 ships the full
 baseline:
 
-`front-page.php`, `home.php`, `index.php`, `archive.php`, `category.php`, `tag.php`,
-`date.php`, `author.php`, `search.php`, `searchform.php`, `404.php`, `page.php`,
-`single.php`, `header.php`, `footer.php`, plus `templates/_skeleton.php` as the page
-template generator.
+`front-page.php`, `home.php`, `index.php`, `archive.php`, `category.php`, `search.php`,
+`searchform.php`, `404.php`, `page.php`, `single.php`, `header.php`, `footer.php`, plus
+`templates/_skeleton.php` as the page template generator.
+
+`tag.php`, `date.php` and `author.php` are **not shipped** — they were three
+near-identical copies of `archive.php` and were removed, so WordPress's template
+hierarchy falls back to `archive.php` for those archives.
 
 ## 17. Documentation requirement
 
