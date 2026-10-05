@@ -13,7 +13,7 @@
 		"renderCallback": "cs__render_{{FUNC}}_block"
 	},
 	"style": "file:./style.min.css",
-	"script": "file:./script.min.js",
+	"script": "",
 	"editorStyle": "file:./editor.min.css",
 	"supports": {
 		"align": ["none", "wide", "full"],

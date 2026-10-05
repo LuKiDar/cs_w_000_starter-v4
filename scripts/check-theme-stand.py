@@ -192,6 +192,23 @@ def _in_generated_dir(theme: Path, p: Path) -> bool:
     return any(part.startswith("_") for part in p.relative_to(theme).parts[:-1])
 
 
+def _output_problems(out: Path, newest: float, source_note: str):
+    """Missing / empty / stale findings for one emitted file.
+
+    `source_note` names the source the freshness comparison uses, so the message
+    tells the reader which clock an output is behind. Both build steps fail the
+    same silent way -- an error or a skipped build leaves the previous output on
+    disk -- so CSS and JS share this check.
+    """
+    if not out.exists():
+        return [(out, "expected build output is missing")]
+    if out.stat().st_size == 0:
+        return [(out, "build output is empty")]
+    if out.stat().st_mtime < newest:
+        return [(out, f"stale build output (older than {source_note})")]
+    return []
+
+
 def check_build_artifacts(theme: Path):
     try:
         r = subprocess.run(
@@ -207,9 +224,9 @@ def check_build_artifacts(theme: Path):
     ]
     problems = [(theme, f"tracked build artifact: {p}") for p in bad]
 
-    # Emitted CSS must exist, be non-empty, and be newer than its sources. This
-    # guards an OBSERVED failure, not an imagined one: on 2026-10-05 a partial with
-    # a Sass syntax error, `@use`-d from main.scss, left assets/css/main.min.css
+    # Emitted assets must exist, be non-empty, and be newer than their sources.
+    # This guards an OBSERVED failure, not an imagined one: on 2026-10-05 a partial
+    # with a Sass syntax error, `@use`-d from main.scss, left assets/css/main.min.css
     # untouched -- mtime unchanged -- while `npm run build` printed the error and
     # still exited 0. A broken compile therefore shipped the previous stylesheet
     # silently, and every "build passed" that day was weak evidence. Comparing each
@@ -236,12 +253,33 @@ def check_build_artifacts(theme: Path):
     newest = max((p.stat().st_mtime for p in sources), default=0.0)
 
     for out in outputs:
-        if not out.exists():
-            problems.append((out, "expected build output is missing"))
-        elif out.stat().st_size == 0:
-            problems.append((out, "build output is empty"))
-        elif out.stat().st_mtime < newest:
-            problems.append((out, "stale build output (older than the newest source .scss)"))
+        problems.extend(_output_problems(out, newest, "the newest source .scss"))
+
+    # The same guard now covers the JS outputs. The esbuild task fails identically:
+    # a syntax error or a skipped build leaves the previous main.min.js /
+    # script.min.js on disk while the site serves old JS, so staleness there is the
+    # same silent class this check exists for. The global entry is compared to the
+    # newest global source; each block's output to its own script.js, so a block
+    # edit cannot be masked by another block's build.
+    js_sources = [
+        p for p in theme.glob("assets/js/src/**/*.js")
+        if not _in_generated_dir(theme, p)
+    ]
+    js_newest = max((p.stat().st_mtime for p in js_sources), default=0.0)
+    for out in sorted(theme.glob("assets/js/dist/*.min.js")):
+        problems.extend(_output_problems(out, js_newest, "the newest source .js"))
+    for block in sorted(theme.glob("parts/block/*")):
+        if not block.is_dir() or block.name.startswith("_"):
+            continue
+        source = block / "script.js"
+        if source.exists():
+            problems.extend(
+                _output_problems(
+                    block / "script.min.js",
+                    source.stat().st_mtime,
+                    "its source script.js",
+                )
+            )
     return problems
 
 
@@ -250,7 +288,7 @@ CHECKS = [
     ("block.json validity", check_block_json),
     ("symbol resolution", check_symbols),
     ("output escaping", check_escaping),
-    ("build artifacts not tracked / CSS fresh", check_build_artifacts),
+    ("build artifacts not tracked / CSS + JS fresh", check_build_artifacts),
 ]
 
 

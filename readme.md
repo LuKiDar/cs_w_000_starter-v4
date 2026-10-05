@@ -99,7 +99,7 @@ This copies `parts/block/_skeleton/` to `parts/block/my-block/`, replacing
 | `render.php` | The block's markup. Escape output (`esc_html`, `esc_attr`, `wp_kses_post`) and build the wrapper with `cs__get_block_id()`, `cs__get_block_classes()` and `cs__get_block_styles()`. |
 | `style.scss` | Front-end styles for the block (see §10). |
 | `editor.scss` | Editor-only styles. |
-| `script.js` | Optional front-end behaviour, bundled to `script.min.js` by the esbuild task. `block.json` declares the **built** file (`"script": "file:./script.min.js"`) — never the source. The skeleton already carries that value, so a block with **no** script sets it back to `""` (as `cta` does); otherwise `npm run stand` reports the missing output. |
+| `script.js` | Optional front-end behaviour, bundled to `script.min.js` by the esbuild task. Only when you add this file, change `block.json`'s `"script"` to the **built** file (`"script": "file:./script.min.js"`) — never the source. The skeleton ships `"script": ""` (the value a block with no script keeps, as `cta` does); a block that adds a `script.js` but leaves the default loads nothing. |
 
 Finally:
 
@@ -207,14 +207,17 @@ this theme deliverable?":
    v3 fatal).
 4. **Output escaping** — no `<?= $var ?>` printed without an `esc_*`/`wp_kses`
    call on the same line.
-5. **Build outputs not tracked, and emitted CSS fresh** — no `*.min.css`,
-   `*.min.js` or `*.map` files are committed, and every expected emitted
-   stylesheet (`assets/css/*.min.css`, and each block's `style.min.css` /
-   `editor.min.css`) **exists, is non-empty, and is not older than the newest
-   source `.scss`**. The freshness half guards an observed failure, not an
-   imagined one: a Sass error left `assets/css/main.min.css` untouched while
-   `npm run build` printed the error and still exited 0, so the previous
-   stylesheet could ship silently.
+5. **Build outputs not tracked, and emitted CSS/JS fresh** — no `*.min.css`,
+   `*.min.js` or `*.map` files are committed, and every expected emitted output
+   **exists, is non-empty, and is not older than its source**. For CSS that is
+   `assets/css/*.min.css` and each block's `style.min.css` / `editor.min.css`
+   against the newest source `.scss`; for JS it is `assets/js/dist/*.min.js`
+   against the newest `assets/js/src/**/*.js`, and each block's `script.min.js`
+   against its own `script.js`. The freshness half guards an observed failure,
+   not an imagined one: a Sass error left `assets/css/main.min.css` untouched
+   while `npm run build` printed the error and still exited 0, so the previous
+   stylesheet could ship silently — and the esbuild task fails the same way, so
+   a stale `.min.js` would otherwise pass too.
 
 **A styles task is verified by inspecting the emitted CSS, not by the build's
 exit code.** A Sass error used to print and still exit 0, leaving the old
@@ -344,8 +347,10 @@ Accepted, documented limits — not defects to fix in passing:
   guard as the stylesheet. It is the only global behaviour the theme ships; it
   gives `.nav-toggle`/`.mobile-navigation` the toggle nothing provided before.
   Per-block JS builds to `parts/block/<slug>/script.min.js` when a block has a
-  `script.js`; `_skeleton/block.json` declares that built path, so a block with
-  no script sets `"script": ""` (as `cta` does).
+  `script.js`; a block that adds one points `block.json` at that built path
+  (`"script": "file:./script.min.js"`). `_skeleton/block.json` ships
+  `"script": ""` (as `cta` does) — the value a block with no script keeps — so a
+  generated block with no script needs no change and passes the stand as generated.
 - **The `h6` eyebrow filter is indiscriminate.** `inc/a11y-block-fixes.php`
   rewrites **every** `core/heading` level-6 block to a `<p>`, so a genuine H6
   heading an author meant as a heading is rewritten too. An H6 block carries

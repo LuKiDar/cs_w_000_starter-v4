@@ -331,8 +331,10 @@ first.
 
 - [ ] **Step 1:** Choose the bundler with the same discipline Task 1 used: a time-boxed spike with
   pre-registered pass criteria, written down **before** running it, so the decision cannot be
-  reverse-fitted. The output layout is already fixed by the block contract and by
-  `.gitignore:12–15` — one JS entry per block plus a global entry.
+  reverse-fitted. The output layout is fixed by the block contract's **R-build** reading
+  (the ruling that settled Task 20: per-block JS is a build output, parallel to
+  `style.min.css`) and by `.gitignore:10–11` for the global entry and `.gitignore:16–17`
+  for the per-block output — one JS entry per block plus a global entry.
 - [ ] **Step 2:** Wire `paths.scripts` to a real task; drop the declaration if the chosen bundler does
   not use it.
 - [ ] **Step 3:** Verify with the guard the Phase 1 stand already has (`build artifacts not tracked`)

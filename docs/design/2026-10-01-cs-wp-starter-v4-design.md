@@ -590,10 +590,12 @@ parallel to `style.min.css`):
 | `assets/js/src/main.js` | `assets/js/dist/main.min.js` |
 | `parts/block/<slug>/script.js` | `parts/block/<slug>/script.min.js` |
 
-`block.json` therefore points at `file:./script.min.js` (the built file, not the source),
-and `.gitignore` names `parts/block/**/script.min.js(.map)` — the rule Phase 1's plan
-wrongly assumed already existed. A block with no script leaves `"script": ""` (as `cta`
-does). A syntax error makes esbuild reject and `npm run build` exit non-zero — the same
+`block.json` therefore points at `file:./script.min.js` (the built file, not the source)
+**only when the block has a `script.js`**, and `.gitignore` names
+`parts/block/**/script.min.js(.map)` — the rule Phase 1's plan wrongly assumed already
+existed. `_skeleton/block.json` ships `"script": ""` (as `cta` does), the honest default
+for a block with no script: a generated block declares no file that does not exist. A
+syntax error makes esbuild reject and `npm run build` exit non-zero — the same
 loud-failure guarantee `67afd99` gave the Sass tasks.
 
 ## 14. Repository hygiene
