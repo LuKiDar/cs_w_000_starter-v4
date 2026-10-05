@@ -69,6 +69,14 @@ all under `D:/Local/<name>/app/public/wp-content/themes/<name>/assets/scss`.
 6. **Superseded variants are not ported.** `layout/_header.scss:142–279` is a second, commented-out
    implementation of the *same* header. That is not a staged section — it is a dead alternate of a
    live one — so only the live rules (L5–137) travel.
+7. **The mobile-menu colours stay canonical** (ruled after Task 17, once the mobile menu could be seen
+   in the running theme). v3 styles that menu with `$graphite`/`$beaver`; neither exists in v4's
+   `theme.json` palette and neither is defined by Arosa, nucleux or corazon — millburn alone carries
+   them, as `#3E4349` and `#9B7A68`. Rather than re-add hex constants, which the canonical-names rule
+   forbids, they map onto the nearest canonical neutral pair: `$graphite → $color_gray_900`,
+   `$beaver → $color_gray_500`. `layout/_navigation.scss` names both reference hexes and the mapping
+   in its comment, so a later reader sees a decision and not an accident. **Kept as-is.** If the brand
+   palette ever needs these colours, the route is `theme.json`, not a hex constant in SCSS.
 
 ## Controller rulings (delegated by the owner, 2026-10-05)
 
