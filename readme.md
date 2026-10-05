@@ -160,10 +160,19 @@ uncomment the line to switch the feature on. (The v3 theme died because a
 commented include's file was *missing* — a commented include is a promise that
 the file exists, and here it does.)
 
+**Two former toolbox entries are now active and are therefore not in the table
+below.** `inc/breadcrumbs.php` and `inc/pagination.php` are enabled in
+`functions.php`: both are structural — every listing needs pagination, and a
+single view needs a trail — so leaving them off by default made the theme worse,
+not leaner. Their call sites stay behind `function_exists()` guards, so a
+project that removes either include keeps working; it simply renders nothing
+there. `cs__the_breadcrumbs()` is called by `single.php`, `page.php` and the
+archive, category, front-page, home and search templates (author, date and tag
+archives resolve to `archive.php`); `cs__the_pagination()` by the listing
+templates.
+
 | Commented include | Provides | Notes / dependencies |
 |---|---|---|
-| `inc/breadcrumbs.php` | `cs__the_breadcrumbs()` — the breadcrumb trail. | Already called, behind `function_exists()` guards, by the archive, category, front-page, home and search templates; author, date and tag archives resolve to `archive.php`. Uncommenting lights them up. |
-| `inc/pagination.php` | `cs__the_pagination()` — Previous/Next bookended pagination. | Guarded the same way by the same archive-style templates. |
 | `inc/shortcodes.php` | The `[cs-year]` shortcode (current year in the site timezone). | None. |
 | `inc/widgets.php` | Registers the `cs-sidebar` sidebar and `cs__the_sidebar()`. | None. |
 | `inc/cpt-post.php` | Removes the built-in Posts post type from the admin. | None. |
