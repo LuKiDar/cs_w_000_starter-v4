@@ -75,7 +75,7 @@ parts/block/<slug>/
 ├── block.json        # name cs/<slug>, category "cs-blocks", apiVersion 3,
 │                     # acf.mode "auto", acf.renderCallback "cs__render_<slug>_block",
 │                     # style  "file:./style.min.css"
-│                     # script "file:./script.js"        (optional)
+│                     # script "file:./script.min.js"    (optional — the built output)
 │                     # editorStyle "file:./editor.min.css"
 ├── callback.php      # cs__render_<slug>_block(): get_field() each field,
 │                     # pack into $block_data, set_query_var('block_data', $block_data),
@@ -84,7 +84,7 @@ parts/block/<slug>/
 │                     # semantic markup only
 ├── style.scss        # front-end styles (compiled in place to style.min.css)
 ├── editor.scss       # editor-only styles (compiled in place to editor.min.css)
-└── script.js         # optional, front-end behaviour only
+└── script.js         # optional, front-end behaviour only; bundled to script.min.js
 ```
 
 `_skeleton/` is the same tree with placeholders and is **excluded from registration**
@@ -327,7 +327,7 @@ shadows and custom spacing sizes disabled — so only the project palette is sel
 
 The mechanism is already proven in arosa: `inc/gutenberg.php` is 72 lines and performs
 **no manual enqueue at all**. Each `block.json` declares `"style": "file:./style.min.css"`,
-`"editorStyle": "file:./editor.min.css"`, `"script": "file:./script.js"`, and WordPress
+`"editorStyle": "file:./editor.min.css"`, `"script": "file:./script.min.js"`, and WordPress
 loads them per block.
 
 What v4 must therefore **not** do (this is the v3/nucleux/millburn defect):
@@ -571,6 +571,31 @@ Notes for the record: `outDir: '.'` will warn permanently with this layout; the 
 and the compiled CSS is minified and re-ordered, so §7's alphabetical property order
 survives in the SCSS source but not in the emitted CSS.
 
+### JS pipeline (Task 20)
+
+The Gulp decision above covers CSS. JS was a separate gap: Phase 1 left `gulpfile.js`
+declaring `paths.scripts` with no task consuming it, so `npm run build` emitted no JS.
+Task 20 measured the candidates in `docs/plans/2026-10-05-js-pipeline-spike.md` and the
+owner ruled for **esbuild**, wired as a `compileScripts` task inside the existing Gulp
+graph — not a second toolchain, not a config file. It adds **2** packages (`esbuild` plus
+one native binary) against rollup's 16; `gulp-terser` fails outright because it cannot
+resolve `import` — the emitted file keeps a bare specifier a classic `<script>` cannot
+evaluate.
+
+Outputs (the R-build reading of the block contract — per-block JS is a **build output**,
+parallel to `style.min.css`):
+
+| Entry | Output |
+|---|---|
+| `assets/js/src/main.js` | `assets/js/dist/main.min.js` |
+| `parts/block/<slug>/script.js` | `parts/block/<slug>/script.min.js` |
+
+`block.json` therefore points at `file:./script.min.js` (the built file, not the source),
+and `.gitignore` names `parts/block/**/script.min.js(.map)` — the rule Phase 1's plan
+wrongly assumed already existed. A block with no script leaves `"script": ""` (as `cta`
+does). A syntax error makes esbuild reject and `npm run build` exit non-zero — the same
+loud-failure guarantee `67afd99` gave the Sass tasks.
+
 ## 14. Repository hygiene
 
 `.gitignore` — **in the starter theme only** (client projects have their own `.gitignore`
@@ -586,6 +611,8 @@ parts/block/**/style.min.css
 parts/block/**/style.min.css.map
 parts/block/**/editor.min.css
 parts/block/**/editor.min.css.map
+parts/block/**/script.min.js
+parts/block/**/script.min.js.map
 ```
 
 Also shipped: `.editorconfig`, PHPCS with WordPress Coding Standards, stylelint.

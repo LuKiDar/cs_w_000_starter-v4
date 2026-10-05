@@ -63,18 +63,21 @@ Every script in `package.json`. There are **six**:
 
 | Command | Runs | What it does | When to run it |
 |---|---|---|---|
-| `npm start` | `gulp` | Generates tokens, compiles all Sass, then starts BrowserSync against `https://starter-theme.local` and watches SCSS/PHP for changes. | During active development. This is the default working command. |
-| `npm run build` | `gulp build` | Generates tokens and compiles all Sass (global + per-block) with sourcemaps, then exits. No watcher. | Before every commit and before delivery. |
-| `npm run watch` | `gulp watch` | Starts BrowserSync and the file watchers only — it does **not** run tokens or compile first. | When the CSS is already built and you only want live reload while editing templates. |
+| `npm start` | `gulp` | Generates tokens, compiles all Sass and JavaScript, then starts BrowserSync against `https://starter-theme.local` and watches SCSS/JS/PHP for changes. | During active development. This is the default working command. |
+| `npm run build` | `gulp build` | Generates tokens and compiles all Sass (global + per-block) and JavaScript (global + per-block) with sourcemaps, then exits. No watcher. | Before every commit and before delivery. |
+| `npm run watch` | `gulp watch` | Starts BrowserSync and the file watchers only — it does **not** run tokens or compile first. | When the CSS/JS is already built and you only want live reload while editing templates. |
 | `npm run tokens` | `node scripts/build-tokens.mjs` | Regenerates `assets/scss/abstracts/_tokens.scss` from `theme.json`. The file is generated and gitignored — never edit it by hand. | After changing any token in `theme.json`. `start` and `build` run it for you. |
 | `npm run make:block <slug> "<Title>"` | `node scripts/make-block.mjs` | Scaffolds `parts/block/<slug>/` from the `_skeleton` template. | When adding a new block (see §5). |
 | `npm run stand` | `python scripts/check-theme-stand.py` | Runs the five pre-delivery checks (see §9). | Before every commit and as the final gate before delivery. |
 
-> **`npm run build` compiles CSS only.** No task compiles JavaScript — see the
-> first item in §11.
+> **`npm run build` compiles CSS and JavaScript.** Sass goes through the Gulp
+> tasks; JavaScript goes through `compileScripts`, an esbuild task in the same
+> `gulpfile.js` (no second toolchain, no config file). It emits
+> `assets/js/dist/main.min.js` and one `parts/block/<slug>/script.min.js` per
+> block that has a `script.js`.
 >
-> **A Sass compile error fails the build.** Both sass tasks reject when sass
-> reports an error, so `npm run build` exits non-zero (gulp-sass's own
+> **A compile error fails the build.** Both sass tasks and the esbuild task reject
+> when they report an error, so `npm run build` exits non-zero (gulp-sass's own
 > `logError` used to print the error and then mark the task successful, leaving
 > the previous stylesheet on disk while the process exited 0).
 
@@ -96,11 +99,12 @@ This copies `parts/block/_skeleton/` to `parts/block/my-block/`, replacing
 | `render.php` | The block's markup. Escape output (`esc_html`, `esc_attr`, `wp_kses_post`) and build the wrapper with `cs__get_block_id()`, `cs__get_block_classes()` and `cs__get_block_styles()`. |
 | `style.scss` | Front-end styles for the block (see §10). |
 | `editor.scss` | Editor-only styles. |
+| `script.js` | Optional front-end behaviour, bundled to `script.min.js` by the esbuild task. `block.json` declares the **built** file (`"script": "file:./script.min.js"`) — never the source. The skeleton already carries that value, so a block with **no** script sets it back to `""` (as `cta` does); otherwise `npm run stand` reports the missing output. |
 
 Finally:
 
 ```bash
-npm run build   # compiles style.min.css and editor.min.css for the new block
+npm run build   # compiles style.min.css and editor.min.css, and script.min.js when script.js exists
 ```
 
 `cs__get_blocks()` skips an **exact list of names** — `_skeleton`, `_base-block`
@@ -334,12 +338,14 @@ Accepted, documented limits — not defects to fix in passing:
 - **The US map component is absent by design.** The large inlined US-map SVG
   used by earlier themes was considered for reuse and rejected — it is not
   needed on most projects. Add it per project when required.
-- **`npm run build` compiles no JS.** `gulpfile.js` declares `paths.scripts` but
-  no task consumes it, and `package.json` carries no bundler, so
-  `assets/js/dist/` holds only `.gitkeep`. This is harmless today:
-  `inc/enqueue.php:19` guards its enqueue with `file_exists()`, so no
-  `<script src>` renders and no 404 is reachable. The JS pipeline must be built
-  before the first real JS source is added.
+- **The global JS entry is the mobile-menu toggle.** `assets/js/src/main.js`
+  builds to `assets/js/dist/main.min.js` through the `compileScripts` esbuild
+  task and is enqueued by `inc/enqueue.php:19` behind the same `file_exists()`
+  guard as the stylesheet. It is the only global behaviour the theme ships; it
+  gives `.nav-toggle`/`.mobile-navigation` the toggle nothing provided before.
+  Per-block JS builds to `parts/block/<slug>/script.min.js` when a block has a
+  `script.js`; `_skeleton/block.json` declares that built path, so a block with
+  no script sets `"script": ""` (as `cta` does).
 - **The `h6` eyebrow filter is indiscriminate.** `inc/a11y-block-fixes.php`
   rewrites **every** `core/heading` level-6 block to a `<p>`, so a genuine H6
   heading an author meant as a heading is rewritten too. An H6 block carries

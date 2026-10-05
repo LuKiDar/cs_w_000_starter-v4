@@ -13,6 +13,8 @@ parts/block/**/style.min.css
 parts/block/**/style.min.css.map
 parts/block/**/editor.min.css
 parts/block/**/editor.min.css.map
+parts/block/**/script.min.js
+parts/block/**/script.min.js.map
 assets/scss/abstracts/_tokens.scss
 
 # Build caches

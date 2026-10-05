@@ -18,15 +18,17 @@ const browserSync = require('browser-sync').create();
 const sourcemaps = require('gulp-sourcemaps');
 const glob = require('glob');
 const path = require('path');
+const fs = require('fs');
 const { execSync } = require('child_process');
+const esbuild = require('esbuild');
 
 const paths = {
 	styles:  { src: 'assets/scss/*.scss', dest: 'assets/css' },
-	// No task consumes `scripts` yet: nothing compiles assets/js/src/**, and package.json
-	// carries no bundler. Declared for Phase 2, which adds the first JS source. Until then
-	// `npm run build` emits no JS and assets/js/dist/ holds only .gitkeep — harmless,
-	// because inc/enqueue.php:19 guards its enqueue with file_exists().
-	scripts: { src: 'assets/js/src/**/*.js', dest: 'assets/js/dist' },
+	// `paths.scripts` was declared here for Phase 2 and no task consumed it (the
+	// `src`/`dest` glob pair it described never matched how JS is bundled). Task 20
+	// dropped it rather than leave a dead declaration: esbuild takes one entry
+	// point per output, and the glob it would need (`assets/js/src/**/*.js`) would
+	// treat shared modules as entries. See compileScripts below for the real inputs.
 };
 
 // Deprecation silences, each load-bearing during the port:
@@ -104,6 +106,62 @@ function compileBlockSass(){
 	return compileStream(files, file => path.dirname(file.path));
 }
 
+/**
+ * Bundle and minify JavaScript with esbuild, inside this gulp graph.
+ *
+ * Owner's ruling for Task 20: esbuild as a `compileScripts` task — not a second
+ * toolchain and not a config file. Measured in docs/plans/2026-10-05-js-pipeline-spike.md:
+ * 2 new packages (esbuild + its one native binary) versus rollup's 16, with equal
+ * output, and it runs here so `npm run build` and `gulp.watch` stay single commands.
+ *
+ * Outputs, fixed by the block contract and .gitignore:
+ *   assets/js/src/main.js         -> assets/js/dist/main.min.js         (global)
+ *   parts/block/<slug>/script.js  -> parts/block/<slug>/script.min.js   (per block)
+ *
+ * `format: 'iife'` because `block.json`'s `"script"` loads a classic `<script>`,
+ * which cannot evaluate a bare `import` — the failure the spike measured for the
+ * Gulp-only path.
+ *
+ * A syntax error must fail the build: esbuild rejects, the rejection propagates to
+ * gulp, and `npm run build` exits non-zero. This mirrors the sass tasks fixed in
+ * 67afd99, where a broken compile printed its error and still exited 0.
+ */
+function compileScripts(){
+	const jobs = [];
+
+	// Global entry — the theme's always-on behaviour (the mobile menu toggle).
+	if ( fs.existsSync('assets/js/src/main.js') ){
+		jobs.push({ entry: 'assets/js/src/main.js', outfile: 'assets/js/dist/main.min.js' });
+	}
+
+	// Per-block entries. `_skeleton` is a generator template, excluded for the same
+	// reason the SCSS glob excludes it: it carries placeholders, not a real script.
+	for ( const entry of glob.sync('parts/block/*/script.js', { ignore: 'parts/block/_*/**' }) ){
+		jobs.push({ entry, outfile: entry.replace(/script\.js$/, 'script.min.js') });
+	}
+
+	// No JS sources yet is a real state (a fresh block, or JS not needed), not an error.
+	if ( ! jobs.length ){
+		return Promise.resolve();
+	}
+
+	return Promise.all(jobs.map(job => esbuild.build({
+		entryPoints: [job.entry],
+		outfile: job.outfile,
+		bundle: true,
+		format: 'iife',
+		minify: true,
+		sourcemap: true,
+		target: ['es2020'],
+		logLevel: 'warning',
+	}))).catch(err => {
+		// esbuild's formatted message names the file, line and column. Write it, then
+		// re-throw so the task rejects rather than finishing successfully.
+		process.stderr.write(`\nError in plugin "esbuild"\n${err.message || err}\n`);
+		throw err;
+	});
+}
+
 function watchFiles(done){
 	browserSync.init({
 		proxy: 'https://starter-theme.local',
@@ -116,13 +174,24 @@ function watchFiles(done){
 	// Sass error during `npm run watch` is visible rather than swallowed.
 	gulp.watch('assets/scss/**/*.scss', compileSass);
 	gulp.watch('parts/block/**/*.scss', compileBlockSass);
+
+	// JS re-emits and reloads the page. The reload is folded onto the compile task so
+	// a broken script rejects the watcher task (visible) instead of reloading anyway.
+	gulp.watch('assets/js/src/**/*.js', reloadScripts);
+	gulp.watch('parts/block/**/script.js', reloadScripts);
+
 	gulp.watch('**/*.php').on('change', browserSync.reload);
 	done();
+}
+
+function reloadScripts(){
+	return compileScripts().then(() => browserSync.reload());
 }
 
 exports.tokens = tokens;
 exports.compileSass = compileSass;
 exports.compileBlockSass = compileBlockSass;
+exports.compileScripts = compileScripts;
 exports.watch = watchFiles;
-exports.build = gulp.series(tokens, gulp.parallel(compileSass, compileBlockSass));
-exports.default = gulp.series(tokens, gulp.parallel(compileSass, compileBlockSass), watchFiles);
+exports.build = gulp.series(tokens, gulp.parallel(compileSass, compileBlockSass, compileScripts));
+exports.default = gulp.series(tokens, gulp.parallel(compileSass, compileBlockSass, compileScripts), watchFiles);
