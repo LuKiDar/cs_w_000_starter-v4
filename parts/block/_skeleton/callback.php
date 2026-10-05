@@ -6,9 +6,12 @@
 
 function cs__render_{{FUNC}}_block( $block, $content = '', $is_preview = false, $post_id = 0 ){
 	$block_data = array(
-		'heading' => cs__get_block_field('heading'),
-		'content' => cs__get_block_field('content'),
-		'block'   => $block,
+		'eyebrow'    => cs__get_block_field('eyebrow'),
+		'heading'    => cs__get_block_field('heading'),
+		'subheading' => cs__get_block_field('subheading'),
+		'content'    => cs__get_block_field('content'),
+		'buttons'    => cs__get_block_field('buttons'),
+		'block'      => $block,
 	);
 
 	set_query_var('block_data', $block_data);
