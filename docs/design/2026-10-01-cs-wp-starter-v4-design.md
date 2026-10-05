@@ -461,7 +461,9 @@ is not needed on most projects. Skip it; add it per project when required.
 
 ### 12.4 ACF Pro evidence
 
-Version 6.8.6. `includes/post-types/{class-acf-post-type,class-acf-taxonomy}.php` present.
+Version 6.8.6, as observed 2026-10-01 (the install has since moved on; the claim this
+section supports is that the CPT and taxonomy UI files ship in the plugin, not the version
+number). `includes/post-types/{class-acf-post-type,class-acf-taxonomy}.php` present.
 `acf.php:154` sets `'enable_post_types' => true` by default.
 `local-json.php:324-358` implements `include_post_types()` and `include_taxonomies()`
 since 6.1.
