@@ -7,6 +7,12 @@ get_header();
 ?>
 
 <div class="container">
+	<?php
+	if ( function_exists('cs__the_breadcrumbs') ){
+		cs__the_breadcrumbs();
+	}
+	?>
+
 	<?php while ( have_posts() ): the_post(); ?>
 		<article id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
 			<h1 class="page-title"><?php the_title(); ?></h1>

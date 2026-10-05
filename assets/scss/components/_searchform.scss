@@ -1,0 +1,36 @@
+// -----------------------------------------------------------------------------
+// Search form
+//
+// Written new for v4: searchform.php emits `.search-form`, `.search-form__label`,
+// `.search-form__input` and `.search-form__submit` (the submit also carries the
+// shared `.button`, styled in components/_buttons.scss). corazon's
+// components/_searchform.scss targets `.searchform` (no hyphen), so it is the
+// shape reference only: a flex row with the block gap between the parts.
+// -----------------------------------------------------------------------------
+
+@use '../abstracts/variables' as vars;
+
+.search-form {
+	align-items: stretch;
+	display: flex;
+	flex-flow: row nowrap;
+	gap: vars.$layout_block_gap;
+
+	&__label {
+		align-self: center;
+	}
+
+	&__input {
+		background: vars.$color_white;
+		border: 2px solid vars.$color_gray_500;
+		border-radius: vars.$borderRadius_small;
+		color: vars.$color_black;
+		flex: 1 1 auto;
+		min-width: 0;
+		padding: 0.375rem 1.125rem;
+
+		&:focus {
+			border-color: vars.$color_primary;
+		}
+	}
+}

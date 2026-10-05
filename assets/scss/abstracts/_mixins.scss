@@ -91,35 +91,101 @@
 	z-index: 1;
 }
 
+/* --- Icon mask shared pseudo-element styles ---
+ * The visual shell an icon mask paints on ::before/::after. Split out of
+ * iconMask() so the attribute-selector and Arosa-extended forms share one copy. */
+@mixin iconMaskPseudoStyles( $color, $size ){
+	background: $color;
+	content: '';
+	display: inline-block;
+	height: $size;
+	mask-position: 50% 50%;
+	mask-repeat: no-repeat;
+	mask-size: contain;
+	position: absolute;
+	top: 50%;
+	transform: translateY(-50%);
+	width: $size;
+	z-index: 5;
+}
+
 /* --- Icon mask ---
  * Creates a mask for an icon.
- * Usage: @include iconMask($icons, after, $color_black, 20px); */
-@mixin iconMask( $icons, $position: both, $color: currentColor, $size: 1rem ){
-	$selector: '::before, ::after';
+ *
+ * Usage (mask on a `.has-icon-*` class): @include iconMask($icons, after, $color_black, 20px);
+ * Usage (paint on the element itself):   @include iconMask($icons, after, currentColor, remc(16), true);
+ *
+ * The fifth argument, `$applyToBase`, is Arosa's extension (arosa
+ * abstracts/_mixins.scss:104, with the `iconMaskPseudoStyles` helper at :89): with
+ * it true the icon is painted directly on the element's own ::before/::after,
+ * by-passing the `[class*="has-icon-"]` gate. components/_pagination.scss uses
+ * this because v4's pagination markup emits no `has-icon-*` class, so the
+ * four-argument form would compile and draw nothing. It defaults to false, so the
+ * four-argument form is unchanged.
+ *
+ * Each `both` case is written as two explicit selectors, not by interpolating a
+ * single '::before, ::after' selector string: putting the attribute selector
+ * before that string leaves the parent reference on the first pseudo only, so
+ * `::after` scopes to nothing (Task 14 finding 4). The two-selector form
+ * distributes the base selector to both.
+ *
+ * The pseudo name is chosen with an `@if`, not Sass's legacy `if()` function:
+ * Sass 1.85 deprecates `if()`, and a deprecation warning on every build is the
+ * noise this layer exists to avoid. */
+@mixin iconMask( $icons, $position: both, $color: currentColor, $size: 1rem, $applyToBase: false ){
+	$is-both: $position != before and $position != after;
+	$single: 'after';
 	@if $position == before {
-		$selector: '::before';
-	} @else if $position == after {
-		$selector: '::after';
+		$single: 'before';
 	}
 
-	&[class*="has-icon-"]#{$selector} {
-		background: $color;
-		content: '';
-		display: inline-block;
-		height: $size;
-		mask-position: 50% 50%;
-		mask-repeat: no-repeat;
-		mask-size: contain;
-		position: absolute;
-		top: 50%;
-		transform: translateY(-50%);
-		width: $size;
-		z-index: 5;
+	@if $is-both {
+		@if $applyToBase {
+			&::before,
+			&::after {
+				@include iconMaskPseudoStyles($color, $size);
+			}
+		} @else {
+			&[class*="has-icon-"]::before,
+			&[class*="has-icon-"]::after {
+				@include iconMaskPseudoStyles($color, $size);
+			}
+		}
+	} @else if $applyToBase {
+		&::#{$single} {
+			@include iconMaskPseudoStyles($color, $size);
+		}
+	} @else {
+		&[class*="has-icon-"]::#{$single} {
+			@include iconMaskPseudoStyles($color, $size);
+		}
 	}
 
-	@each $icon in $icons {
-		&.has-icon-#{$icon}#{$selector} {
-			mask-image: url('../../assets/images/icons/icon-#{$icon}.svg');
+	@if $applyToBase and length($icons) == 1 {
+		$icon: nth($icons, 1);
+
+		@if $is-both {
+			&::before,
+			&::after {
+				mask-image: url('../../assets/images/icons/icon-#{$icon}.svg');
+			}
+		} @else {
+			&::#{$single} {
+				mask-image: url('../../assets/images/icons/icon-#{$icon}.svg');
+			}
+		}
+	} @else {
+		@each $icon in $icons {
+			@if $is-both {
+				&.has-icon-#{$icon}::before,
+				&.has-icon-#{$icon}::after {
+					mask-image: url('../../assets/images/icons/icon-#{$icon}.svg');
+				}
+			} @else {
+				&.has-icon-#{$icon}::#{$single} {
+					mask-image: url('../../assets/images/icons/icon-#{$icon}.svg');
+				}
+			}
 		}
 	}
 }

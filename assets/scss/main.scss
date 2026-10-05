@@ -19,8 +19,13 @@
 @use 'base/blocks-base';
 @use 'base/blocks-styles';
 
+// Components
+@use 'components/buttons';
+@use 'components/breadcrumbs';
+@use 'components/pagination';
+@use 'components/searchform';
+
 // The layers below are added as the theme grows. Keep this order.
-// @use 'components/…';
 // @use 'layout/…';
 // @use 'pages/…';
 // @use 'parts/…';
