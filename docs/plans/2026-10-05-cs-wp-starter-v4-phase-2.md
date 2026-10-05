@@ -87,6 +87,17 @@ all under `D:/Local/<name>/app/public/wp-content/themes/<name>/assets/scss`.
 
 ---
 
+## How a styles task is verified
+
+Inspect the **emitted CSS** — `assets/css/main.min.css`, the block's `style.min.css` — not the
+build's exit code and not the presence of a `Finished` line. The reason is measured: a Sass error
+used to print and still exit 0, leaving the previous stylesheet on disk, so "the build passed"
+proved nothing about what shipped. The `gulpfile.js` fix in Task 14's follow-up makes the process
+fail non-zero on a Sass error, so the exit code is meaningful **again** — but the emitted CSS is
+still the primary evidence. Every Verify step below that says "compile a probe … inspect
+`main.min.css`" is doing exactly this, and the stand check's build-artifact pass now fails when the
+emitted CSS is stale as well.
+
 ## Part A — Theme styles
 
 ### Task 14: Extend the abstracts layer
@@ -111,6 +122,56 @@ all under `D:/Local/<name>/app/public/wp-content/themes/<name>/assets/scss`.
 - [ ] **Step 4: Verify.** `npm run build` exits 0 and `npm run lint:css` exits 0. Then prove the new
   variables resolved rather than silently compiling to nothing: compile a probe partial that emits
   each new variable as a custom property, inspect `assets/css/main.min.css`, and delete the probe.
+
+### Task 14 findings that change later tasks (recorded 2026-10-05)
+
+Task 14 was executed; its executor measured nine things the rest of this plan did not
+account for. The ones that change the tasks below:
+
+1. **`npm run build` did not fail on a Sass error — fixed in `gulpfile.js`.** A partial
+   holding `body { color: ; }`, `@use`-d from `main.scss`, printed Sass's `Expected expression.`
+   and then `Finished 'compileSass'` / `Finished 'build'`, and the process **exited 0**;
+   `assets/css/main.min.css` kept its previous mtime, so the broken compile silently shipped
+   the old stylesheet. `gulp-sass`'s `logError` emits `end` on the stream, which marks the
+   task successful. Both sass tasks now reject on a Sass error, so `npm run build` (global and
+   block) exits **non-zero** after printing the same readable message. **The exit code is
+   meaningful again; before this it was not.** See the verification bar above Part A.
+
+2. **Task 16 Step 3 cannot compile as written.** Arosa's `components/_pagination.scss:1–67`
+   calls `iconMask(('arrow-left'), after, currentColor, remc(16), true)` — **five arguments** —
+   while v3's `iconMask`, which Task 14 ported, takes **four** (`$icons, $position, $color,
+   $size`). The call cannot compile against the ported signature. **Resolution (either, and it
+   must compile):** port Arosa's extended mixin — `arosa/abstracts/_mixins.scss:104` adds the
+   fifth `$applyToBase` parameter (defaulted `false`) plus the `iconMaskPseudoStyles` helper at
+   `:89` — or adapt the pagination call to the four-argument form. Whichever is chosen is
+   verified by compiling it, not by reading it.
+
+3. **Task 17 Step 1's source uses three undefined variables.** v3 `layout/_header.scss`
+   references `$lineHeight_huge` (L27), `$graphite` (L69, **L81**, **L119**) and `$beaver`
+   (L113). Task 14 grepped the whole of v3 and **none of the three is defined anywhere in it** —
+   v3 `abstracts/_variables.scss` declares only `$lineHeight_base` (L54) — so that file cannot
+   have compiled as written. v4's `theme.json` defines only `line-height.base`. **There is no v3
+   source for these three.** Task 17 derives them from `theme.json` / the reference themes; if a
+   value genuinely cannot be sourced, it is **flagged to the owner, not invented.**
+
+4. **v3's `iconMask` `both` branch is malformed.** It builds `$selector: '::before, ::after'`
+   and emits `&[class*="has-icon-"]#{$selector}`, which compiles to
+   `&[class*="has-icon-"]::before, ::after` — `&` is not distributed to the second pseudo, so
+   `::after` is scoped to nothing. Task 14 ported it as-is. Any later port of the `both` branch
+   must either fix it (`&::before, &::after` under the attribute selector) or port it knowingly
+   with a comment; it must not be left unremarked.
+
+Two further constraints Task 14 hit, to apply before the next ported partial lands:
+
+5. **New partials use namespaced `@use`, never `as *`.** `@use '…/variables' as *` collides with
+   `parts/block/cta/style.scss`, which still uses legacy `@import` and defines the same names —
+   the executor hit exactly this. Use namespaced `@use 'variables' as vars` in new partials, and
+   **void the collision at its source** by migrating the cta block's SCSS from `@import` to
+   namespaced `@use`, verifying its compiled CSS is still emitted (`parts/block/cta/style.min.css`
+   non-empty).
+6. **`--header--logo-width` / `$header_logoWidth` are correct.** Task 14 added them
+   (`abstracts/_variables.scss:52,56`) and Task 17's ported header uses `$header_logoWidth`
+   (v3 L40). This is right and does not change.
 
 ### Task 15: The base layer
 
@@ -155,7 +216,11 @@ uncomment `inc/breadcrumbs.php` and `inc/pagination.php` (lines 66–67).**
   only if `inc/breadcrumbs.php` appends them verbatim (it appends the modifier raw, so they work).
 - [ ] **Step 3: `_pagination.scss`** from **Arosa `components/_pagination.scss:1–67`** — it targets
   `.pagination`, `.nav-links`, `.page-numbers`, `&.prev/&.next`, `&.disabled`, `&.current` exactly.
-  It uses `iconMask` for the prev/next arrows; that mixin now exists from Task 14.
+  It uses `iconMask` for the prev/next arrows, **and as written it cannot compile against the
+  four-argument `iconMask` Task 14 ported** — the Arosa call passes five arguments. See finding 2
+  under Task 14 for the required resolution (port Arosa's extended mixin with its `$applyToBase`
+  parameter and `iconMaskPseudoStyles`, or adapt the call to four arguments). Whichever is chosen
+  must be compiled before this step is called done.
 - [ ] **Step 4: `_searchform.scss`** — **write new.** v4's `searchform.php` emits `.search-form`,
   `__label`, `__input`, `__submit`; corazon's `_searchform.scss` targets `.searchform` (no hyphen)
   and is 9 lines, so it is a shape reference only.
@@ -174,13 +239,18 @@ uncomment `inc/breadcrumbs.php` and `inc/pagination.php` (lines 66–67).**
 their `@use` lines.
 
 - [ ] **Step 1: `_header.scss`** from v3 `layout/_header.scss:5–137` **only** (ruling 6 — L142–279 is
-  a superseded variant and is not ported). Two markup mismatches must be handled:
+  a superseded variant and is not ported). Three things must be handled:
   (a) v3 draws the toggle from `.nav-toggle__icon` with pseudo-elements, while v4 emits
   **`.nav-toggle__bar`** (`header.php:44`) — Arosa `layout/_header.scss:137–195` already targets both
   `.nav-toggle::before/::after` and `.nav-toggle__bar`, the exact three-bar markup v4 uses, so take
   the toggle from Arosa;
   (b) v3 shows/hides `.mobile-navigation` via `[aria-hidden="false"]` (L134) while v4 uses the
-  **`hidden` attribute** (`header.php:50`) — target `[hidden]` / `:not([hidden])` instead.
+  **`hidden` attribute** (`header.php:50`) — target `[hidden]` / `:not([hidden])` instead;
+  (c) v3's file uses `$lineHeight_huge` (L27), `$graphite` (L69, L81, L119) and `$beaver` (L113),
+  and **none of the three is defined anywhere in v3** — see finding 3 under Task 14. Source them
+  from `theme.json` / the reference themes; if a value genuinely cannot be sourced, flag it to the
+  owner rather than invent it. (`$header_logoWidth`, used at v3 L40, **is** defined by Task 14 and is
+  correct — finding 6.)
 - [ ] **Step 2: `_navigation.scss`** — desktop dropdown from **Arosa `layout/_navigation.scss:1–380`**,
   which targets the walker's `.menu-item-trigger`/`.caret`/`.sub-menu`; the flat `.footer-menu` block
   from v3 `layout/_navigation.scss:99–127`. The v3 flat-list rule uses `display:none !important` on

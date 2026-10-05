@@ -182,6 +182,16 @@ def check_escaping(theme: Path):
     return problems
 
 
+def _in_generated_dir(theme: Path, p: Path) -> bool:
+    """True when a path sits under an underscore-prefixed directory.
+
+    Underscore-prefixed *files* are real inputs (`_base.scss`, `_tokens.scss` are
+    `@use`-d); only underscore-prefixed *folders* (`_skeleton`) are templates whose
+    placeholders the compiler never sees.
+    """
+    return any(part.startswith("_") for part in p.relative_to(theme).parts[:-1])
+
+
 def check_build_artifacts(theme: Path):
     try:
         r = subprocess.run(
@@ -195,7 +205,44 @@ def check_build_artifacts(theme: Path):
         line for line in r.stdout.splitlines()
         if line.endswith((".min.css", ".min.js", ".map"))
     ]
-    return [(theme, f"tracked build artifact: {p}") for p in bad]
+    problems = [(theme, f"tracked build artifact: {p}") for p in bad]
+
+    # Emitted CSS must exist, be non-empty, and be newer than its sources. This
+    # guards an OBSERVED failure, not an imagined one: on 2026-10-05 a partial with
+    # a Sass syntax error, `@use`-d from main.scss, left assets/css/main.min.css
+    # untouched -- mtime unchanged -- while `npm run build` printed the error and
+    # still exited 0. A broken compile therefore shipped the previous stylesheet
+    # silently, and every "build passed" that day was weak evidence. Comparing each
+    # output to the newest source .scss catches that stale stylesheet directly.
+    outputs = []
+    for entry in sorted(theme.glob("assets/scss/*.scss")):
+        if not entry.name.startswith("_"):  # top-level entries only; _*.scss are partials
+            outputs.append(theme / "assets" / "css" / f"{entry.stem}.min.css")
+    for block in sorted(theme.glob("parts/block/*")):
+        if not block.is_dir() or block.name.startswith("_"):
+            continue
+        for name in ("style.scss", "editor.scss"):
+            if (block / name).exists():
+                outputs.append(block / f"{Path(name).stem}.min.css")
+
+    sources = [
+        p for p in theme.glob("assets/scss/**/*.scss")
+        if not _in_generated_dir(theme, p)
+    ]
+    sources += [
+        p for p in theme.glob("parts/block/**/*.scss")
+        if not _in_generated_dir(theme, p)
+    ]
+    newest = max((p.stat().st_mtime for p in sources), default=0.0)
+
+    for out in outputs:
+        if not out.exists():
+            problems.append((out, "expected build output is missing"))
+        elif out.stat().st_size == 0:
+            problems.append((out, "build output is empty"))
+        elif out.stat().st_mtime < newest:
+            problems.append((out, "stale build output (older than the newest source .scss)"))
+    return problems
 
 
 CHECKS = [
@@ -203,7 +250,7 @@ CHECKS = [
     ("block.json validity", check_block_json),
     ("symbol resolution", check_symbols),
     ("output escaping", check_escaping),
-    ("build artifacts not tracked", check_build_artifacts),
+    ("build artifacts not tracked / CSS fresh", check_build_artifacts),
 ]
 
 

@@ -29,21 +29,53 @@ const paths = {
 	scripts: { src: 'assets/js/src/**/*.js', dest: 'assets/js/dist' },
 };
 
+const sassOptions = {
+	silenceDeprecations: ['mixed-decls', 'color-functions', 'global-builtin', 'import'],
+};
+
+/**
+ * Print a Sass failure and hand the error back so the task can reject.
+ *
+ * gulp-sass's own `logError` writes the error to stderr and then emits `end`
+ * on the stream, which marks the task successful. That is why a broken compile
+ * used to print its error and still let `npm run build` exit 0 while the
+ * previous stylesheet stayed untouched on disk — observed on 2026-10-05 with a
+ * partial that held `body { color: ; }`, `@use`-d from main.scss. This handler
+ * keeps the readable message but does NOT swallow the error: the caller rejects
+ * the task with it, so the process exits non-zero.
+ */
+function reportSassError(err){
+	const detail = err.messageFormatted || err.messageOriginal || err.message || String(err);
+	process.stderr.write(`\nError in plugin "sass"\nMessage:\n    ${detail}\n`);
+	return err;
+}
+
 function tokens(done){
 	execSync('node scripts/build-tokens.mjs', { stdio: 'inherit' });
 	done();
 }
 
+// A Sass error must fail the task, not just print. The stream resolves the
+// returned promise only when it finishes cleanly; any error rejects it.
+function compileStream(src, dest){
+	return new Promise((resolve, reject) => {
+		const stream = gulp.src(src)
+			.pipe(sourcemaps.init())
+			.pipe(sass(sassOptions).on('error', err => reject(reportSassError(err))))
+			.pipe(autoprefixer())
+			.pipe(cleanCSS())
+			.pipe(rename({ suffix: '.min' }))
+			.pipe(sourcemaps.write('.'))
+			.pipe(gulp.dest(dest));
+
+		stream.on('finish', resolve);
+		stream.on('error', reject);
+		stream.pipe(browserSync.stream());
+	});
+}
+
 function compileSass(){
-	return gulp.src(paths.styles.src)
-		.pipe(sourcemaps.init())
-		.pipe(sass({ silenceDeprecations: ['mixed-decls', 'color-functions', 'global-builtin', 'import'] }).on('error', sass.logError))
-		.pipe(autoprefixer())
-		.pipe(cleanCSS())
-		.pipe(rename({ suffix: '.min' }))
-		.pipe(sourcemaps.write('.'))
-		.pipe(gulp.dest(paths.styles.dest))
-		.pipe(browserSync.stream());
+	return compileStream(paths.styles.src, paths.styles.dest);
 }
 
 function compileBlockSass(){
@@ -57,15 +89,7 @@ function compileBlockSass(){
 	const files = glob.sync('parts/block/**/*.scss', { ignore: 'parts/block/_*/**' });
 	if ( ! files.length ){ return Promise.resolve(); }
 
-	return gulp.src(files)
-		.pipe(sourcemaps.init())
-		.pipe(sass({ silenceDeprecations: ['mixed-decls', 'color-functions', 'global-builtin', 'import'] }).on('error', sass.logError))
-		.pipe(autoprefixer())
-		.pipe(cleanCSS())
-		.pipe(rename({ suffix: '.min' }))
-		.pipe(sourcemaps.write('.'))
-		.pipe(gulp.dest(file => path.dirname(file.path)))
-		.pipe(browserSync.stream());
+	return compileStream(files, file => path.dirname(file.path));
 }
 
 function watchFiles(done){
@@ -76,6 +100,8 @@ function watchFiles(done){
 		https: { rejectUnauthorized: false },
 	});
 
+	// gulp.watch reports a rejected task instead of silently finishing it, so a
+	// Sass error during `npm run watch` is visible rather than swallowed.
 	gulp.watch('assets/scss/**/*.scss', compileSass);
 	gulp.watch('parts/block/**/*.scss', compileBlockSass);
 	gulp.watch('**/*.php').on('change', browserSync.reload);

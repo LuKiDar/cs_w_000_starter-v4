@@ -72,6 +72,11 @@ Every script in `package.json`. There are **six**:
 
 > **`npm run build` compiles CSS only.** No task compiles JavaScript — see the
 > first item in §11.
+>
+> **A Sass compile error fails the build.** Both sass tasks reject when sass
+> reports an error, so `npm run build` exits non-zero (gulp-sass's own
+> `logError` used to print the error and then mark the task successful, leaving
+> the previous stylesheet on disk while the process exited 0).
 
 ## 5. Adding a block
 
@@ -189,8 +194,20 @@ this theme deliverable?":
    v3 fatal).
 4. **Output escaping** — no `<?= $var ?>` printed without an `esc_*`/`wp_kses`
    call on the same line.
-5. **Build artifacts not tracked** — no `*.min.css`, `*.min.js` or `*.map`
-   files are committed.
+5. **Build outputs not tracked, and emitted CSS fresh** — no `*.min.css`,
+   `*.min.js` or `*.map` files are committed, and every expected emitted
+   stylesheet (`assets/css/*.min.css`, and each block's `style.min.css` /
+   `editor.min.css`) **exists, is non-empty, and is not older than the newest
+   source `.scss`**. The freshness half guards an observed failure, not an
+   imagined one: a Sass error left `assets/css/main.min.css` untouched while
+   `npm run build` printed the error and still exited 0, so the previous
+   stylesheet could ship silently.
+
+**A styles task is verified by inspecting the emitted CSS, not by the build's
+exit code.** A Sass error used to print and still exit 0, leaving the old
+stylesheet on disk, so "build passed" was weak evidence; the gulpfile now fails
+non-zero on a Sass error, which makes the exit code meaningful again, but the
+emitted CSS is still the primary evidence. Check 5 above fails when it is stale.
 
 **Exit 0** means all checks passed. **Non-zero** means at least one check
 failed; each finding is printed as `file: line: what`, and it must be fixed
@@ -250,8 +267,12 @@ Rules:
    supports, which do not run for an ACF block here.
 4. **Media queries live inside the element they modify**, never collected at the
    bottom.
-5. Block SCSS imports the shared abstracts:
-   `@import '../../../assets/scss/abstracts/{functions,variables,mixins}';`
+5. New partials load the shared abstracts with **namespaced `@use`**
+   (`@use 'variables' as vars;`, then `vars.$color_black`) — **never `as *`**:
+   `as *` collides with `parts/block/cta/style.scss`, which still uses legacy
+   `@import` and defines the same names. Block entry files that predate the
+   migration use
+   `@import '../../../assets/scss/abstracts/{functions,variables,mixins}';`.
 6. Each block's SCSS is self-contained and compiles in place to
    `style.min.css` / `editor.min.css`.
 7. Spacing and colour per instance come from Gutenberg native supports, emitted
