@@ -38,3 +38,21 @@
 
 // Parts
 @use 'parts/content/post-card';
+
+// -----------------------------------------------------------------------------
+// Staged sections — styles that ship ready but switched off.
+//
+// A section is *ready* when its partial exists under assets/scss/ and its @use
+// line here is commented out. A commented @use is never parsed by the compiler,
+// so the partial contributes 0 bytes to main.min.css, while stylelint still lints
+// it (its glob is assets/scss/**/*.scss). This file is the single switch.
+//
+// To enable a staged section, uncomment its @use line — and, when the section
+// renders through one of the commented toolbox includes in functions.php
+// (readme.md §8), uncomment that include in the same change: the two go
+// together. Every commented @use must point at a real file on disk; a commented
+// include with no file behind it is how the v3 theme died.
+//
+// Nothing is staged right now. Add a commented @use below only when its partial
+// actually exists, e.g. `// @use 'components/example';   + inc/example.php`.
+// -----------------------------------------------------------------------------

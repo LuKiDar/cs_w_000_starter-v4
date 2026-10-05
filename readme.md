@@ -304,6 +304,18 @@ SCSS never hardcodes a colour, font size or radius; it references
 `assets/scss/abstracts/_variables.scss`. Editing a token means editing
 `theme.json` and re-running the build.
 
+### Staged sections
+
+A section the site does not use yet ships **ready but switched off**. A section
+is *ready* when its partial exists under `assets/scss/` **and** its `@use` line
+in `main.scss` is commented out: the compiler never parses a commented `@use`,
+so the partial contributes **0 bytes** to `main.min.css` while stylelint still
+lints it. `main.scss` is the single place the switch lives — enabling a section
+means uncommenting its `@use` line there and, where the section renders through
+a commented toolbox include in `functions.php` (see §8), uncommenting that
+include in the same change, because the two go together. Every commented `@use`
+must point at a real file on disk.
+
 ## 11. Known limitations
 
 Accepted, documented limits — not defects to fix in passing:
