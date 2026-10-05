@@ -1,0 +1,43 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "cs/hero",
+	"title": "Hero",
+	"description": "A page-opening hero with optional background image, text and buttons.",
+	"category": "cs-blocks",
+	"icon": "cover-image",
+	"keywords": ["hero", "banner", "header", "intro"],
+	"acf": {
+		"mode": "auto",
+		"postTypes": ["page"],
+		"renderCallback": "cs__render_hero_block"
+	},
+	"style": "file:./style.min.css",
+	"script": "",
+	"editorStyle": "file:./editor.min.css",
+	"supports": {
+		"align": ["none", "wide", "full"],
+		"alignContent": false,
+		"alignText": true,
+		"anchor": true,
+		"html": false,
+		"multiple": true,
+		"color": {"background": true, "link": false, "text": false},
+		"spacing": {"blockGap": false, "margin": ["top", "bottom"], "padding": ["top", "bottom"]}
+	},
+	"attributes": {
+		"align": {"type": "string", "default": ""},
+		"alignText": {"type": "string", "default": ""}
+	},
+	"example": {
+		"attributes": {
+			"mode": "preview",
+			"data": {
+				"eyebrow": "Welcome",
+				"heading": "Page-opening heading",
+				"subheading": "A short supporting line.",
+				"buttons": [{"link": {"title": "Get started", "url": "#"}, "link_type": "button"}]
+			}
+		}
+	}
+}

@@ -1,0 +1,14 @@
+/**
+ * Block: Hero — editor only
+ */
+
+.block-hero {
+	// Give the editor the hero's shape even when no front-end styles apply.
+	&__inner {
+		padding-block: 40px;
+	}
+	&__button-wrapper {
+		// buttons are not clickable in the editor
+		pointer-events: none;
+	}
+}
