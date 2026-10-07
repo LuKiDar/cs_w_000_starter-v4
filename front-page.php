@@ -9,48 +9,41 @@
 
 get_header();
 
-if ( function_exists('cs__the_breadcrumbs') ){
-	cs__the_breadcrumbs();
-}
 
-if ( is_home() ):
-	// The front page shows the latest posts. get_the_title() of the queried object
-	// is used rather than the_archive_title(), which would print the literal
-	// "Archives" here (wp-includes/general-template.php:1957) — not empty, just wrong.
-	?>
+if ( is_home() ): ?>
+	<?php if ( function_exists('cs__the_breadcrumbs') ) cs__the_breadcrumbs(); ?>
+
 	<header class="archive-header">
-		<div class="container">
-			<h1 class="archive-header__title"><?= esc_html(get_the_title(get_queried_object_id())); ?></h1>
-		</div>
+		<h1 class="archive-header__title"><?= esc_html(get_the_title(get_queried_object_id())); ?></h1>
 	</header>
 
-	<div class="container">
-		<?php if ( have_posts() ): ?>
-			<div class="card-list">
-				<?php while ( have_posts() ): the_post(); ?>
-					<?php get_template_part('parts/content/post-card', '', ['post_id' => get_the_ID()]); ?>
-				<?php endwhile; ?>
-			</div>
+	<?php if ( have_posts() ): ?>
+		<div class="card-list">
+			<?php while ( have_posts() ): the_post(); ?>
+				<?php get_template_part('parts/content/post-card', '', ['post_id' => get_the_ID()]); ?>
+			<?php endwhile; ?>
+		</div>
 
-			<?php if ( function_exists('cs__the_pagination') ): ?>
-				<?php cs__the_pagination(); ?>
-			<?php else: ?>
-				<?php the_posts_pagination(); ?>
-			<?php endif; ?>
-		<?php else: ?>
-			<p class="no-results"><?php esc_html_e('Nothing found.', CSWP); ?></p>
-		<?php endif; ?>
-	</div>
+		<?php if ( function_exists('cs__the_pagination') ) cs__the_pagination(); ?>
+
+	<?php else: ?>
+		<p class="no-results"><?php esc_html_e('Nothing found.', CSWP); ?></p>
+
+	<?php endif; ?>
+
 <?php else: ?>
-	<div class="container">
+	<?php if ( have_posts() ): ?>
 		<?php while ( have_posts() ): the_post(); ?>
-			<article id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
-				<h1 class="page-title"><?php the_title(); ?></h1>
-				<div class="page-content"><?php the_content(); ?></div>
-				<?php wp_link_pages(); ?>
-			</article>
+			<?php get_template_part('parts/content/post-entry'); ?>
 		<?php endwhile; ?>
-	</div>
+		
+		<?php if ( function_exists('cs__the_pagination') ) cs__the_pagination(); ?>
+
+	<?php else: ?>
+		<p class="no-results"><?php esc_html_e('Nothing found.', CSWP); ?></p>
+
+	<?php endif; ?>
+
 <?php endif; ?>
 
 <?php get_footer(); ?>

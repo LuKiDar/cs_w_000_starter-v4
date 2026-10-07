@@ -1,20 +1,20 @@
 {
-    "name": "cstheme/starter-theme",
-    "description": "Development tooling for the CStheme starter theme.",
-    "authors": [
-        {
-            "name": "Dariia",
-            "email": "daria.lukianchuk@gmail.com"
-        }
-    ],
-    "config": {
-        "allow-plugins": {
-            "dealerdirect/phpcodesniffer-composer-installer": true
-        }
-    },
-    "require-dev": {
-        "squizlabs/php_codesniffer": "^3.13",
-        "wp-coding-standards/wpcs": "^3.4",
-        "dealerdirect/phpcodesniffer-composer-installer": "^1.2"
+  "name": "cstheme/starter-theme",
+  "description": "Development tooling for the CStheme starter theme.",
+  "authors": [
+    {
+      "name": "Dariia",
+      "email": "daria.lukianchuk@gmail.com"
     }
+  ],
+  "config": {
+    "allow-plugins": {
+      "dealerdirect/phpcodesniffer-composer-installer": true
+    }
+  },
+  "require-dev": {
+    "squizlabs/php_codesniffer": "^3.13",
+    "wp-coding-standards/wpcs": "^3.4",
+    "dealerdirect/phpcodesniffer-composer-installer": "^1.2"
+  }
 }

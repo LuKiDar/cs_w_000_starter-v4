@@ -1,0 +1,35 @@
+/**
+ * 404 Template
+ */
+
+@use '../abstracts/functions' as fn;
+@use '../abstracts/mixins' as mx;
+@use '../abstracts/variables' as vars;
+
+.error-404 {
+	overflow-x: clip;
+	padding-bottom: calc(vars.$layout_padding * 4);
+	text-align: center;
+
+	&__title {
+		font-size: vars.$fontSize_huge;
+		line-height: vars.$lineHeight_base;
+		margin: 0 0 vars.$layout_block_gap;
+		overflow-wrap: anywhere;
+		padding-top: calc(vars.$layout_padding * 4);
+
+		@include mx.mediaMaxWidth(xs) {
+			font-size: vars.$fontSize_xx_large;
+		}
+	}
+	&__content {
+		line-height: vars.$lineHeight_base;
+		margin-inline: auto;
+		max-width: fn.remc(560);
+		padding-bottom: calc(vars.$layout_padding * 4);
+
+		> :last-child {
+			margin-bottom: 0;
+		}
+	}
+}

@@ -1,8 +1,9 @@
-// -----------------------------------------------------------------------------
-// Admin stylesheet entry point.
-//
-// Compiled by Gulp to assets/css/admin.min.css. Loaded only on admin screens.
-// -----------------------------------------------------------------------------
+/**
+ * Admin Styles
+ *
+ * Admin entry point. Gulp compiles this file to assets/css/admin.min.css,
+ * which inc/enqueue.php loads on the admin screens.
+ */
 
 @use 'abstracts/functions';
 @use 'abstracts/variables';

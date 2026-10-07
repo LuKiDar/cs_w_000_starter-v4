@@ -59,4 +59,4 @@
 			<?php endif; ?>
 		</header>
 
-		<main id="main" class="site-main">
+		<main id="main" class="site-main container">

@@ -1,0 +1,28 @@
+/**
+ * Content / Post entry
+ */
+
+@use '../../abstracts/mixins' as mx;
+@use '../../abstracts/variables' as vars;
+
+.post-entry {
+	&__title {
+		font-size: vars.$fontSize_huge;
+		line-height: vars.$lineHeight_base;
+		margin: 0 0 vars.$layout_block_gap;
+		overflow-wrap: anywhere;
+		padding-top: calc(vars.$layout_padding * 4);
+
+		@include mx.mediaMaxWidth(xs) {
+			font-size: vars.$fontSize_xx_large;
+		}
+	}
+	&__content {
+		line-height: vars.$lineHeight_base;
+		padding-bottom: calc(vars.$layout_padding * 4);
+
+		> :last-child {
+			margin-bottom: 0;
+		}
+	}
+}

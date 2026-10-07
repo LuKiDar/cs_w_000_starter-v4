@@ -1,9 +1,9 @@
-// -----------------------------------------------------------------------------
-// Editor stylesheet entry point.
-//
-// Compiled by Gulp to assets/css/editor.min.css and registered with
-// add_editor_style() so the block editor matches the front end.
-// -----------------------------------------------------------------------------
+/**
+ * Editor Styles
+ *
+ * Block editor entry point. Gulp compiles this file to assets/css/editor.min.css,
+ * which inc/enqueue.php registers with add_editor_style().
+ */
 
 @use 'abstracts/functions';
 @use 'abstracts/variables';

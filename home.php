@@ -5,35 +5,26 @@
 
 get_header();
 
-if ( function_exists('cs__the_breadcrumbs') ){
-	cs__the_breadcrumbs();
-}
+$page_for_posts = (int) get_option('page_for_posts'); ?>
 
-$page_for_posts = (int) get_option('page_for_posts');
-?>
+<?php if ( function_exists('cs__the_breadcrumbs') ) cs__the_breadcrumbs(); ?>
 
 <header class="archive-header">
-	<div class="container">
-		<h1 class="archive-header__title"><?= esc_html(get_the_title($page_for_posts)); ?></h1>
-	</div>
+	<h1 class="archive-header__title"><?= esc_html(get_the_title($page_for_posts)); ?></h1>
 </header>
 
-<div class="container">
-	<?php if ( have_posts() ): ?>
-		<div class="card-list">
-			<?php while ( have_posts() ): the_post(); ?>
-				<?php get_template_part('parts/content/post-card', '', ['post_id' => get_the_ID()]); ?>
-			<?php endwhile; ?>
-		</div>
+<?php if ( have_posts() ): ?>
+	<div class="card-list">
+		<?php while ( have_posts() ): the_post(); ?>
+			<?php get_template_part('parts/content/post-card', '', ['post_id' => get_the_ID()]); ?>
+		<?php endwhile; ?>
+	</div>
 
-		<?php if ( function_exists('cs__the_pagination') ): ?>
-			<?php cs__the_pagination(); ?>
-		<?php else: ?>
-			<?php the_posts_pagination(); ?>
-		<?php endif; ?>
-	<?php else: ?>
-		<p class="no-results"><?php esc_html_e('Nothing found.', CSWP); ?></p>
-	<?php endif; ?>
-</div>
+	<?php if ( function_exists('cs__the_pagination') ) cs__the_pagination(); ?>
+
+<?php else: ?>
+	<p class="no-results"><?php esc_html_e('Nothing found.', CSWP); ?></p>
+
+<?php endif; ?>
 
 <?php get_footer(); ?>

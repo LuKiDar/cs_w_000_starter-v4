@@ -1,18 +1,21 @@
 <?php
 /**
  * Index Template
+ * Fallback template for displaying posts
  */
 
-get_header();
-?>
+get_header(); ?>
 
-<div class="container">
+<?php if ( have_posts() ): ?>
 	<?php while ( have_posts() ): the_post(); ?>
-		<article id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
-			<h2 class="entry-title"><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h2>
-			<div class="entry-content"><?php the_content(); ?></div>
-		</article>
+		<?php get_template_part('parts/content/post-entry'); ?>
 	<?php endwhile; ?>
-</div>
+	
+	<?php if ( function_exists('cs__the_pagination') ) cs__the_pagination(); ?>
+
+<?php else: ?>
+	<p class="no-results"><?php esc_html_e('Nothing found.', CSWP); ?></p>
+
+<?php endif; ?>
 
 <?php get_footer(); ?>

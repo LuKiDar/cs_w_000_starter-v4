@@ -1,19 +1,6 @@
-// -----------------------------------------------------------------------------
-// Archive (index, blog, category, tag, author, search)
-//
-// Targets the listing contract: `<header class="archive-header">` with
-// `.archive-header__title` and `.archive-header__description`
-// (archive.php:11,13), `.archive-header__query` and `.archive-header__count`
-// (search.php:20,25), the `.card-list` wrapper (archive.php:19, home.php,
-// front-page.php, search.php) and `.no-results` (archive.php:31). The blog index
-// (home.php:15) and the posts-for-front-page branch (front-page.php) emit
-// `.archive-header` with only `__title`.
-//
-// Written new: no v3 file (pages/_blog.scss is 0 bytes) and no reference theme
-// matches. Arosa styles `.blog-page…`, corazon `.news-feed…`; `.archive-header`
-// and `.card-list` are targeted by nothing in either. `.card-list` is the grid
-// that lays out the `.card-post` cards from parts/content/_post-card.scss.
-// -----------------------------------------------------------------------------
+/**
+ * Archive Template
+ */
 
 @use '../abstracts/functions' as fn;
 @use '../abstracts/mixins' as mx;
@@ -28,7 +15,6 @@
 		margin: 0;
 		overflow-wrap: anywhere;
 	}
-
 	&__description,
 	&__count {
 		color: vars.$color_gray_500;
@@ -39,11 +25,9 @@
 			margin-bottom: 0;
 		}
 	}
-
 	&__count {
 		font-size: vars.$fontSize_small;
 	}
-
 	&__query {
 		color: vars.$color_primary;
 	}

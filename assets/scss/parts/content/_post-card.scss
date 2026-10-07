@@ -1,19 +1,6 @@
-// -----------------------------------------------------------------------------
-// Content / Post card
-//
-// Targets the contract parts/content/post-card.php emits: `<article class="card-post">`
-// (L17), `.card-post__media` link (L20), `.card-post__image` (L21),
-// `.card-post__body` (L24), `.card-post__title` (L25), `.card-post__link` (L26),
-// `.card-post__excerpt` (L29) and `.card-post__more.link-arrow` (L31). The
-// `$modifier` argument (L12) is appended raw to the root class, so a
-// `card-post--featured` modifier would be reachable — none is emitted today.
-//
-// Written new: v3 parts/content/_post-card.scss:5-106 is the structural skeleton
-// only (its `.post-card__media-wrapper`/`__media-link`/`__content-wrapper`/`__meta`
-// classes match nothing here), and Arosa parts/content/_post-card.scss:5-141 is
-// the closest visual reference. Token names rewritten to v4's generated
-// vocabulary (`$teal` -> `$color_primary`, `$beige_50` -> `$color_gray_100`).
-// -----------------------------------------------------------------------------
+/**
+ * Content / Post card
+ */
 
 @use '../../abstracts/functions' as fn;
 @use '../../abstracts/mixins' as mx;
