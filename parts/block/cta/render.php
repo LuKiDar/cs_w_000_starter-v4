@@ -28,7 +28,7 @@ foreach ( (array) $buttons as $row ){
 <?php if ( $heading !== '' || $eyebrow !== '' || $subheading !== '' || $content !== '' || $has_button ): ?>
 	<section
 		id="<?= esc_attr(cs__get_block_id($block)); ?>"
-		class="<?= esc_attr(cs__get_block_classes($block, 'block-cta')); ?>"
+		class="block-cta <?= cs__get_block_classes($block, $data, []); ?>"
 		<?= cs__get_block_styles($block); ?>
 	>
 		<div class="block-cta__container container">

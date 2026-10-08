@@ -57,7 +57,7 @@ if ( $image_id ){
 
 <section
 	id="<?= esc_attr(cs__get_block_id($block)); ?>"
-	class="<?= esc_attr($classes); ?>"
+	class="block-hero <?= cs__get_block_classes($block, $data, []); ?>"
 	<?= cs__get_block_styles($block); ?>
 >
 	<?php if ( $image_id ): ?>

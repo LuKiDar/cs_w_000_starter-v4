@@ -4,4 +4,7 @@
  */
 
 .block-{{SLUG}} {
+	&__button-wrapper {
+		pointer-events: none;
+	}
 }

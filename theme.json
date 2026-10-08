@@ -431,7 +431,7 @@
 			"cite": {},
 			"heading": {
 				"color": {
-					"text": "var(--wp--preset--color--black)"
+					"text": "currentColor"
 				},
 				"typography": {
 					"fontFamily": "var(--wp--preset--font-family--secondary)",
