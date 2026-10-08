@@ -34,7 +34,7 @@ all under `D:/Local/<name>/app/public/wp-content/themes/<name>/assets/scss`.
 - Pagination: `.pagination .nav-links .page-numbers` with `.prev`/`.next`/`.current`/`.disabled` —
   `inc/pagination.php:25–37`. WordPress's own `the_posts_pagination()` emits the same classes, which
   is why pagination styles work even where the include is off.
-- Post card: v4 emits **`.card-post`, `.card-post__media`, `__image`, `__body`, `__title`, `__link`,
+- Post card: v4 emits **`.post-card`, `.post-card__media`, `__image`, `__body`, `__title`, `__link`,
   `__excerpt`, `__more`** and `.link-arrow` (`parts/content/post-card.php`). v3 styles
   `.post-card__media-wrapper`, `__content-wrapper`, `__navigation` — **not one name matches.**
   v3's file is a structural skeleton only, and `.card-list` (the wrapper every listing template uses)
@@ -285,7 +285,7 @@ their `@use` lines.
   `.archive-header`. The contract is `.archive-header` with `__title`/`__description` (and, in
   `search.php:20,25`, `__query`/`__count`), the `.card-list` wrapper, and `.no-results`.
   **`.card-list` is styled nowhere in any reference.**
-- [ ] **Step 2: `_post-card.scss`** — **write new** for `.card-post*`, using v3
+- [ ] **Step 2: `_post-card.scss`** — **write new** for `.post-card*`, using v3
   `parts/content/_post-card.scss:5–106` as the structural skeleton only (its class names do not
   apply — see the contract note at the top). Arosa `parts/content/_post-card.scss` is the closest
   *visual* reference.

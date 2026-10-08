@@ -2969,7 +2969,7 @@ Expected: all `MISSING` except those created in Task 2.
 $post_id  = $args['post_id'] ?? get_the_ID();
 $modifier = $args['modifier'] ?? '';
 
-$classes = 'card-post';
+$classes = 'post-card';
 if ( $modifier !== '' ){
 	$classes .= ' '. $modifier;
 }
@@ -2977,19 +2977,19 @@ if ( $modifier !== '' ){
 
 <article class="<?= esc_attr($classes); ?>">
 	<?php if ( has_post_thumbnail($post_id) ): ?>
-		<a class="card-post__media" href="<?= esc_url(get_permalink($post_id)); ?>" tabindex="-1" aria-hidden="true">
-			<?= get_the_post_thumbnail($post_id, 'medium_large', array('class' => 'card-post__image')); ?>
+		<a class="post-card__media" href="<?= esc_url(get_permalink($post_id)); ?>" tabindex="-1" aria-hidden="true">
+			<?= get_the_post_thumbnail($post_id, 'medium_large', array('class' => 'post-card__image')); ?>
 		</a>
 	<?php endif; ?>
 
-	<div class="card-post__body">
-		<h3 class="card-post__title">
-			<a class="card-post__link" href="<?= esc_url(get_permalink($post_id)); ?>"><?= esc_html(get_the_title($post_id)); ?></a>
+	<div class="post-card__body">
+		<h3 class="post-card__title">
+			<a class="post-card__link" href="<?= esc_url(get_permalink($post_id)); ?>"><?= esc_html(get_the_title($post_id)); ?></a>
 		</h3>
 
-		<div class="card-post__excerpt"><?= wp_kses_post(get_the_excerpt($post_id)); ?></div>
+		<div class="post-card__excerpt"><?= wp_kses_post(get_the_excerpt($post_id)); ?></div>
 
-		<a class="card-post__more link-arrow" href="<?= esc_url(get_permalink($post_id)); ?>">
+		<a class="post-card__more link-arrow" href="<?= esc_url(get_permalink($post_id)); ?>">
 			<?= esc_html__('Read more', CSWP); ?>
 			<span class="screen-reader-text"><?= esc_html(get_the_title($post_id)); ?></span>
 		</a>
@@ -3134,7 +3134,7 @@ The Task 8 review was interrupted before it wrote its report, but its transcript
 
 **F1 — Important: `front-page.php` throws away a static front page's content.**
 
-The template is written as an archive: header, card loop, pagination. It never calls `the_content()`. On this install the front page is a **static page** — `page_on_front=2`, and page 2 holds 19,918 characters of block content — so `/` renders a list of post cards and the page the owner actually built is never shown. Measured before the site went down: `/` and `/sample-page/` were byte-identical at 38,441, and the review's own probe found `article.card-post` on `/`.
+The template is written as an archive: header, card loop, pagination. It never calls `the_content()`. On this install the front page is a **static page** — `page_on_front=2`, and page 2 holds 19,918 characters of block content — so `/` renders a list of post cards and the page the owner actually built is never shown. Measured before the site went down: `/` and `/sample-page/` were byte-identical at 38,441, and the review's own probe found `article.post-card` on `/`.
 
 `front-page.php` covers two different WordPress settings, and the template has to tell them apart:
 
@@ -3158,7 +3158,7 @@ Measured across the whole document, not just `<main>`:
 /category/uncategorized/  same
 ```
 
-`parts/content/post-card.php` uses `<h3 class="card-post__title">` while the only heading above it is the `<h1>` archive title. Change the card's title to `<h2>`, which is what it is: a top-level item under the page's single `<h1>`.
+`parts/content/post-card.php` uses `<h3 class="post-card__title">` while the only heading above it is the `<h1>` archive title. Change the card's title to `<h2>`, which is what it is: a top-level item under the page's single `<h1>`.
 
 Do **not** add a `heading_level` argument for it. Phase 2's `card-list` may eventually nest cards under its own heading and want a level knob; when it does, it can add one. Adding it now is building for a caller that does not exist.
 

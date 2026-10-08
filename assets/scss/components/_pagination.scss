@@ -19,8 +19,6 @@
 		font-size: $fontSize_small;
 		font-weight: 400;
 		min-width: rem(24);
-		margin: rem(2);
-		padding: rem(2);
 		text-align: center;
 		text-decoration: none;
 		transition: all 0.3s ease;
@@ -29,6 +27,12 @@
 		&.prev,
 		&.next {
 			position: relative;
+
+			&::after {
+				position: absolute;
+				top: 50%;
+				transform: translateY(-50%);
+			}
 
 			&.disabled {
 				opacity: 0;

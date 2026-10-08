@@ -1,6 +1,6 @@
 <?php
 /**
- * Entry: Page
+ * Content: Page entry
  */
 ?>
 

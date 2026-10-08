@@ -643,7 +643,7 @@ two was kept; the other was built, measured against every template, and deleted 
    date archive, search, 404). It produced **no observable change on any of them**: the theme
    emits no positive `tabindex` anywhere, and the only two `aria-hidden="true"` elements it
    emits are `header.php:44`'s `nav-toggle__bar` span, which holds nothing focusable, and
-   `parts/content/post-card.php:19`'s `card-post__media` anchor — which **is itself**
+   `parts/content/post-card.php:19`'s `post-card__media` anchor — which **is itself**
    the aria-hidden element and carries `tabindex="-1"` on its own tag. That second one is the
    sharper reason to delete: the runtime sets `tabindex="-1"` on *descendants* of
    `[aria-hidden="true"]`, so it would never have touched the theme's actual pattern even had

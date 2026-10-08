@@ -2,73 +2,44 @@
  * Mixins
  */
 
-// Media-query mixins resolve breakpoint names against $breakpoints, which is
-// declared in _variables.scss. Under `@use` a mixin body is scoped to the module
-// that defines it, so that file must be loaded here. It is loaded with a
-// namespace (not `as *`): a block that legacy-`@import`s both files must not see
-// the variables module's members arrive twice.
 @use 'variables' as vars;
 
 /* --- Media Queries --- */
-@mixin mediaMinWidth( $minWidth ){
+@mixin mediaMinWidth( $minWidth ) {
 	@if type-of($minWidth)==string {
 		$minWidth: map-get(vars.$breakpoints, $minWidth);
 	}
 
-	@media screen and (min-width: #{$minWidth + 0px}){
+	@media screen and (min-width: #{$minWidth + 0px}) {
 		@content;
 	}
 }
-@mixin mediaMaxWidth( $maxWidth ){
+
+@mixin mediaMaxWidth( $maxWidth ) {
 	@if type-of($maxWidth)==string {
 		$maxWidth: map-get(vars.$breakpoints, $maxWidth);
 	}
 
-	@media screen and (max-width: #{$maxWidth + 0px}){
+	@media screen and (max-width: #{$maxWidth + 0px}) {
 		@content;
 	}
 }
-@mixin mediaBetween( $minWidth, $maxWidth ){
+
+@mixin mediaBetween( $minWidth, $maxWidth ) {
 	@if type-of($minWidth)==string {
 		$minWidth: map-get(vars.$breakpoints, $minWidth);
 	}
+
 	@if type-of($maxWidth)==string {
 		$maxWidth: map-get(vars.$breakpoints, $maxWidth);
 	}
 
-	@media screen and (min-width: #{$minWidth + 0px}) and (max-width: #{$maxWidth + 0px}){
+	@media screen and (min-width: #{$minWidth + 0px}) and (max-width: #{$maxWidth + 0px}) {
 		@content;
 	}
 }
 
-/* --- Get styles ---
- * Emit a style map as declarations: a map of property -> value. */
-@mixin getStyles( $styles, $screen:'' ){
-	@each $name, $value in $styles {
-		#{$name}: #{$value};
-	}
-}
-
-/* Emit a map of per-breakpoint style maps: a 'default' key emits unconditionally,
- * any breakpoint key wraps its styles in a mediaMaxWidth() query. */
-@mixin getStylesBreakpoints( $styles ){
-	@if type-of($styles)=='map' {
-		@each $itemScreen, $itemStyles in $styles {
-			@if $itemScreen=='xl' or $itemScreen=='lg' or $itemScreen=='md' or $itemScreen=='sm' or $itemScreen=='xs'{
-				@include mediaMaxWidth( $itemScreen ){
-					@include getStyles( $itemStyles, $itemScreen );
-				}
-			} @else if $itemScreen=='default' {
-				@include getStyles( $itemStyles, $itemScreen );
-			}
-		}
-	}
-}
-
-/* --- Placeholder ---
- * Style an input's placeholder text across engines. */
-/* stylelint-disable selector-no-vendor-prefix -- these vendor-prefixed
- * pseudo-elements are the point of the mixin; autoprefixer does not add them. */
+/* --- Placeholder --- */
 @mixin placeholder {
 	&.placeholder { @content; }
 	&:-ms-input-placeholder { @content; }
@@ -76,12 +47,9 @@
 	&::-moz-placeholder { @content; }
 	&::-webkit-input-placeholder { @content; }
 }
-/* stylelint-enable selector-no-vendor-prefix */
 
-/* --- Block cover ---
- * Creates a block that covers the full width/height of a positioned parent. */
-@mixin blockCover(){
-	content: '';
+/* --- Block cover --- */
+@mixin blockCover() {
 	display: block;
 	height: 100%;
 	left: 0;
@@ -91,10 +59,13 @@
 	z-index: 1;
 }
 
-/* --- Icon mask shared pseudo-element styles ---
- * The visual shell an icon mask paints on ::before/::after. Split out of
- * iconMask() so the attribute-selector and Arosa-extended forms share one copy. */
-@mixin iconMaskPseudoStyles( $color, $size ){
+/* --- Icon Mask ---
+ * Creates a mask for an icon.
+ *
+ * $icons is one icon name or a list of them. $position is before, after, or both.
+ * Usage: @include iconMask($icons, after, currentColor, rem(20), true);
+ */
+@mixin iconMaskPseudoStyles( $color, $size ) {
 	background: $color;
 	content: '';
 	display: inline-block;
@@ -102,89 +73,51 @@
 	mask-position: 50% 50%;
 	mask-repeat: no-repeat;
 	mask-size: contain;
-	position: absolute;
-	top: 50%;
-	transform: translateY(-50%);
 	width: $size;
 	z-index: 5;
 }
 
-/* --- Icon mask ---
- * Creates a mask for an icon.
- *
- * Usage (mask on a `.has-icon-*` class): @include iconMask($icons, after, $color_black, 20px);
- * Usage (paint on the element itself):   @include iconMask($icons, after, currentColor, rem(16), true);
- *
- * The fifth argument, `$applyToBase`, is Arosa's extension (arosa
- * abstracts/_mixins.scss:104, with the `iconMaskPseudoStyles` helper at :89): with
- * it true the icon is painted directly on the element's own ::before/::after,
- * by-passing the `[class*="has-icon-"]` gate. components/_pagination.scss uses
- * this because v4's pagination markup emits no `has-icon-*` class, so the
- * four-argument form would compile and draw nothing. It defaults to false, so the
- * four-argument form is unchanged.
- *
- * Each `both` case is written as two explicit selectors, not by interpolating a
- * single '::before, ::after' selector string: putting the attribute selector
- * before that string leaves the parent reference on the first pseudo only, so
- * `::after` scopes to nothing (Task 14 finding 4). The two-selector form
- * distributes the base selector to both.
- *
- * The pseudo name is chosen with an `@if`, not Sass's legacy `if()` function:
- * Sass 1.85 deprecates `if()`, and a deprecation warning on every build is the
- * noise this layer exists to avoid. */
-@mixin iconMask( $icons, $position: both, $color: currentColor, $size: 1rem, $applyToBase: false ){
-	$is-both: $position != before and $position != after;
-	$single: 'after';
+@mixin _iconMaskSelector( $position, $suffix: '' ) {
 	@if $position == before {
-		$single: 'before';
+		&#{$suffix}::before { @content; }
+	}
+	@else if $position == after {
+		&#{$suffix}::after { @content; }
+	}
+	@else if $position == both {
+		&#{$suffix}::before,
+		&#{$suffix}::after { @content; }
+	}
+	@else {
+		@error 'iconMask position must be before, after, or both.';
+	}
+}
+
+@mixin iconMask( $icons, $position: both, $color: currentColor, $size: 1rem, $applyToBase: false ) {
+	@if type-of($icons) == string {
+		$icons: ($icons,);
 	}
 
-	@if $is-both {
-		@if $applyToBase {
-			&::before,
-			&::after {
-				@include iconMaskPseudoStyles($color, $size);
-			}
-		} @else {
-			&[class*="has-icon-"]::before,
-			&[class*="has-icon-"]::after {
-				@include iconMaskPseudoStyles($color, $size);
-			}
-		}
-	} @else if $applyToBase {
-		&::#{$single} {
-			@include iconMaskPseudoStyles($color, $size);
-		}
-	} @else {
-		&[class*="has-icon-"]::#{$single} {
-			@include iconMaskPseudoStyles($color, $size);
-		}
+	$hook: '';
+	@if not $applyToBase {
+		$hook: '[class*="has-icon-"]';
+	}
+
+	@include _iconMaskSelector($position, $hook) {
+		@include iconMaskPseudoStyles($color, $size);
 	}
 
 	@if $applyToBase and length($icons) == 1 {
 		$icon: nth($icons, 1);
 
-		@if $is-both {
-			&::before,
-			&::after {
-				mask-image: url('../../assets/images/icons/icon-#{$icon}.svg');
-			}
-		} @else {
-			&::#{$single} {
-				mask-image: url('../../assets/images/icons/icon-#{$icon}.svg');
-			}
+		@include _iconMaskSelector($position) {
+			mask-image: url('../images/icons/icon-#{$icon}.svg');
 		}
-	} @else {
+	}
+	@else {
 		@each $icon in $icons {
-			@if $is-both {
-				&.has-icon-#{$icon}::before,
-				&.has-icon-#{$icon}::after {
-					mask-image: url('../../assets/images/icons/icon-#{$icon}.svg');
-				}
-			} @else {
-				&.has-icon-#{$icon}::#{$single} {
-					mask-image: url('../../assets/images/icons/icon-#{$icon}.svg');
-				}
+			@include _iconMaskSelector($position, '.has-icon-#{$icon}') {
+				mask-image: url('../images/icons/icon-#{$icon}.svg');
 			}
 		}
 	}

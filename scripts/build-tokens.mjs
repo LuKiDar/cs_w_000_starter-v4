@@ -37,6 +37,13 @@ for ( const key of Object.keys(s.custom?.functionalColor ?? {}) ){
 }
 lines.push('');
 
+// $fontFamily_primary, $fontFamily_secondary, ...
+lines.push('// Font families');
+for ( const { slug } of s.typography?.fontFamilies ?? [] ){
+	lines.push(`$fontFamily_${slug.replace(/-/g, '_')}: var(--wp--preset--font-family--${slug});`);
+}
+lines.push('');
+
 // $fontSize_small, $fontSize_x_large, ...
 lines.push('// Font sizes');
 for ( const { slug } of s.typography?.fontSizes ?? [] ){

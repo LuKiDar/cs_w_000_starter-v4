@@ -1,6 +1,6 @@
 <?php
 /**
- * Entry: Post
+ * Content: Post entry
  */
 ?>
 

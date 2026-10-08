@@ -1,29 +1,28 @@
 /**
- * Content / Post card
+ * Content: Post card
  */
 
 @use '../../abstracts/functions' as *;
 @use '../../abstracts/mixins' as *;
 @use '../../abstracts/variables' as *;
 
-.card-post {
+.post-card {
 	background: $color_white;
 	border: rem(1) solid $color_gray_100;
-	border-radius: $borderRadius_medium;
-	box-shadow: $custom_box_shadow_default;
+	border-radius: $borderRadius_small;
 	display: flex;
 	flex-flow: column nowrap;
 	overflow: hidden;
-	transition: box-shadow 0.3s ease, transform 0.3s ease;
+	transition: border-color 0.3s ease, transform 0.3s ease;
 
 	&__media {
 		aspect-ratio: 16 / 9;
 		background: $color_gray_100;
 		display: block;
+		margin: 0;
 		overflow: hidden;
 		position: relative;
 	}
-
 	&__image {
 		display: block;
 		height: 100%;
@@ -34,66 +33,76 @@
 		transition: transform 0.3s ease;
 		width: 100%;
 	}
+	&__media-link {
+		inset: 0;
+		position: absolute;
+	}
 
 	&__body {
+		padding: $layout_padding;
+	}
+	&__tags,
+	&__meta {
 		display: flex;
-		flex: 1 1 auto;
-		flex-flow: column nowrap;
-		gap: $layout_block_gap;
-		padding: $spacing_30;
-	}
-
-	&__title {
-		font-size: $fontSize_large;
-		line-height: $lineHeight_base;
+		flex-flow: row wrap;
 		margin: 0;
-	}
+		padding: 0;
 
-	&__link {
-		color: $color_black;
-		text-decoration: none;
-
-		&:is(:hover, :focus-within) {
-			color: $color_primary;
-			text-decoration: underline;
+		li {
+			list-style-type: none;
+			margin: 0;
 		}
 	}
+	&__tags {
+		font-size: $fontSize_small;
+		margin-block: 0 $layout_padding;
 
-	&__excerpt {
-		color: $color_gray_500;
-		flex: 1 1 auto;
-		line-height: $lineHeight_base;
-		margin: 0;
+		li:not(:last-child)::after {
+			content: ",";
+			margin-inline-end: 0.25em;
+		}
+
+		a {
+			color: $color_gray_500;
+		}
 	}
-
+	&__meta {
+		color: $color_gray_500;
+		font-size: $fontSize_small;
+		gap: $layout_padding;
+		justify-content: space-between;
+		margin-block: $layout_padding 0;
+	}
+	&__title {
+		margin-block: 0 $layout_padding;
+	}
+	&__excerpt {
+		color: $color_gray_900;
+	}
+	&__navigation {
+		margin-block: $layout_padding 0;
+	}
 	&__more {
-		align-self: flex-start;
+		@include iconMask(('arrow-right'), after, currentColor, rem(16), true);
 		color: $color_primary;
 		font-weight: 700;
+		padding-right: calc(rem(16) + $layout_padding);
 		position: relative;
-		text-decoration: none;
-
-		@include iconMask(('arrow-right'), after, currentColor, rem(16), true);
 
 		&::after {
-			margin-left: rem(8);
-			position: static;
-			transform: none;
-			vertical-align: middle;
-		}
-
-		&:is(:hover, :focus-within) {
-			color: $color_black;
-			text-decoration: underline;
+			position: absolute;
+			right: 0;
+			top: 50%;
+			transform: translateY(-50%);
 		}
 	}
 
 	// States
 	&:is(:hover, :focus-within) {
-		box-shadow: 0 0 0 rem(1) $color_primary;
+		border-color: $color_primary;
 
-		.card-post__image {
-			transform: scale(1.05);
+		.post-card__image {
+			transform: scale(1.1);
 		}
 	}
 }
