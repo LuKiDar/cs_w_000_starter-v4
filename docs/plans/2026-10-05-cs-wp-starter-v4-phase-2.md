@@ -150,7 +150,7 @@ account for. The ones that change the tasks below:
    meaningful again; before this it was not.** See the verification bar above Part A.
 
 2. **Task 16 Step 3 cannot compile as written.** Arosa's `components/_pagination.scss:1–67`
-   calls `iconMask(('arrow-left'), after, currentColor, remc(16), true)` — **five arguments** —
+   calls `iconMask(('arrow-left'), after, currentColor, rem(16), true)` — **five arguments** —
    while v3's `iconMask`, which Task 14 ported, takes **four** (`$icons, $position, $color,
    $size`). The call cannot compile against the ported signature. **Resolution (either, and it
    must compile):** port Arosa's extended mixin — `arosa/abstracts/_mixins.scss:104` adds the

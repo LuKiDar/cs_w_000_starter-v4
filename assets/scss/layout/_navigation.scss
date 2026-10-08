@@ -20,7 +20,7 @@
 // `$lineHeight_heading` (1.2) and `$teal_light` have no v4 counterpart
 // (theme.json declares only line-height.base and one primary), so the base step
 // is used and the hover state resolves to `$color_primary`, `$color_black` or
-// `$color_gray_900` as noted. `remc()` and the media mixins are namespaced.
+// `$color_gray_900` as noted. `rem()` and the media mixins are namespaced.
 //
 // The mobile link colours are v3's `.mobile-navigation` link rules
 // (layout/_header.scss:112-121): v3's `$beaver` and `$graphite` have no v4
@@ -80,7 +80,7 @@
 
 			&:is(:hover, :focus-within) {
 				text-decoration: underline;
-				text-decoration-thickness: remc(2);
+				text-decoration-thickness: rem(2);
 				text-underline-offset: .1em;
 
 				@include mediaMinWidth( md ){
@@ -94,7 +94,7 @@
 		.menu-item-trigger {
 			align-items: center;
 			display: flex;
-			gap: remc(8);
+			gap: rem(8);
 			max-width: 100%;
 
 			> .caret {
@@ -106,14 +106,14 @@
 		.caret {
 			border-color: transparent currentcolor currentcolor transparent;
 			border-style: solid;
-			border-width: 0 remc(2) remc(2) 0;
+			border-width: 0 rem(2) rem(2) 0;
 			display: inline-block;
-			height: remc(10);
-			margin: -.3em 0 0 remc(8);
+			height: rem(10);
+			margin: -.3em 0 0 rem(8);
 			rotate: 45deg;
 			transition: all .3s ease;
 			vertical-align: middle;
-			width: remc(10);
+			width: rem(10);
 
 			@include mediaMaxWidth( md ){
 				display: none;
@@ -140,27 +140,27 @@
 
 	.sub-menu {
 		flex-flow: column nowrap;
-		gap: remc(4) 0;
+		gap: rem(4) 0;
 		list-style: none;
 		margin: 0;
 		padding: 0;
 
 		@include mediaMinWidth( md ){
 			background: $color_white;
-			border: remc(1) solid $color_primary;
+			border: rem(1) solid $color_primary;
 			border-radius: $borderRadius_medium;
 			display: none;
 			left: 0;
-			max-width: remc(200);
-			min-width: remc(160);
-			padding: remc(20) $layout_block_gap;
+			max-width: rem(200);
+			min-width: rem(160);
+			padding: rem(20) $layout_block_gap;
 			position: absolute;
 			top: 100%;
 			width: max-content;
 			z-index: 999;
 		}
 		@include mediaMaxWidth( md ){
-			padding: remc(12) 0;
+			padding: rem(12) 0;
 		}
 
 		> .menu-item {
@@ -169,7 +169,7 @@
 
 			> a {
 				display: block;
-				padding: remc(4) 0;
+				padding: rem(4) 0;
 				text-decoration: none;
 				width: 100%;
 
@@ -205,7 +205,7 @@
 	.menu-item-has-children {
 		&:is(:hover, :focus-within) {
 			> .menu-item-trigger .caret {
-				margin: .1em 0 0 remc(8);
+				margin: .1em 0 0 rem(8);
 				rotate: -135deg;
 			}
 			> .sub-menu {

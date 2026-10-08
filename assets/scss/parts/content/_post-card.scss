@@ -8,7 +8,7 @@
 
 .card-post {
 	background: $color_white;
-	border: remc(1) solid $color_gray_100;
+	border: rem(1) solid $color_gray_100;
 	border-radius: $borderRadius_medium;
 	box-shadow: $custom_box_shadow_default;
 	display: flex;
@@ -73,10 +73,10 @@
 		position: relative;
 		text-decoration: none;
 
-		@include iconMask(('arrow-right'), after, currentColor, remc(16), true);
+		@include iconMask(('arrow-right'), after, currentColor, rem(16), true);
 
 		&::after {
-			margin-left: remc(8);
+			margin-left: rem(8);
 			position: static;
 			transform: none;
 			vertical-align: middle;
@@ -90,7 +90,7 @@
 
 	// States
 	&:is(:hover, :focus-within) {
-		box-shadow: 0 0 0 remc(1) $color_primary;
+		box-shadow: 0 0 0 rem(1) $color_primary;
 
 		.card-post__image {
 			transform: scale(1.05);

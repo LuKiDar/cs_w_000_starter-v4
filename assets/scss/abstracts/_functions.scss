@@ -3,7 +3,7 @@
  */
 
 /* --- Convert px to rem --- */
-@function remc( $pxValue ){
+@function rem( $pxValue ){
 	@return calc($pxValue / 16 * 1rem);
 }
 

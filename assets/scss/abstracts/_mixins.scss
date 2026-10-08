@@ -113,7 +113,7 @@
  * Creates a mask for an icon.
  *
  * Usage (mask on a `.has-icon-*` class): @include iconMask($icons, after, $color_black, 20px);
- * Usage (paint on the element itself):   @include iconMask($icons, after, currentColor, remc(16), true);
+ * Usage (paint on the element itself):   @include iconMask($icons, after, currentColor, rem(16), true);
  *
  * The fifth argument, `$applyToBase`, is Arosa's extension (arosa
  * abstracts/_mixins.scss:104, with the `iconMaskPseudoStyles` helper at :89): with

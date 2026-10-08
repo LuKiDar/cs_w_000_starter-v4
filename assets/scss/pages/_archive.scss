@@ -35,11 +35,11 @@
 .card-list {
 	display: grid;
 	gap: $layout_block_gap;
-	grid-template-columns: repeat(auto-fill, minmax(min(100%, remc(320)), 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, rem(320)), 1fr));
 	margin: calc($layout_padding * 2) 0 0;
 
 	@include mediaMinWidth(md) {
-		grid-template-columns: repeat(auto-fill, minmax(min(100%, remc(360)), 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(min(100%, rem(360)), 1fr));
 	}
 }
 

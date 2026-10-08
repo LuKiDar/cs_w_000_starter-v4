@@ -24,8 +24,8 @@ $layout_breakout: calc((var(--wp--custom--layout--wide) - var(--wp--custom--layo
 
 /* --- Custom properties --- */
 :root {
-	--header--height: #{remc(80)};
-	--header--logo-width: #{remc(275)};
+	--header--height: #{rem(80)};
+	--header--logo-width: #{rem(275)};
 
 	--page--padding-top: calc(var(--wp--custom--layout--padding) * 4);
 	--page--padding-bottom: calc(var(--wp--custom--layout--padding) * 4);

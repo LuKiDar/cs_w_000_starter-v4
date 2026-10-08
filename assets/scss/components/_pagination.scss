@@ -18,9 +18,9 @@
 		display: inline-block;
 		font-size: $fontSize_small;
 		font-weight: 400;
-		min-width: remc(24);
-		margin: remc(2);
-		padding: remc(2);
+		min-width: rem(24);
+		margin: rem(2);
+		padding: rem(2);
 		text-align: center;
 		text-decoration: none;
 		transition: all 0.3s ease;
@@ -36,18 +36,18 @@
 			}
 		}
 		&.prev {
-			@include iconMask(('arrow-left'), after, currentColor, remc(16), true);
+			@include iconMask(('arrow-left'), after, currentColor, rem(16), true);
 			margin-right: auto;
-			padding-left: calc(remc(16) + $layout_padding);
+			padding-left: calc(rem(16) + $layout_padding);
 
 			&::after {
 				left: 0;
 			}
 		}
 		&.next {
-			@include iconMask(('arrow-right'), after, currentColor, remc(16), true);
+			@include iconMask(('arrow-right'), after, currentColor, rem(16), true);
 			margin-left: auto;
-			padding-right: calc(remc(16) + $layout_padding);
+			padding-right: calc(rem(16) + $layout_padding);
 
 			&::after {
 				right: 0;

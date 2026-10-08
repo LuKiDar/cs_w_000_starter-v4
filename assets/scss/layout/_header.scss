@@ -92,12 +92,12 @@
 	cursor: pointer;
 	display: block;
 	font-size: 0;
-	height: remc(24);
+	height: rem(24);
 	overflow: hidden;
 	padding: 0;
 	position: relative;
 	text-indent: -9999px;
-	width: remc(32);
+	width: rem(32);
 	z-index: 101;
 
 	@include mediaMinWidth( md ){
@@ -110,14 +110,14 @@
 		background-color: $color_primary;
 		content: '';
 		display: block;
-		height: remc(2);
+		height: rem(2);
 		left: 0;
 		position: absolute;
 		transition: all .3s ease;
 		width: 100%;
 	}
 	&::before {
-		top: remc(1);
+		top: rem(1);
 	}
 	&::after {
 		bottom: 0;
@@ -129,13 +129,13 @@
 
 	&[aria-expanded="true"] {
 		&::before {
-			height: remc(2);
+			height: rem(2);
 			top: 50%;
 			transform: translateY(-50%) rotate(45deg);
 		}
 		&::after {
 			bottom: 50%;
-			height: remc(2);
+			height: rem(2);
 			transform: translateY(50%) rotate(-45deg);
 		}
 		.nav-toggle__bar {

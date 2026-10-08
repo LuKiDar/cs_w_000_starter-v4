@@ -11,7 +11,7 @@
 // Ported from nucleux components/_breadcrumbs.scss:1-57 -- the closer of the two
 // available sources (corazon's is inline-block, this one is a flex row). Tokens
 // rewritten to v4's generated vocabulary ($medium_gray -> $color_gray_500,
-// $black -> $color_black) and `rem()` -> `remc()`.
+// $black -> $color_black) and `rem()` -> `rem()`.
 //
 // Two rules from the source are deliberately not carried: `br { display:none }`,
 // because inc/breadcrumbs.php emits no <br>, and the `--home-hide` modifier,
@@ -44,10 +44,10 @@
 
 	&__delimiter {
 		display: inline-block;
-		margin: 0 remc(10);
+		margin: 0 rem(10);
 
 		@include mediaMaxWidth(md) {
-			margin: 0 remc(5);
+			margin: 0 rem(5);
 		}
 	}
 

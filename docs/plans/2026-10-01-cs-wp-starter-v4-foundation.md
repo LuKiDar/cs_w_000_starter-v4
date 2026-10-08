@@ -1956,7 +1956,7 @@ require_once 'inc/class-block-styles.php';
 
 - [ ] **Step 2b: Populate the SCSS abstracts**
 
-Task 3 built the SCSS skeleton but left `assets/scss/abstracts/_functions.scss` and `_mixins.scss` as header-only stubs — 171 and 174 bytes, no definitions. The block's `style.scss` (Step 7) calls `mediaMaxWidth()` and `remc()`, so **the block cannot compile until these exist**, and the failure is quiet: gulp-sass's `.on('error', sass.logError)` logs the error and gulp still exits **0**. A `npm run build` that reports success while emitting no block stylesheet at all is the exact trap this pipeline exists to avoid.
+Task 3 built the SCSS skeleton but left `assets/scss/abstracts/_functions.scss` and `_mixins.scss` as header-only stubs — 171 and 174 bytes, no definitions. The block's `style.scss` (Step 7) calls `mediaMaxWidth()` and `rem()`, so **the block cannot compile until these exist**, and the failure is quiet: gulp-sass's `.on('error', sass.logError)` logs the error and gulp still exits **0**. A `npm run build` that reports success while emitting no block stylesheet at all is the exact trap this pipeline exists to avoid.
 
 Write `assets/scss/abstracts/_functions.scss`:
 
@@ -1966,7 +1966,7 @@ Write `assets/scss/abstracts/_functions.scss`:
  */
 
 /* --- Convert px to rem --- */
-@function remc( $pxValue ){
+@function rem( $pxValue ){
 	@return calc($pxValue / 16 * 1rem);
 }
 ```
@@ -2295,7 +2295,7 @@ Follow the conventions exactly — elements in architectural order, `// Modifier
 	}
 	&__subheading,
 	&__content {
-		max-width: remc(736);
+		max-width: rem(736);
 	}
 	&__content {
 		margin: 0;
