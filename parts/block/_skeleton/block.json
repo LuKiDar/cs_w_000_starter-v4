@@ -8,6 +8,7 @@
 	"icon": "block-default",
 	"keywords": [],
 	"acf": {
+		"hideFieldsInSidebar": true,
 		"mode": "auto",
 		"postTypes": ["page"],
 		"renderCallback": "cs__render_{{FUNC}}_block"
@@ -16,18 +17,46 @@
 	"script": "",
 	"editorStyle": "file:./editor.min.css",
 	"supports": {
-		"align": ["none", "wide", "full"],
+		"align": ["wide", "full"],
 		"alignContent": false,
 		"alignText": true,
 		"anchor": true,
 		"html": false,
 		"multiple": true,
-		"color": {"background": true, "link": false, "text": false},
-		"spacing": {"blockGap": false, "margin": ["top", "bottom"], "padding": ["top", "bottom"]}
+		"color": {
+			"background": true,
+			"link": false,
+			"text": false
+		},
+		"spacing": {
+			"blockGap": false,
+			"margin": ["top", "bottom"],
+			"padding": ["top", "bottom"]
+		}
 	},
 	"attributes": {
-		"align": {"type": "string", "default": "none"},
-		"alignText": {"type": "string", "default": "none"}
+		"align": {
+			"type": "string",
+			"default": "none"
+		},
+		"alignText": {
+			"type": "string",
+			"default": "none"
+		},
+		"style": {
+			"type": "object",
+			"default": {
+				"color":{
+					"background": "var:preset|color|gray-100"
+				},
+				"spacing": {
+					"padding": {
+						"top": "var:preset|spacing|20",
+						"bottom": "var:preset|spacing|20"
+					}
+				}
+			}
+		}
 	},
 	"example": {
 		"attributes": {

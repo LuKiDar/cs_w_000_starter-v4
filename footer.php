@@ -3,6 +3,7 @@
  * Footer Template
  */
 ?>
+
 		</main>
 
 		<footer id="footer" class="site-footer container" role="contentinfo">
@@ -19,14 +20,12 @@
 				<?php endif; ?>
 
 				<p class="site-footer__copyright">
-					<?php
-					printf(
+					<?php printf(
 						/* translators: %s: site name */
 						esc_html__('© %1$s %2$s', CSWP),
 						esc_html(date_i18n('Y')),
 						esc_html(get_bloginfo('name'))
-					);
-					?>
+					); ?>
 				</p>
 			</div>
 		</footer>

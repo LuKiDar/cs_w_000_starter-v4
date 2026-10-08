@@ -5,9 +5,7 @@
 
 $data = get_query_var('block_data');
 
-if ( ! $data ){
-	return;
-}
+if ( ! $data ) return;
 
 $eyebrow    = $data['eyebrow'] ?? '';
 $heading    = $data['heading'] ?? '';

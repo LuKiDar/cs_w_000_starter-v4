@@ -8,6 +8,7 @@
 	"icon": "megaphone",
 	"keywords": ["cta", "call to action", "button"],
 	"acf": {
+		"hideFieldsInSidebar": true,
 		"mode": "auto",
 		"postTypes": ["page"],
 		"renderCallback": "cs__render_cta_block"
@@ -16,23 +17,43 @@
 	"script": "",
 	"editorStyle": "file:./editor.min.css",
 	"supports": {
-		"align": ["none", "full"],
+		"align": ["full"],
 		"alignContent": false,
 		"alignText": true,
 		"anchor": true,
 		"html": false,
 		"multiple": true,
-		"color": {"background": true, "link": false, "text": false},
-		"spacing": {"blockGap": false, "margin": ["top", "bottom"], "padding": ["top", "bottom"]}
+		"color": {
+			"background": true,
+			"link": false,
+			"text": false
+		},
+		"spacing": {
+			"blockGap": false,
+			"margin": ["top", "bottom"],
+			"padding": ["top", "bottom"]
+		}
 	},
 	"attributes": {
-		"align": {"type": "string", "default": "full"},
-		"alignText": {"type": "string", "default": "center"},
+		"align": {
+			"type": "string",
+			"default": "full"
+		},
+		"alignText": {
+			"type": "string",
+			"default": "center"
+		},
 		"style": {
 			"type": "object",
 			"default": {
+				"color":{
+					"background": "var:preset|color|gray-100"
+				},
 				"spacing": {
-					"padding": {"top": "var:preset|spacing|40", "bottom": "var:preset|spacing|40"}
+					"padding": {
+						"top": "var:preset|spacing|40",
+						"bottom": "var:preset|spacing|40"
+					}
 				}
 			}
 		}
@@ -43,7 +64,15 @@
 			"data": {
 				"heading": "Ready to get started?",
 				"content": "Get in touch to learn more.",
-				"buttons": [{"link": {"title": "Contact us", "url": "#"}, "link_type": "button"}]
+				"buttons": [
+					{
+						"link": {
+							"title": "Contact us",
+							"url": "#"
+						},
+						"link_type": "button"
+					}
+				]
 			}
 		}
 	}

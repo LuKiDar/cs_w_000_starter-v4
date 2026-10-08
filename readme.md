@@ -95,7 +95,7 @@ This copies `parts/block/_skeleton/` to `parts/block/my-block/`, replacing
 | File | What to change |
 |---|---|
 | `block.json` | `title`, `description`, `icon`, `keywords`, `supports`, `attributes`, and which `postTypes` the block appears on. `name` is already `cs/<slug>`. |
-| `callback.php` | The render callback. It reads ACF fields (via `cs__get_block_field()`) into an array and includes `render.php`. Add or rename the fields you need. |
+| `callback.php` | The render callback. It reads ACF fields with `get_field()` into an array and includes `render.php`. Add or rename the fields you need. |
 | `render.php` | The block's markup. Escape output (`esc_html`, `esc_attr`, `wp_kses_post`) and build the wrapper with `cs__get_block_id()`, `cs__get_block_classes()` and `cs__get_block_styles()`. |
 | `style.scss` | Front-end styles for the block (see §10). |
 | `editor.scss` | Editor-only styles. |

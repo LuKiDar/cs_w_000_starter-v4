@@ -87,12 +87,6 @@ function cs__get_block_classes( $block, $base = '' ){
 }
 
 
-/* --- Read a block field, surviving a deactivated ACF Pro --- */
-function cs__get_block_field( $name ){
-	return function_exists('get_field') ? get_field($name) : null;
-}
-
-
 /* --- Render a repeater of buttons/links --- */
 function cs__render_link_group( $links, $modifier = '' ){
 	if ( empty($links) || ! is_array($links) ){

@@ -1,10 +1,10 @@
 /**
- * Block: Call to Action — editor only
+ * Block: Call to Action
+ * Editor only
  */
 
 .block-cta {
 	&__button-wrapper {
-		// buttons are not clickable in the editor
 		pointer-events: none;
 	}
 }
