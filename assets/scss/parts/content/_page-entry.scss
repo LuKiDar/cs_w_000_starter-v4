@@ -1,12 +1,12 @@
 /**
- * Content / Post entry
+ * Content / Page entry
  */
 
 @use '../../abstracts/mixins' as *;
 @use '../../abstracts/variables' as *;
 
-.post-entry {
-	padding-block: calc($layout_padding * 2);
+.page-entry {
+	padding-block: $page_paddingTop $page_paddingBottom;
 
 	&__title {
 		margin: 0 0 $layout_block_gap;

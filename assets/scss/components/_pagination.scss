@@ -1,47 +1,23 @@
-// -----------------------------------------------------------------------------
-// Pagination
-//
-// Targets the contract inc/pagination.php emits: `<nav class="pagination">` >
-// `<div class="nav-links">` > `.page-numbers` with `.prev`/`.next`/`.current` and
-// the disabled bookends `<span class="prev page-numbers disabled">` /
-// `<span class="next page-numbers disabled">` (L25-37). WordPress's own
-// the_posts_pagination(), which the templates fall back on, emits the same
-// classes, so these rules cover both paths. Ported from arosa
-// components/_pagination.scss:1-67 with the token names rewritten to v4's
-// generated vocabulary.
-//
-// `$teal` -> `$color_primary`; `$teal_light`, Arosa's lighter hover shade, has no
-// v4 equivalent (the palette carries one primary), so hover resolves to
-// `$color_black` -- the same colour v4's own button shell already uses for a
-// primary hover (base/_button-base.scss:48). `remc()` and `iconMask()` are
-// namespaced.
-//
-// iconMask is called with five arguments, `$applyToBase: true`, which paints the
-// arrow directly on `.page-numbers.prev/::after` instead of behind a
-// `[class*="has-icon-"]` gate: v4's pagination markup carries no `has-icon-*`
-// class, so the four-argument form would compile and emit nothing visible. See
-// the resolution note on the mixin in abstracts/_mixins.scss.
-// -----------------------------------------------------------------------------
+/**
+ * Pagination
+ */
 
 @use '../abstracts/functions' as *;
 @use '../abstracts/mixins' as *;
 @use '../abstracts/variables' as *;
 
 .pagination {
-	margin: calc($layout_padding * 4) 0 0;
-
 	.nav-links {
 		display: flex;
 		flex-flow: row wrap;
 		justify-content: center;
 		gap: 0 $layout_padding;
 	}
-
 	.page-numbers {
-		color: $color_primary;
+		color: $color_black;
 		display: inline-block;
 		font-size: $fontSize_small;
-		font-weight: 700;
+		font-weight: 400;
 		min-width: remc(24);
 		margin: remc(2);
 		padding: remc(2);
@@ -59,38 +35,33 @@
 				visibility: hidden;
 			}
 		}
-
 		&.prev {
+			@include iconMask(('arrow-left'), after, currentColor, remc(16), true);
 			margin-right: auto;
 			padding-left: calc(remc(16) + $layout_padding);
-
-			@include iconMask(('arrow-left'), after, currentColor, remc(16), true);
 
 			&::after {
 				left: 0;
 			}
 		}
-
 		&.next {
+			@include iconMask(('arrow-right'), after, currentColor, remc(16), true);
 			margin-left: auto;
 			padding-right: calc(remc(16) + $layout_padding);
-
-			@include iconMask(('arrow-right'), after, currentColor, remc(16), true);
 
 			&::after {
 				right: 0;
 			}
 		}
-
 		&.current {
-			color: $color_black;
-			font-weight: 400;
+			color: $color_primary;
+			font-weight: 700;
 			pointer-events: none;
 		}
 
 		// States
 		&:is(:hover, :focus-within) {
-			color: $color_black;
+			color: $color_primary;
 			text-decoration: underline;
 		}
 	}

@@ -60,4 +60,5 @@
 			<?php endif; ?>
 		</header>
 
-		<main id="main" class="site-main container">
+		<main id="main" class="site-main">
+		<?php global $template; echo basename($template); ?>

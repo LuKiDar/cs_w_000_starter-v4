@@ -8,7 +8,7 @@
 get_header(); ?>
 
 <?php while ( have_posts() ): the_post(); ?>
-	<?php get_template_part('parts/content/post-entry', '', ['heading' => 'h1', 'link' => false]); ?>
+	<?php get_template_part('parts/content/page-entry'); ?>
 <?php endwhile; ?>
 
 <?php get_footer(); ?>

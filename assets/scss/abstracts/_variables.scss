@@ -1,18 +1,7 @@
-// -----------------------------------------------------------------------------
-// Variables
-//
-// The design tokens are generated from theme.json into _tokens.scss
-// (gitignored — run `npm run tokens`). Forwarding them here makes
-// $color_*, $fontSize_*, $spacing_*, $borderRadius_* and $layout_* available to
-// every partial that loads this file.
-//
-// Only non-token constants live below. Everything theme.json can express stays
-// in the generated _tokens.scss so the theme never carries two vocabularies.
-// -----------------------------------------------------------------------------
+/**
+ * Variables
+ */
 
-// remc() is used by the :root block below. Under `@use` the function is scoped
-// to the module that defines it, so it must be loaded here — an unloaded name is
-// emitted verbatim as a plain CSS function instead of being evaluated.
 @forward 'tokens';
 @use 'functions' as *;
 @use 'tokens' as *;
@@ -30,11 +19,8 @@ $breakpoints: (
 );
 
 /* --- Layout constants --- */
-// Semantic layout constants, not design tokens: $layout_padding, $layout_content
-// and $layout_wide are generated in _tokens.scss, and v3's $layout_blockGap is
-// spelled $layout_block_gap there — neither gets a second name here.
-$layout_columns: 12; // Consumed by base/_grid.scss (Task 15) for the column spans.
-$layout_breakout: calc((var(--wp--custom--layout--wide) - var(--wp--custom--layout--content)) / 2); // Consumed by base/_grid.scss (Task 15) for the full-bleed grid line.
+$layout_columns: 12;
+$layout_breakout: calc((var(--wp--custom--layout--wide) - var(--wp--custom--layout--content)) / 2);
 
 /* --- Typography --- */
 // Line-height steps. v3 declares the $lineHeight_* family; only the base step
@@ -64,3 +50,6 @@ $lineHeight_huge: 1;
 
 $header_height: var(--header--height);
 $header_logoWidth: var(--header--logo-width);
+
+$page_paddingTop: calc($layout_padding * 4);
+$page_paddingBottom: calc($layout_padding * 4);

@@ -39,5 +39,6 @@
 @use 'pages/error-404' as *;
 
 // Parts
+@use 'parts/content/page-entry' as *;
 @use 'parts/content/post-card' as *;
 @use 'parts/content/post-entry' as *;

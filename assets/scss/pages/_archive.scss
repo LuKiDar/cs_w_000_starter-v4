@@ -6,38 +6,37 @@
 @use '../abstracts/mixins' as *;
 @use '../abstracts/variables' as *;
 
-.archive-header {
-	padding: calc($layout_padding * 4) 0 0;
+.archive-page {
+	padding-block: $page_paddingTop $page_paddingBottom;
 
+	.pagination {
+		margin-block: calc($layout_padding * 2) 0;
+	}
+}
+
+.archive-header {
 	&__title {
-		font-size: $fontSize_huge;
-		line-height: $lineHeight_base;
 		margin: 0;
 		overflow-wrap: anywhere;
 	}
-	&__description,
-	&__count {
-		color: $color_gray_500;
-		line-height: $lineHeight_base;
-		margin: $layout_block_gap 0 0;
-
-		> :last-child {
-			margin-bottom: 0;
-		}
-	}
-	&__count {
-		font-size: $fontSize_small;
-	}
-	&__query {
-		color: $color_primary;
-	}
+	// &__count {
+	// 	color: $color_gray_500;
+	// 	line-height: $lineHeight_base;
+	// 	margin: $layout_block_gap 0 0;
+	// }
+	// &__count {
+	// 	font-size: $fontSize_small;
+	// }
+	// &__query {
+	// 	color: $color_primary;
+	// }
 }
 
 .card-list {
 	display: grid;
 	gap: $layout_block_gap;
 	grid-template-columns: repeat(auto-fill, minmax(min(100%, remc(320)), 1fr));
-	margin: calc($layout_padding * 4) 0 0;
+	margin: calc($layout_padding * 2) 0 0;
 
 	@include mediaMinWidth(md) {
 		grid-template-columns: repeat(auto-fill, minmax(min(100%, remc(360)), 1fr));
@@ -46,5 +45,5 @@
 
 .no-results {
 	color: $color_gray_500;
-	margin: calc($layout_padding * 4) 0 0;
+	margin: calc($layout_padding * 2) 0 0;
 }
