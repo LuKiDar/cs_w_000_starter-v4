@@ -27,10 +27,13 @@ const lines = [
 
 /* --- Presets ------------------------------------------------------------- */
 
-// $color_primary, $color_gray_900, ...
+// $color_primary, $color_gray_900, ... plus custom functional colors.
 lines.push('// Colors');
 for ( const { slug } of s.color?.palette ?? [] ){
 	lines.push(`$color_${slug.replace(/-/g, '_')}: var(--wp--preset--color--${slug});`);
+}
+for ( const key of Object.keys(s.custom?.functionalColor ?? {}) ){
+	lines.push(`$color_${key.replace(/-/g, '_')}: var(--wp--custom--functionalColor--${key});`);
 }
 lines.push('');
 
@@ -38,6 +41,13 @@ lines.push('');
 lines.push('// Font sizes');
 for ( const { slug } of s.typography?.fontSizes ?? [] ){
 	lines.push(`$fontSize_${slug.replace(/-/g, '_')}: var(--wp--preset--font-size--${slug});`);
+}
+lines.push('');
+
+// $lineHeight_base, ...
+lines.push('// Line heights');
+for ( const key of Object.keys(s.custom?.['line-height'] ?? {}) ){
+	lines.push(`$lineHeight_${key.replace(/-/g, '_')}: var(--wp--custom--line-height--${key});`);
 }
 lines.push('');
 
@@ -51,7 +61,7 @@ lines.push('');
 /* --- Named custom groups ------------------------------------------------- */
 
 // $borderRadius_small, $borderRadius_medium, ...
-lines.push('// Border radii');
+lines.push('// Border radius');
 for ( const key of Object.keys(s.custom?.['border-radius'] ?? {}) ){
 	lines.push(`$borderRadius_${key.replace(/-/g, '_')}: var(--wp--custom--border-radius--${key});`);
 }
@@ -66,13 +76,17 @@ lines.push('');
 
 /* --- Remaining custom tokens (generic passthrough) ----------------------- */
 
+// Groups emitted above keep a single name. Listing them again here would
+// duplicate $borderRadius_*, $layout_*, $lineHeight_* and the functional colors.
+const namedCustom = new Set(['border-radius', 'functionalColor', 'layout', 'line-height']);
+
 lines.push('// Custom (generic)');
 for ( const [key, value] of Object.entries(s.custom ?? {}) ){
-	if ( typeof value === 'object' ){
-		for ( const [sub, subValue] of Object.entries(value) ){
-			if ( typeof subValue === 'string' ){
-				lines.push(`$custom_${key.replace(/-/g, '_')}_${sub.replace(/-/g, '_')}: var(--wp--custom--${key}--${sub});`);
-			}
+	if ( namedCustom.has(key) || typeof value !== 'object' ) continue;
+
+	for ( const [sub, subValue] of Object.entries(value) ){
+		if ( typeof subValue === 'string' ){
+			lines.push(`$custom_${key.replace(/-/g, '_')}_${sub.replace(/-/g, '_')}: var(--wp--custom--${key}--${sub});`);
 		}
 	}
 }

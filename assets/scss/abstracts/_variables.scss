@@ -22,34 +22,16 @@ $breakpoints: (
 $layout_columns: 12;
 $layout_breakout: calc((var(--wp--custom--layout--wide) - var(--wp--custom--layout--content)) / 2);
 
-/* --- Typography --- */
-// Line-height steps. v3 declares the $lineHeight_* family; only the base step
-// has a value (theme.json custom.line-height.base). Consumed by
-// base/_button-base.scss and layout/_header.scss.
-$lineHeight_base: var(--wp--custom--line-height--base);
-
-// $lineHeight_huge is used by layout/_header.scss (v3 layout/_header.scss:27,
-// `.site-logo`). No v3 file defines it and no reference theme carries that name;
-// v3 cannot have compiled as written (see Task 14 finding 3). theme.json
-// declares only line-height.base, so there is no token to rewrite it to.
-// millburn's largest display step, $lineHeight_xxlarge = 1 (millburn
-// abstracts/_variables.scss:51), is the measured value for the biggest type and
-// is the closest source for the logo step, so it is declared here with that
-// value rather than invented. Flagged to the owner in the Task 17 report.
-$lineHeight_huge: 1;
-
-/* --- Header --- */
-// Custom properties v3 declares in its :root block, with their 80rem/275rem
-// measurements. --header--height is consumed by layout/_header.scss and, for the
-// fixed-header offset, base/_base.scss; --header--logo-width by
-// layout/_header.scss.
+/* --- Custom properties --- */
 :root {
 	--header--height: #{remc(80)};
 	--header--logo-width: #{remc(275)};
+
+	--page--padding-top: calc(var(--wp--custom--layout--padding) * 4);
+	--page--padding-bottom: calc(var(--wp--custom--layout--padding) * 4);
 }
 
 $header_height: var(--header--height);
 $header_logoWidth: var(--header--logo-width);
-
-$page_paddingTop: calc($layout_padding * 4);
-$page_paddingBottom: calc($layout_padding * 4);
+$page_paddingTop: var(--page--padding-top);
+$page_paddingBottom: var(--page--padding-bottom);
