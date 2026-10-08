@@ -2048,7 +2048,7 @@ function cs__render_link_group( $links, $modifier = '' ){
 		return;
 	}
 
-	$classes = 'block-links';
+	$classes = 'button-group';
 	if ( $modifier !== '' ){
 		$classes .= ' '. $modifier;
 	}
@@ -2065,7 +2065,7 @@ function cs__render_link_group( $links, $modifier = '' ){
 				continue;
 			}
 
-			$link_classes = array('block-links__item');
+			$link_classes = array('button-group__item');
 			if ( $type === 'button' ){
 				$link_classes[] = 'button';
 			} elseif ( $type === 'button-outlined' ){
@@ -2087,7 +2087,7 @@ function cs__render_link_group( $links, $modifier = '' ){
 
 **The tag's `>` must sit on the same line as the closing `?>`.** That is not a style preference, and getting it half right is easy — this exact line was wrong twice.
 
-The output was `<a class="block-links__item button" href="/x" >0</a>`: a stray whitespace run before the `>`. Moving the `target`/`rel` conditional up onto the `href` line is necessary but **not sufficient**, because PHP's `?>` swallows only the newline immediately after it, **not the indentation on the next line** — so the tag's own `>` on its own line at three tabs still emits those three tabs between the `"` and the `>`.
+The output was `<a class="button-group__item button" href="/x" >0</a>`: a stray whitespace run before the `>`. Moving the `target`/`rel` conditional up onto the `href` line is necessary but **not sufficient**, because PHP's `?>` swallows only the newline immediately after it, **not the indentation on the next line** — so the tag's own `>` on its own line at three tabs still emits those three tabs between the `"` and the `>`.
 
 Measured, both layouts in one eval:
 
@@ -2481,7 +2481,7 @@ echo "title \"0\" alone => bytes=", strlen(trim(do_blocks(get_post_field("post_c
 '
 ```
 
-Expected: **non-zero**, and the markup contains `<a class="block-links__item button" href="/x">0</a>`. `cs__render_link_group()` skips a row only when url or title is `''` after a `?? ''` default — so the guard in `render.php` must use the same test, not `empty()`, which would treat `"0"` as absent and drop the button while the renderer would emit it.
+Expected: **non-zero**, and the markup contains `<a class="button-group__item button" href="/x">0</a>`. `cs__render_link_group()` skips a row only when url or title is `''` after a `?? ''` default — so the guard in `render.php` must use the same test, not `empty()`, which would treat `"0"` as absent and drop the button while the renderer would emit it.
 
 ```bash
 # (e) no stray whitespace before a tag's '>' -- this markup is copied by every block

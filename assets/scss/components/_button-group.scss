@@ -1,0 +1,20 @@
+/**
+ * Button Group
+ */
+
+@use '../abstracts/variables' as *;
+
+.button-group {
+  align-items: center;
+  display: flex;
+  flex-flow: row wrap;
+  gap: $layout_block_gap;
+  margin: 0;
+
+  &.align-center {
+    justify-content: center;
+  }
+  &.align-right {
+    justify-content: flex-end;
+  }
+}

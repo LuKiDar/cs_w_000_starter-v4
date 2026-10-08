@@ -2,9 +2,9 @@
  * Block: Call to Action
  */
 
-@import '../../../assets/scss/abstracts/functions';
-@import '../../../assets/scss/abstracts/variables';
-@import '../../../assets/scss/abstracts/mixins';
+@use '../../../assets/scss/abstracts/functions' as *;
+@use '../../../assets/scss/abstracts/variables' as *;
+@use '../../../assets/scss/abstracts/mixins' as *;
 
 .block-cta {
 	$b: &;
@@ -30,10 +30,6 @@
 		margin: 0;
 	}
 	&__button-wrapper {
-		align-items: center;
-		display: flex;
-		flex-flow: row wrap;
-		gap: $layout_block_gap;
 		margin: calc($layout_padding * 2) 0 0;
 	}
 
@@ -71,6 +67,18 @@
 		}
 		#{$b}__button-wrapper {
 			justify-content: flex-end;
+		}
+	}
+
+	// Frontend only styles
+	body:not(.wp-admin) & {
+		&.has-background.alignfull {
+			// &:first-child {
+			// 	margin-top: calc($defaultPage_paddingTop * -1) !important;
+			// }
+			// &:last-child {
+			// 	margin-bottom: calc($defaultPage_paddingBottom * -1) !important;
+			// }
 		}
 	}
 }

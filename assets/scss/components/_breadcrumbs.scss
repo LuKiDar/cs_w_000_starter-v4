@@ -11,7 +11,7 @@
 // Ported from nucleux components/_breadcrumbs.scss:1-57 -- the closer of the two
 // available sources (corazon's is inline-block, this one is a flex row). Tokens
 // rewritten to v4's generated vocabulary ($medium_gray -> $color_gray_500,
-// $black -> $color_black), `rem()` -> `fn.remc()` and `mediaMaxWidth` namespaced.
+// $black -> $color_black) and `rem()` -> `remc()`.
 //
 // Two rules from the source are deliberately not carried: `br { display:none }`,
 // because inc/breadcrumbs.php emits no <br>, and the `--home-hide` modifier,
@@ -19,9 +19,9 @@
 // (the Home crumb is a bare <a>).
 // -----------------------------------------------------------------------------
 
-@use '../abstracts/functions' as fn;
-@use '../abstracts/mixins' as mx;
-@use '../abstracts/variables' as vars;
+@use '../abstracts/functions' as *;
+@use '../abstracts/mixins' as *;
+@use '../abstracts/variables' as *;
 
 .breadcrumbs {
 	display: flex;
@@ -31,23 +31,23 @@
 	&__delimiter,
 	&__current,
 	&__paged {
-		color: vars.$color_gray_500;
+		color: $color_gray_500;
 		text-decoration: none;
 	}
 
 	a {
 		&:hover {
-			color: vars.$color_black;
+			color: $color_black;
 			text-decoration: underline;
 		}
 	}
 
 	&__delimiter {
 		display: inline-block;
-		margin: 0 fn.remc(10);
+		margin: 0 remc(10);
 
-		@include mx.mediaMaxWidth(md) {
-			margin: 0 fn.remc(5);
+		@include mediaMaxWidth(md) {
+			margin: 0 remc(5);
 		}
 	}
 

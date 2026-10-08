@@ -12,24 +12,24 @@
 // two-element shell, so these three are new rules here.
 // -----------------------------------------------------------------------------
 
-@use '../abstracts/mixins' as mx;
-@use '../abstracts/variables' as vars;
+@use '../abstracts/mixins' as *;
+@use '../abstracts/variables' as *;
 
 .site-footer {
-	background: vars.$color_gray_900;
-	color: vars.$color_white;
+	background: $color_gray_900;
+	color: $color_white;
 	margin-top: auto; // sticky footer
-	padding: calc(vars.$layout_padding * 2) 0;
+	padding: calc($layout_padding * 2) 0;
 	width: 100%;
 
 	&__inner {
 		align-items: center;
 		display: flex;
 		flex-flow: row wrap;
-		gap: vars.$layout_padding vars.$layout_block_gap;
+		gap: $layout_padding $layout_block_gap;
 		justify-content: space-between;
 
-		@include mx.mediaMaxWidth( md ){
+		@include mediaMaxWidth( md ){
 			align-items: flex-start;
 			flex-flow: column nowrap;
 		}
@@ -37,11 +37,11 @@
 	&__navigation {
 		display: flex;
 		flex-flow: row wrap;
-		gap: vars.$layout_padding vars.$layout_block_gap;
+		gap: $layout_padding $layout_block_gap;
 	}
 	&__copyright {
-		font-size: vars.$fontSize_small;
-		line-height: vars.$lineHeight_base;
+		font-size: $fontSize_small;
+		line-height: $lineHeight_base;
 		margin: 0;
 	}
 }

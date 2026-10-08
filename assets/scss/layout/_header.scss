@@ -22,13 +22,13 @@
 // `$lineHeight_huge` (v3 L27) is declared in abstracts/_variables.scss:46.
 // -----------------------------------------------------------------------------
 
-@use '../abstracts/functions' as fn;
-@use '../abstracts/mixins' as mx;
-@use '../abstracts/variables' as vars;
+@use '../abstracts/functions' as *;
+@use '../abstracts/mixins' as *;
+@use '../abstracts/variables' as *;
 
 .site-header {
-	background: color-mix(in srgb, vars.$color_white 50%, transparent);
-	height: vars.$header_height;
+	background: color-mix(in srgb, $color_white 50%, transparent);
+	height: $header_height;
 	transition: background .2s, box-shadow .2s, top .1s;
 	z-index: 100;
 
@@ -45,15 +45,15 @@
 		gap: 24px 48px;
 
 		// Below `md` the primary menu lives in `.mobile-navigation` instead.
-		@include mx.mediaMaxWidth( md ){
+		@include mediaMaxWidth( md ){
 			display: none;
 		}
 	}
 
 	.site-logo {
-		font-size: vars.$fontSize_huge;
+		font-size: $fontSize_huge;
 		font-weight: 900;
-		line-height: vars.$lineHeight_huge;
+		line-height: $lineHeight_huge;
 
 		a {
 			color: inherit;
@@ -66,7 +66,7 @@
 		.logo__image {
 			height: auto;
 			transition: width .2s;
-			width: vars.$header_logoWidth;
+			width: $header_logoWidth;
 		}
 	}
 
@@ -79,7 +79,7 @@
 	body.admin-bar & {
 		top: 32px;
 
-		@include mx.mediaMaxWidth( 782 ){
+		@include mediaMaxWidth( 782 ){
 			top: 46px;
 		}
 	}
@@ -92,32 +92,32 @@
 	cursor: pointer;
 	display: block;
 	font-size: 0;
-	height: fn.remc(24);
+	height: remc(24);
 	overflow: hidden;
 	padding: 0;
 	position: relative;
 	text-indent: -9999px;
-	width: fn.remc(32);
+	width: remc(32);
 	z-index: 101;
 
-	@include mx.mediaMinWidth( md ){
+	@include mediaMinWidth( md ){
 		display: none;
 	}
 
 	&::before,
 	&::after,
 	&__bar {
-		background-color: vars.$color_primary;
+		background-color: $color_primary;
 		content: '';
 		display: block;
-		height: fn.remc(2);
+		height: remc(2);
 		left: 0;
 		position: absolute;
 		transition: all .3s ease;
 		width: 100%;
 	}
 	&::before {
-		top: fn.remc(1);
+		top: remc(1);
 	}
 	&::after {
 		bottom: 0;
@@ -129,13 +129,13 @@
 
 	&[aria-expanded="true"] {
 		&::before {
-			height: fn.remc(2);
+			height: remc(2);
 			top: 50%;
 			transform: translateY(-50%) rotate(45deg);
 		}
 		&::after {
 			bottom: 50%;
-			height: fn.remc(2);
+			height: remc(2);
 			transform: translateY(50%) rotate(-45deg);
 		}
 		.nav-toggle__bar {
@@ -149,8 +149,8 @@
 // menu layer in layout/_navigation.scss owns because v4 emits the same
 // `.primary-menu` in both the header nav and this panel.
 .mobile-navigation {
-	background: vars.$color_white;
-	border-top: 1px solid vars.$color_gray_100;
+	background: $color_white;
+	border-top: 1px solid $color_gray_100;
 	left: 0;
 	padding: 1rem;
 	position: absolute;
@@ -166,7 +166,7 @@
 		display: none;
 	}
 
-	@include mx.mediaMaxWidth( md ){
+	@include mediaMaxWidth( md ){
 		&:not([hidden]) {
 			display: block;
 		}

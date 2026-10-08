@@ -10,7 +10,7 @@
 // resolve inside this module too.
 // -----------------------------------------------------------------------------
 
-@use 'button-base';
+@use 'button-base' as *;
 
 /* stylelint-disable scss/at-extend-no-missing-placeholder --
  * The button shell is intentionally a real class, not a private placeholder:

@@ -9,12 +9,12 @@
 // the media mixin namespaced.
 // -----------------------------------------------------------------------------
 
-@use '../abstracts/variables' as vars;
-@use '../abstracts/mixins' as mx;
+@use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
 
 ::selection {
-	background: vars.$color_gray_500;
-	color: vars.$color_white;
+	background: $color_gray_500;
+	color: $color_white;
 }
 
 #wpadminbar * {
@@ -75,23 +75,23 @@ body {
 		min-height: calc(100vh - 32px); // Fallback for browsers that don't support dvh
 		min-height: calc(100dvh - 32px);
 
-		@include mx.mediaMaxWidth(782) {
+		@include mediaMaxWidth(782) {
 			min-height: calc(100vh - 46px); // Fallback for browsers that don't support dvh
 			min-height: calc(100dvh - 46px);
 		}
-		@include mx.mediaMaxWidth(600) {
+		@include mediaMaxWidth(600) {
 			min-height: 100vh; // Fallback for browsers that don't support dvh
 			min-height: 100dvh;
 		}
 	}
 
 	body.is-header-fixed & {
-		padding-top: vars.$header_height;
+		padding-top: $header_height;
 	}
 }
 
 .site-overlay {
-	background: vars.$color_black;
+	background: $color_black;
 	display: none;
 	height: 100dvh;
 	left: 0;

@@ -2,7 +2,7 @@
 // Variables
 //
 // The design tokens are generated from theme.json into _tokens.scss
-// (gitignored — run `npm run tokens`). Importing them here makes
+// (gitignored — run `npm run tokens`). Forwarding them here makes
 // $color_*, $fontSize_*, $spacing_*, $borderRadius_* and $layout_* available to
 // every partial that loads this file.
 //
@@ -13,9 +13,9 @@
 // remc() is used by the :root block below. Under `@use` the function is scoped
 // to the module that defines it, so it must be loaded here — an unloaded name is
 // emitted verbatim as a plain CSS function instead of being evaluated.
+@forward 'tokens';
 @use 'functions' as *;
-
-@import 'tokens';
+@use 'tokens' as *;
 
 /* --- Breakpoints --- */
 $breakpoints: (

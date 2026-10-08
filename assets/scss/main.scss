@@ -7,36 +7,37 @@
  */
 
 // Abstracts
-@use 'abstracts/functions';
-@use 'abstracts/variables';
-@use 'abstracts/mixins';
+@use 'abstracts/functions' as *;
+@use 'abstracts/variables' as *;
+@use 'abstracts/mixins' as *;
 
 // Base
-@use 'base/grid';
-@use 'base/base';
-@use 'base/button-base';
-@use 'base/typography';
-@use 'base/content-formats';
-@use 'base/blocks-base';
-@use 'base/blocks-styles';
+@use 'base/grid' as *;
+@use 'base/base' as *;
+@use 'base/button-base' as *;
+@use 'base/typography' as *;
+@use 'base/content-formats' as *;
+@use 'base/blocks-base' as *;
+@use 'base/blocks-styles' as *;
 
 // Components
-@use 'components/buttons';
-@use 'components/breadcrumbs';
-@use 'components/pagination';
-@use 'components/searchform';
+@use 'components/buttons' as *;
+@use 'components/breadcrumbs' as *;
+@use 'components/button-group' as *;
+@use 'components/pagination' as *;
+@use 'components/searchform' as *;
 
 // Layout
-@use 'layout/header';
-@use 'layout/navigation';
-@use 'layout/footer';
+@use 'layout/header' as *;
+@use 'layout/navigation' as *;
+@use 'layout/footer' as *;
 
 // Pages
-@use 'pages/archive';
-// @use 'pages/single';
-// @use 'pages/page';
-@use 'pages/error-404';
+@use 'pages/archive' as *;
+// @use 'pages/single' as *;
+// @use 'pages/page' as *;
+@use 'pages/error-404' as *;
 
 // Parts
-@use 'parts/content/post-card';
-@use 'parts/content/post-entry';
+@use 'parts/content/post-card' as *;
+@use 'parts/content/post-entry' as *;

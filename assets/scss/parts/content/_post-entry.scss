@@ -2,24 +2,24 @@
  * Content / Post entry
  */
 
-@use '../../abstracts/mixins' as mx;
-@use '../../abstracts/variables' as vars;
+@use '../../abstracts/mixins' as *;
+@use '../../abstracts/variables' as *;
 
 .post-entry {
 	&__title {
-		font-size: vars.$fontSize_huge;
-		line-height: vars.$lineHeight_base;
-		margin: 0 0 vars.$layout_block_gap;
+		font-size: $fontSize_huge;
+		line-height: $lineHeight_base;
+		margin: 0 0 $layout_block_gap;
 		overflow-wrap: anywhere;
-		padding-top: calc(vars.$layout_padding * 4);
+		padding-top: calc($layout_padding * 4);
 
-		@include mx.mediaMaxWidth(xs) {
-			font-size: vars.$fontSize_xx_large;
+		@include mediaMaxWidth(xs) {
+			font-size: $fontSize_xx_large;
 		}
 	}
 	&__content {
-		line-height: vars.$lineHeight_base;
-		padding-bottom: calc(vars.$layout_padding * 4);
+		line-height: $lineHeight_base;
+		padding-bottom: calc($layout_padding * 4);
 
 		> :last-child {
 			margin-bottom: 0;

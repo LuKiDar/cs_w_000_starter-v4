@@ -2,9 +2,9 @@
  * Block: {{TITLE}}
  */
 
-@import '../../../assets/scss/abstracts/functions';
-@import '../../../assets/scss/abstracts/variables';
-@import '../../../assets/scss/abstracts/mixins';
+@use '../../../assets/scss/abstracts/functions' as *;
+@use '../../../assets/scss/abstracts/variables' as *;
+@use '../../../assets/scss/abstracts/mixins' as *;
 
 .block-{{SLUG}} {
 	$b: &;
@@ -13,8 +13,18 @@
 		position: relative;
 		z-index: 1;
 	}
+	&__eyebrow {
+		margin: 0 0 $layout_padding;
+	}
 	&__heading {
-		margin: 0 0 $layout_block_gap;
+		margin: 0 0 $layout_padding;
+	}
+	&__subheading {
+		margin: 0 0 $layout_padding;
+	}
+	&__subheading,
+	&__content {
+		max-width: remc(736);
 	}
 	&__content {
 		margin: 0;

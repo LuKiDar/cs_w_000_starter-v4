@@ -8,29 +8,29 @@
 // shape reference only: a flex row with the block gap between the parts.
 // -----------------------------------------------------------------------------
 
-@use '../abstracts/variables' as vars;
+@use '../abstracts/variables' as *;
 
 .search-form {
 	align-items: stretch;
 	display: flex;
 	flex-flow: row nowrap;
-	gap: vars.$layout_block_gap;
+	gap: $layout_block_gap;
 
 	&__label {
 		align-self: center;
 	}
 
 	&__input {
-		background: vars.$color_white;
-		border: 2px solid vars.$color_gray_500;
-		border-radius: vars.$borderRadius_small;
-		color: vars.$color_black;
+		background: $color_white;
+		border: 2px solid $color_gray_500;
+		border-radius: $borderRadius_small;
+		color: $color_black;
 		flex: 1 1 auto;
 		min-width: 0;
 		padding: 0.375rem 1.125rem;
 
 		&:focus {
-			border-color: vars.$color_primary;
+			border-color: $color_primary;
 		}
 	}
 }

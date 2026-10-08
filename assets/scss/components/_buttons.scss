@@ -14,7 +14,7 @@
 // code.
 // -----------------------------------------------------------------------------
 
-@use '../base/button-base';
+@use '../base/button-base' as *;
 
 /* stylelint-disable scss/at-extend-no-missing-placeholder --
  * Same reason as base/_blocks-base.scss: the button shell is a real class, not a

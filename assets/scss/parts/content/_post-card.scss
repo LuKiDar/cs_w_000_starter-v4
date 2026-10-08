@@ -2,15 +2,15 @@
  * Content / Post card
  */
 
-@use '../../abstracts/functions' as fn;
-@use '../../abstracts/mixins' as mx;
-@use '../../abstracts/variables' as vars;
+@use '../../abstracts/functions' as *;
+@use '../../abstracts/mixins' as *;
+@use '../../abstracts/variables' as *;
 
 .card-post {
-	background: vars.$color_white;
-	border: fn.remc(1) solid vars.$color_gray_100;
-	border-radius: vars.$borderRadius_medium;
-	box-shadow: vars.$custom_box_shadow_default;
+	background: $color_white;
+	border: remc(1) solid $color_gray_100;
+	border-radius: $borderRadius_medium;
+	box-shadow: $custom_box_shadow_default;
 	display: flex;
 	flex-flow: column nowrap;
 	overflow: hidden;
@@ -18,7 +18,7 @@
 
 	&__media {
 		aspect-ratio: 16 / 9;
-		background: vars.$color_gray_100;
+		background: $color_gray_100;
 		display: block;
 		overflow: hidden;
 		position: relative;
@@ -39,58 +39,58 @@
 		display: flex;
 		flex: 1 1 auto;
 		flex-flow: column nowrap;
-		gap: vars.$layout_block_gap;
-		padding: vars.$spacing_30;
+		gap: $layout_block_gap;
+		padding: $spacing_30;
 	}
 
 	&__title {
-		font-size: vars.$fontSize_large;
-		line-height: vars.$lineHeight_base;
+		font-size: $fontSize_large;
+		line-height: $lineHeight_base;
 		margin: 0;
 	}
 
 	&__link {
-		color: vars.$color_black;
+		color: $color_black;
 		text-decoration: none;
 
 		&:is(:hover, :focus-within) {
-			color: vars.$color_primary;
+			color: $color_primary;
 			text-decoration: underline;
 		}
 	}
 
 	&__excerpt {
-		color: vars.$color_gray_500;
+		color: $color_gray_500;
 		flex: 1 1 auto;
-		line-height: vars.$lineHeight_base;
+		line-height: $lineHeight_base;
 		margin: 0;
 	}
 
 	&__more {
 		align-self: flex-start;
-		color: vars.$color_primary;
+		color: $color_primary;
 		font-weight: 700;
 		position: relative;
 		text-decoration: none;
 
-		@include mx.iconMask(('arrow-right'), after, currentColor, fn.remc(16), true);
+		@include iconMask(('arrow-right'), after, currentColor, remc(16), true);
 
 		&::after {
-			margin-left: fn.remc(8);
+			margin-left: remc(8);
 			position: static;
 			transform: none;
 			vertical-align: middle;
 		}
 
 		&:is(:hover, :focus-within) {
-			color: vars.$color_black;
+			color: $color_black;
 			text-decoration: underline;
 		}
 	}
 
 	// States
 	&:is(:hover, :focus-within) {
-		box-shadow: 0 0 0 fn.remc(1) vars.$color_primary;
+		box-shadow: 0 0 0 remc(1) $color_primary;
 
 		.card-post__image {
 			transform: scale(1.05);

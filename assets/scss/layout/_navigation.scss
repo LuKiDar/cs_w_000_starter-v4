@@ -30,26 +30,26 @@
 // breadcrumbs use. Flagged to the owner.
 // -----------------------------------------------------------------------------
 
-@use '../abstracts/functions' as fn;
-@use '../abstracts/mixins' as mx;
-@use '../abstracts/variables' as vars;
+@use '../abstracts/functions' as *;
+@use '../abstracts/mixins' as *;
+@use '../abstracts/variables' as *;
 
 .primary-menu {
 	display: flex;
 	flex-wrap: wrap;
-	gap: vars.$layout_padding vars.$layout_block_gap;
+	gap: $layout_padding $layout_block_gap;
 	list-style: none;
 	margin: 0;
 	padding: 0;
 
-	@include mx.mediaMinWidth( md ){
+	@include mediaMinWidth( md ){
 		flex-flow: row nowrap;
 		justify-content: flex-end;
 	}
-	@include mx.mediaMinWidth( lg ){
-		gap: vars.$layout_padding calc(vars.$layout_padding * 3);
+	@include mediaMinWidth( lg ){
+		gap: $layout_padding calc($layout_padding * 3);
 	}
-	@include mx.mediaMaxWidth( md ){
+	@include mediaMaxWidth( md ){
 		align-items: flex-start;
 		flex-flow: column nowrap;
 	}
@@ -63,59 +63,59 @@
 			display: block;
 			text-decoration: none;
 
-			@include mx.mediaMinWidth( md ){
-				color: vars.$color_black;
-				font-size: vars.$fontSize_medium;
+			@include mediaMinWidth( md ){
+				color: $color_black;
+				font-size: $fontSize_medium;
 				font-weight: 700;
-				line-height: vars.$lineHeight_base;
+				line-height: $lineHeight_base;
 			}
-			@include mx.mediaMaxWidth( md ){
-				color: vars.$color_gray_500;
-				font-size: vars.$fontSize_small;
+			@include mediaMaxWidth( md ){
+				color: $color_gray_500;
+				font-size: $fontSize_small;
 				font-weight: 700;
 				letter-spacing: .3em;
-				line-height: vars.$lineHeight_base;
+				line-height: $lineHeight_base;
 				text-transform: uppercase;
 			}
 
 			&:is(:hover, :focus-within) {
 				text-decoration: underline;
-				text-decoration-thickness: fn.remc(2);
+				text-decoration-thickness: remc(2);
 				text-underline-offset: .1em;
 
-				@include mx.mediaMinWidth( md ){
-					color: vars.$color_primary;
+				@include mediaMinWidth( md ){
+					color: $color_primary;
 				}
-				@include mx.mediaMaxWidth( md ){
-					color: vars.$color_gray_900;
+				@include mediaMaxWidth( md ){
+					color: $color_gray_900;
 				}
 			}
 		}
 		.menu-item-trigger {
 			align-items: center;
 			display: flex;
-			gap: fn.remc(8);
+			gap: remc(8);
 			max-width: 100%;
 
 			> .caret {
-				@include mx.mediaMinWidth( md ){
-					color: vars.$color_primary;
+				@include mediaMinWidth( md ){
+					color: $color_primary;
 				}
 			}
 		}
 		.caret {
 			border-color: transparent currentcolor currentcolor transparent;
 			border-style: solid;
-			border-width: 0 fn.remc(2) fn.remc(2) 0;
+			border-width: 0 remc(2) remc(2) 0;
 			display: inline-block;
-			height: fn.remc(10);
-			margin: -.3em 0 0 fn.remc(8);
+			height: remc(10);
+			margin: -.3em 0 0 remc(8);
 			rotate: 45deg;
 			transition: all .3s ease;
 			vertical-align: middle;
-			width: fn.remc(10);
+			width: remc(10);
 
-			@include mx.mediaMaxWidth( md ){
+			@include mediaMaxWidth( md ){
 				display: none;
 			}
 		}
@@ -125,8 +125,8 @@
 			> a,
 			> .menu-item-trigger > a,
 			> .menu-item-trigger > .caret {
-				@include mx.mediaMinWidth( md ){
-					color: vars.$color_primary;
+				@include mediaMinWidth( md ){
+					color: $color_primary;
 				}
 			}
 		}
@@ -140,27 +140,27 @@
 
 	.sub-menu {
 		flex-flow: column nowrap;
-		gap: fn.remc(4) 0;
+		gap: remc(4) 0;
 		list-style: none;
 		margin: 0;
 		padding: 0;
 
-		@include mx.mediaMinWidth( md ){
-			background: vars.$color_white;
-			border: fn.remc(1) solid vars.$color_primary;
-			border-radius: vars.$borderRadius_medium;
+		@include mediaMinWidth( md ){
+			background: $color_white;
+			border: remc(1) solid $color_primary;
+			border-radius: $borderRadius_medium;
 			display: none;
 			left: 0;
-			max-width: fn.remc(200);
-			min-width: fn.remc(160);
-			padding: fn.remc(20) vars.$layout_block_gap;
+			max-width: remc(200);
+			min-width: remc(160);
+			padding: remc(20) $layout_block_gap;
 			position: absolute;
 			top: 100%;
 			width: max-content;
 			z-index: 999;
 		}
-		@include mx.mediaMaxWidth( md ){
-			padding: fn.remc(12) 0;
+		@include mediaMaxWidth( md ){
+			padding: remc(12) 0;
 		}
 
 		> .menu-item {
@@ -169,28 +169,28 @@
 
 			> a {
 				display: block;
-				padding: fn.remc(4) 0;
+				padding: remc(4) 0;
 				text-decoration: none;
 				width: 100%;
 
-				@include mx.mediaMinWidth( md ){
-					color: vars.$color_black;
-					font-size: vars.$fontSize_small;
+				@include mediaMinWidth( md ){
+					color: $color_black;
+					font-size: $fontSize_small;
 					font-weight: 500;
-					line-height: vars.$lineHeight_base;
+					line-height: $lineHeight_base;
 
 					&:is(:hover, :focus-within) {
-						color: vars.$color_primary;
+						color: $color_primary;
 					}
 				}
-				@include mx.mediaMaxWidth( md ){
-					color: vars.$color_gray_500;
-					font-size: vars.$fontSize_small;
+				@include mediaMaxWidth( md ){
+					color: $color_gray_500;
+					font-size: $fontSize_small;
 					font-weight: 400;
-					line-height: vars.$lineHeight_base;
+					line-height: $lineHeight_base;
 
 					&:is(:hover, :focus-within) {
-						color: vars.$color_gray_900;
+						color: $color_gray_900;
 					}
 				}
 			}
@@ -205,11 +205,11 @@
 	.menu-item-has-children {
 		&:is(:hover, :focus-within) {
 			> .menu-item-trigger .caret {
-				margin: .1em 0 0 fn.remc(8);
+				margin: .1em 0 0 remc(8);
 				rotate: -135deg;
 			}
 			> .sub-menu {
-				@include mx.mediaMinWidth( md ){
+				@include mediaMinWidth( md ){
 					display: flex;
 				}
 			}
@@ -234,12 +234,12 @@
 		position: relative;
 
 		a {
-			color: vars.$color_white;
+			color: $color_white;
 			text-decoration: none;
 
 			&:hover,
 			&:focus-visible {
-				color: vars.$color_primary;
+				color: $color_primary;
 			}
 		}
 

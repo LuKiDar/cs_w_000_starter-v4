@@ -37,14 +37,11 @@ const paths = {
 //   _mixins.scss).
 // - 'color-functions' covers legacy colour functions in the ported reference
 //   sources; the port is still underway.
-// - 'import' is currently hiding the legacy `@import` in
-//   parts/block/cta/style.scss. Remove this silence once that partial is migrated
-//   to namespaced `@use` -- the Phase 2 plan asks for that migration.
 // 'mixed-decls' was removed: Sass reports that silence as obsolete (the warning no
 // longer exists), and keeping it printed five advisory lines on every build that
 // masked real warnings.
 const sassOptions = {
-	silenceDeprecations: ['color-functions', 'global-builtin', 'import'],
+	silenceDeprecations: ['color-functions', 'global-builtin'],
 };
 
 /**

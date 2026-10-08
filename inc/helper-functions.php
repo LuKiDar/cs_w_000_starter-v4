@@ -221,7 +221,7 @@ function cs__render_link_group( $links, $modifier = '' ){
 		return;
 	}
 
-	$classes = 'block-links';
+	$classes = 'button-group';
 	if ( $modifier !== '' ){
 		$classes .= ' '. $modifier;
 	}
@@ -238,7 +238,7 @@ function cs__render_link_group( $links, $modifier = '' ){
 				continue;
 			}
 
-			$link_classes = array('block-links__item');
+			$link_classes = array('button-group__item');
 			if ( $type === 'button' ){
 				$link_classes[] = 'button';
 			} elseif ( $type === 'button-outlined' ){

@@ -2,9 +2,9 @@
  * Block: Hero
  */
 
-@import '../../../assets/scss/abstracts/functions';
-@import '../../../assets/scss/abstracts/variables';
-@import '../../../assets/scss/abstracts/mixins';
+@use '../../../assets/scss/abstracts/functions' as *;
+@use '../../../assets/scss/abstracts/variables' as *;
+@use '../../../assets/scss/abstracts/mixins' as *;
 
 .block-hero {
 	$b: &;
