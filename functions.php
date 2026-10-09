@@ -56,6 +56,7 @@ add_filter('get_custom_logo', function( $html ){
 // Theme (always on)
 require_once 'inc/enqueue.php';
 require_once 'inc/wordpress-cleanup.php';
+require_once 'inc/customize.php';
 require_once 'inc/helper-functions.php';
 require_once 'inc/class-block-styles.php';
 require_once 'inc/gutenberg.php';
@@ -69,7 +70,6 @@ require_once 'inc/pagination.php';
 // require_once 'inc/widgets.php';
 // require_once 'inc/cpt-post.php';
 // require_once 'inc/admin.php';
-// require_once 'inc/customize.php';
 
 // Plugin support
 // require_once 'inc/plugin-acf.php';       // ACF options page fallback (Customizer is the primary settings surface)

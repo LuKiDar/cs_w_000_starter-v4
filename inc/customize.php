@@ -1,89 +1,89 @@
 <?php
 /**
  * Customize theme
- *
- * Two v3 defects are corrected here:
- *  1. The social options are registered under the slugs the social template
- *     actually reads. v3 registered a `twitter` slug while the template read
- *     `cs_social_x`, so the field saved to an option nothing consumed.
- *  2. The Footer section is not registered. The ACF options page
- *     ("Options: Theme Settings", `theme-settings`) already owns the footer
- *     settings; shipping the same fields in both the Customizer and the options
- *     page left two competing sources of truth. The Customizer is the primary
- *     settings surface in v4, and the options page is the fallback
- *     (inc/plugin-acf.php) for projects that want it instead.
  */
 
+function cs__customize_add_section( $wp_customize, $id, $title, $priority ){
+	$wp_customize->add_section($id, array(
+		'title'    => $title,
+		'priority' => $priority,
+	));
+}
+
+function cs__customize_add_setting_control( $wp_customize, $id, $section, $label, $type, $default, $sanitize_callback ){
+	$wp_customize->add_setting($id, array(
+		'default'           => $default,
+		'type'              => 'option',
+		'sanitize_callback' => $sanitize_callback,
+	));
+	$wp_customize->add_control($id, array(
+		'label'   => $label,
+		'type'    => $type,
+		'section' => $section,
+	));
+}
+
+function cs__customize_add_divider( $wp_customize, $id, $section, $title ){
+	$wp_customize->add_setting($id, array(
+		'default'           => '',
+		'type'              => 'option',
+		'sanitize_callback' => 'sanitize_text_field',
+	));
+	$wp_customize->add_control(new WP_Customize_Control($wp_customize, $id, array(
+		'label'       => '',
+		'description' => '<span class="customize-control-title" style="color: #111; font-size: 120%; font-style: normal; font-weight: 700;">'. $title .'</span><hr />',
+		'section'     => $section,
+		'type'        => 'hidden',
+	)));
+}
+
 function cs__customize_register( $wp_customize ){
+	// --- 0. General Section ---
+	cs__customize_add_section($wp_customize, 'cs_general_section', __('General', CSWP), 100);
+
+	cs__customize_add_setting_control($wp_customize, 'cs_google_api_key', 'cs_general_section', __('Google API Key', CSWP), 'text', '', 'sanitize_text_field');
+
 	// --- 1. Header Section ---
-	$wp_customize->add_section('cs_header_section', array(
-		'title'				=> __('Header', CSWP),
-		'priority'			=> 101,
-	));
+	cs__customize_add_section($wp_customize, 'cs_header_section', __('Header', CSWP), 101);
 
-	$wp_customize->add_setting('cs_header_button_text', array(
-		'default'			=> '',
-		'type'				=> 'option',
-		'sanitize_callback'	=> 'sanitize_text_field',
+	$wp_customize->add_setting('cs_header_mobile_logo', array(
+		'default'           => '',
+		'type'              => 'option',
+		'sanitize_callback' => 'absint',
 	));
-	$wp_customize->add_control('cs_header_button_text', array(
-		'label'				=> __('Button Text', CSWP),
-		'type'				=> 'text',
-		'section'			=> 'cs_header_section',
-	));
-
-	$wp_customize->add_setting('cs_header_button_url', array(
-		'default'			=> '',
-		'type'				=> 'option',
-		'sanitize_callback'	=> 'esc_url_raw',
-	));
-	$wp_customize->add_control('cs_header_button_url', array(
-		'label'				=> __('Button URL', CSWP),
-		'type'				=> 'url',
-		'section'			=> 'cs_header_section',
-	));
-
-	$wp_customize->add_setting('cs_header_button_new_tab', array(
-		'default'			=> false,
-		'type'				=> 'option',
-		'sanitize_callback'	=> 'wp_validate_boolean',
-	));
-	$wp_customize->add_control('cs_header_button_new_tab', array(
-		'label'				=> __('Open link in a new window', CSWP),
-		'type'				=> 'checkbox',
-		'section'			=> 'cs_header_section',
-	));
+	$wp_customize->add_control(new WP_Customize_Media_Control($wp_customize, 'cs_header_mobile_logo', array(
+		'label'     => __('Mobile Logo', CSWP),
+		'section'   => 'cs_header_section',
+		'mime_type' => 'image',
+	)));
+	cs__customize_add_setting_control($wp_customize, 'cs_header_button_text', 'cs_header_section', __('Button Text', CSWP), 'text', '', 'sanitize_text_field');
+	cs__customize_add_setting_control($wp_customize, 'cs_header_button_url', 'cs_header_section', __('Button URL', CSWP), 'url', '', 'esc_url_raw');
+	cs__customize_add_setting_control($wp_customize, 'cs_header_button_new_tab', 'cs_header_section', __('Open link in a new window', CSWP), 'checkbox', false, 'wp_validate_boolean');
 
 	// --- 2. Social Networks Section ---
-	$wp_customize->add_section('cs_social_section', array(
-		'title'				=> __('Social Networks', CSWP),
-		'priority'			=> 102,
-	));
+	cs__customize_add_section($wp_customize, 'cs_social_section', __('Social Networks', CSWP), 102);
 
-	// The key is the slug, not the label: v3's social template read
-	// `cs_social_{slug}` options and read `cs_social_x` for Twitter/X, while v3
-	// registered `cs_social_twitter` -- the field saved to an option nothing
-	// consumed. v4 ships no social template yet, so these settings are consumed by
-	// whatever a project renders.
-	$social_networks = array(
-		'email'		=> sprintf( __( '%s', CSWP ), 'Email' ),
-		'facebook'	=> sprintf( __( '%s', CSWP ), 'Facebook' ),
-		'instagram'	=> sprintf( __( '%s', CSWP ), 'Instagram' ),
-		'linkedin'	=> sprintf( __( '%s', CSWP ), 'LinkedIn' ),
-		'x'			=> sprintf( __( '%s', CSWP ), 'X (Twitter)' ),
-		'youtube'	=> sprintf( __( '%s', CSWP ), 'YouTube' ),
-	);
-	foreach ( $social_networks as $slug => $label ){
-		$wp_customize->add_setting("cs_social_{$slug}", array(
-			'default'			=> '',
-			'type'				=> 'option',
-			'sanitize_callback'	=> 'esc_url_raw',
-		));
-		$wp_customize->add_control("cs_social_{$slug}", array(
-			'label'				=> $label,
-			'type'				=> ( $slug=='email' ) ? 'text' : 'url',
-			'section'			=> 'cs_social_section',
-		));
+	foreach ( SOCIAL_NETWORKS as $network ){
+		$slug         = strtolower(strtok($network, ' '));
+		$control_type = ( $slug=='email' ) ? 'text' : 'url';
+		$sanitize     = ( $slug=='email' ) ? 'sanitize_email' : 'esc_url_raw';
+
+		cs__customize_add_setting_control($wp_customize, "cs_social_{$slug}", 'cs_social_section', sprintf(__('%s', CSWP), $network), $control_type, '', $sanitize);
 	}
+
+	// --- 3. Footer Section ---
+	cs__customize_add_section($wp_customize, 'cs_footer_section', __('Footer', CSWP), 131);
+
+	$wp_customize->add_setting('cs_footer_logo', array(
+		'default'           => '',
+		'type'              => 'option',
+		'sanitize_callback' => 'absint',
+	));
+	$wp_customize->add_control(new WP_Customize_Media_Control($wp_customize, 'cs_footer_logo', array(
+		'label'     => __('Footer Logo', CSWP),
+		'section'   => 'cs_footer_section',
+		'mime_type' => 'image',
+	)));
+	cs__customize_add_setting_control($wp_customize, 'cs_footer_copyright', 'cs_footer_section', __('Copyright Text', CSWP), 'text', '', 'wp_kses_post');
 }
 add_action('customize_register', 'cs__customize_register');
