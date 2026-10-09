@@ -4,8 +4,7 @@
  */
 
 $logo_id   = absint(get_option('cs_footer_logo'));
-$copyright = get_option('cs_footer_copyright');
-?>
+$copyright = get_option('cs_footer_copyright'); ?>
 
 		</main>
 

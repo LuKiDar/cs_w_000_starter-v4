@@ -36,12 +36,20 @@ $button_new_tab = get_option('cs_header_button_new_tab');
 					</div>
 
 					<?php if ( $mobile_logo_id ): ?>
-						<a class="site-logo__mobile logo" href="<?= esc_url(home_url('/')); ?>">
-							<?= wp_get_attachment_image($mobile_logo_id, 'medium', false, array(
-								'class' => 'logo__image',
-								'alt'   => get_bloginfo('name'),
-							)); ?>
-						</a>
+						<div class="site-logo__mobile">
+							<a href="<?= esc_url(home_url('/')); ?>" class="logo" rel="home"<?= ( is_front_page() && ! is_paged() ) ? ' aria-current="page"' : ''; ?>>
+								<?php
+								$mobile_logo_attr = array(
+									'class'   => 'logo__image',
+									'loading' => false,
+								);
+								if ( get_post_meta($mobile_logo_id, '_wp_attachment_image_alt', true)=='' ){
+									$mobile_logo_attr['alt'] = get_bloginfo('name', 'display');
+								}
+								echo wp_get_attachment_image($mobile_logo_id, 'full', false, $mobile_logo_attr);
+								?>
+							</a>
+						</div>
 					<?php endif; ?>
 				</div>
 
@@ -70,15 +78,24 @@ $button_new_tab = get_option('cs_header_button_new_tab');
 				</button>
 			</div>
 
-			<?php if ( has_nav_menu('primary') ): ?>
+			<?php if ( has_nav_menu('primary') || ( $button_text!='' && $button_url!='' ) ): ?>
 				<nav id="mobile-menu" class="mobile-navigation" role="navigation" aria-label="<?php esc_attr_e('Mobile Menu', CSWP); ?>" hidden>
-					<?php wp_nav_menu(array(
-						'theme_location' => 'primary',
-						'menu_class'     => 'primary-menu',
-						'container'      => false,
-						'depth'          => 2,
-						'walker'         => new cs__primary_menu_walker(),
-					)); ?>
+					<?php if ( has_nav_menu('primary') ): ?>
+						<?php wp_nav_menu(array(
+							'theme_location' => 'primary',
+							'menu_class'     => 'primary-menu',
+							'container'      => false,
+							'depth'          => 2,
+							'walker'         => new cs__primary_menu_walker(),
+						)); ?>
+					<?php endif; ?>
+
+					<?php if ( $button_text!='' && $button_url!='' ): ?>
+						<a class="site-header__button button is-outlined"
+						   href="<?= esc_url($button_url); ?>"
+						   <?php if ( $button_new_tab ): ?>target="_blank" rel="noopener noreferrer"<?php endif; ?>
+						><?= esc_html($button_text); ?></a>
+					<?php endif; ?>
 				</nav>
 			<?php endif; ?>
 		</header>

@@ -32,13 +32,18 @@
 	}
 
 	.site-logo {
-		font-size: $fontSize_huge;
-		font-weight: 900;
-		line-height: 1;
-
 		a {
 			color: inherit;
 			text-decoration: none;
+		}
+		.site-title {
+			font-size: $fontSize_x_large;
+			font-weight: 700;
+			line-height: 1;
+
+			@include mediaMaxWidth( md ){
+				font-size: $fontSize_large;
+			}
 		}
 		.logo {
 			display: block;
@@ -49,7 +54,7 @@
 			transition: width 0.3s ease;
 			width: $header_logoWidth;
 		}
-		a.site-logo__mobile {
+		&__mobile {
 			display: none;
 
 			.logo__image {
@@ -61,15 +66,19 @@
 				.site-logo__desktop {
 					display: none;
 				}
-				a.site-logo__mobile {
+				.site-logo__mobile {
 					display: block;
 				}
 			}
 		}
 	}
-	&__button {
+	&__inner > &__button {
 		flex-shrink: 0;
 		white-space: nowrap;
+
+		@include mediaMaxWidth( md ){
+			display: none;
+		}
 	}
 
 	body.is-header-fixed & {
@@ -162,5 +171,10 @@
 		&:not([hidden]) {
 			display: block;
 		}
+	}
+
+	.site-header__button {
+		margin-top: $layout_padding;
+		white-space: nowrap;
 	}
 }
