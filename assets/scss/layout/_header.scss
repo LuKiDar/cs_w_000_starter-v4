@@ -49,6 +49,27 @@
 			transition: width 0.3s ease;
 			width: $header_logoWidth;
 		}
+		a.site-logo__mobile {
+			display: none;
+
+			.logo__image {
+				width: rem(140);
+			}
+		}
+		&.has-mobile-logo {
+			@include mediaMaxWidth( md ){
+				.site-logo__desktop {
+					display: none;
+				}
+				a.site-logo__mobile {
+					display: block;
+				}
+			}
+		}
+	}
+	&__button {
+		flex-shrink: 0;
+		white-space: nowrap;
 	}
 
 	body.is-header-fixed & {
