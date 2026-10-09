@@ -1,14 +1,8 @@
-// -----------------------------------------------------------------------------
-// Base
-//
-// Global element resets and the page shell: selection, the admin-bar guard, the
-// html/body box model, the `.site-container` column, the skip link and the
-// overlay. Ported from cs_w_000_starter-v3 assets/scss/base/_base.scss:5-92 with
-// every token rewritten to v4's generated vocabulary (`$gray_500` ->
-// `$color_gray_500`, `$white` -> `$color_white`, `$black` -> `$color_black`) and
-// the media mixin namespaced.
-// -----------------------------------------------------------------------------
+/**
+ * Base: Base 
+ */
 
+@use '../abstracts/functions' as *;
 @use '../abstracts/variables' as *;
 @use '../abstracts/mixins' as *;
 
@@ -16,11 +10,9 @@
 	background: $color_gray_500;
 	color: $color_white;
 }
-
 #wpadminbar * {
 	min-width: 0;
 }
-
 html {
 	box-sizing: border-box;
 	height: 100%;
@@ -31,7 +23,6 @@ html {
 		box-sizing: inherit;
 	}
 }
-
 body {
 	overflow-x: hidden;
 	overflow-wrap: break-word;
@@ -41,7 +32,6 @@ body {
 		overflow: hidden;
 	}
 }
-
 .site-container {
 	display: flex;
 	flex-flow: column nowrap;
@@ -84,12 +74,10 @@ body {
 			min-height: 100dvh;
 		}
 	}
-
 	body.is-header-fixed & {
 		padding-top: $header_height;
 	}
 }
-
 .site-overlay {
 	background: $color_black;
 	display: none;

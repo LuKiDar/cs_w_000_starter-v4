@@ -1,21 +1,8 @@
-// -----------------------------------------------------------------------------
-// Grid
-//
-// `.container` is the five-column CSS grid with the `full`/`wide`/`content` line
-// names every v4 template wraps in (header.php:17, footer.php, page templates).
-//
-// The `.grid`/`.col` flex half is refactored toward Arosa
-// (base/_grid.scss:27-122): closure mixins and `gap: $layout_block_gap`, so the
-// column maths subtracts the gap instead of v3's negative-margin + padding model.
-// `.container` itself is the v3 shape (base/_grid.scss:5-25) — the two sources
-// agree on it.
-//
-// Token names: v3's `$layout_padding`/`$layout_content`/`$layout_breakout` and
-// `$layout_columns` are canonical in v4 (the first three generated, the last two
-// declared in abstracts/_variables.scss); v3's `$layout_blockGap` is
-// `$layout_block_gap` here.
-// -----------------------------------------------------------------------------
+/**
+ * Base: Grid
+ */
 
+@use '../abstracts/functions' as *;
 @use '../abstracts/variables' as *;
 @use '../abstracts/mixins' as *;
 
@@ -33,11 +20,9 @@
 	> *:not(.alignwide):not(.alignfull) {
 		grid-column: content;
 	}
-
 	> .alignwide {
 		grid-column: wide;
 	}
-
 	> .alignfull {
 		grid-column: full;
 	}
@@ -48,35 +33,25 @@
 	flex-flow: row wrap;
 	gap: $layout_block_gap;
 
-	&--ai-start {
+	&.is-ai-start {
 		align-items: flex-start;
 	}
-
-	&--ai-center {
+	&.is-ai-center {
 		align-items: center;
 	}
-
-	&--ai-end {
+	&.is-ai-end {
 		align-items: flex-end;
 	}
-
-	&--jc-start {
+	&.is-jc-start {
 		justify-content: flex-start;
 	}
-
-	&--jc-center {
+	&.is-jc-center {
 		justify-content: center;
 	}
-
-	&--jc-end {
+	&.is-jc-end {
 		justify-content: flex-end;
 	}
 
-	// Equal columns: `.grid--{n} > .col`. The gap is subtracted so n columns
-	// and their (n - 1) gutters fill the row exactly.
-	// `$base` is the selector prefix: `&--` for the unconditional tier,
-	// `&--{modifier}-` for the responsive ones. Built by concatenation rather
-	// than the deprecated Sass `if()` function.
 	@mixin grid-widths($modifier: '') {
 		$base: '&--';
 		@if $modifier != '' {
@@ -91,35 +66,33 @@
 		}
 	}
 
-	@include grid-widths; // .grid--{n} at every width
-
+	// .grid--{n} at every width
+	@include grid-widths;
+ 	// .grid--xl-{n}
 	@include mediaBetween(lg, xl) {
-		@include grid-widths('xl'); // .grid--xl-{n}
+		@include grid-widths('xl');
 	}
-
+	// .grid--lg-{n}
 	@include mediaBetween(md, lg) {
-		@include grid-widths('lg'); // .grid--lg-{n}
+		@include grid-widths('lg');
 	}
-
+	// .grid--md-{n}
 	@include mediaBetween(sm, md) {
-		@include grid-widths('md'); // .grid--md-{n}
+		@include grid-widths('md');
 	}
-
+	// .grid--sm-{n}
 	@include mediaBetween(xs, sm) {
-		@include grid-widths('sm'); // .grid--sm-{n}
+		@include grid-widths('sm');
 	}
-
+	// .grid--xs-{n}
 	@include mediaMaxWidth(xs) {
-		@include grid-widths('xs'); // .grid--xs-{n}
+		@include grid-widths('xs');
 	}
 }
-
 .col {
 	flex: 1 0 auto;
 	max-width: 100%;
 
-	// Span columns: `.col--{n}`. Out of `$layout_columns` tracks, the (columns -
-	// n) empty tracks' worth of gap is removed from the total.
 	@mixin col-widths($modifier: '') {
 		$base: '&--';
 		@if $modifier != '' {
@@ -134,25 +107,27 @@
 		}
 	}
 
-	@include col-widths; // .col--{n} at every width
+	// .col--{n} at every width
+	@include col-widths;
 
+	// .col--xl-{n}
 	@include mediaBetween(lg, xl) {
-		@include col-widths('xl'); // .col--xl-{n}
+		@include col-widths('xl');
 	}
-
+	// .col--lg-{n}
 	@include mediaBetween(md, lg) {
-		@include col-widths('lg'); // .col--lg-{n}
+		@include col-widths('lg');
 	}
-
+	// .col--md-{n}
 	@include mediaBetween(sm, md) {
-		@include col-widths('md'); // .col--md-{n}
+		@include col-widths('md');
 	}
-
+	// .col--sm-{n}
 	@include mediaBetween(xs, sm) {
-		@include col-widths('sm'); // .col--sm-{n}
+		@include col-widths('sm');
 	}
-
+	// .col--xs-{n}
 	@include mediaMaxWidth(xs) {
-		@include col-widths('xs'); // .col--xs-{n}
+		@include col-widths('xs');
 	}
 }

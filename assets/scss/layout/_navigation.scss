@@ -31,8 +31,8 @@
 // -----------------------------------------------------------------------------
 
 @use '../abstracts/functions' as *;
-@use '../abstracts/mixins' as *;
 @use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
 
 .primary-menu {
 	display: flex;
@@ -237,8 +237,7 @@
 			color: $color_white;
 			text-decoration: none;
 
-			&:hover,
-			&:focus-visible {
+			&:is(:hover, :focus-visible) {
 				color: $color_primary;
 			}
 		}

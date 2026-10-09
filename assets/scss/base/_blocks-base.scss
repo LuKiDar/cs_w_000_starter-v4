@@ -1,23 +1,14 @@
-// -----------------------------------------------------------------------------
-// Gutenberg blocks: base styles
-//
-// Kept deliberately trimmed (controller ruling on the phase-2 recon's Q1): only
-// the core button link, which ships no custom SCSS of its own and must wear the
-// theme's button shell. Not Arosa's 334-line layer.
-//
-// The `.button-base`/`.button-default`/`.button-outlined` classes live in the
-// sibling `_button-base` module; it is loaded here so the `@extend` targets
-// resolve inside this module too.
-// -----------------------------------------------------------------------------
+/**
+ * Base: Gutenberg blocks base styles
+ * Included in main.css and editor.css
+ */
 
+@use '../abstracts/functions' as *;
+@use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
 @use 'button-base' as *;
 
-/* stylelint-disable scss/at-extend-no-missing-placeholder --
- * The button shell is intentionally a real class, not a private placeholder:
- * components/_buttons.scss extends `.button-base`/`.button-default` too (Task 16),
- * and a `%placeholder` is module-scoped under `@use`, so it could not be
- * extended from this module at all. */
-
+// Core / Button
 .wp-block-button {
 	.wp-block-button__link {
 		@extend .button-base;

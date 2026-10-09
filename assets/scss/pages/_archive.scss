@@ -3,8 +3,8 @@
  */
 
 @use '../abstracts/functions' as *;
-@use '../abstracts/mixins' as *;
 @use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
 
 .archive-page {
 	padding-block: $page_paddingTop $page_paddingBottom;

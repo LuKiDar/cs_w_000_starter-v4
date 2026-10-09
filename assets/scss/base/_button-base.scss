@@ -1,16 +1,10 @@
-// -----------------------------------------------------------------------------
-// Button base
-//
-// The shared button shell and its two variants. Both the block layer
-// (base/_blocks-base.scss) and `components/_buttons.scss` (Task 16) extend these
-// three classes rather than re-declaring them. Ported from cs_w_000_starter-v3
-// assets/scss/base/_button-base.scss:5-51 with the token names rewritten
-// (`$borderRadius_small`/`$fontSize_small`/`$lineHeight_base` are unchanged in
-// v4; `$primary` -> `$color_primary`, `$black` -> `$color_black`,
-// `$white` -> `$color_white`).
-// -----------------------------------------------------------------------------
+/**
+ * Base: Button base
+ */
 
 @use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
+@use '../abstracts/functions' as *;
 
 .button-base {
 	background: transparent;
@@ -28,35 +22,29 @@
 	text-decoration: none;
 	transition: all 0.2s;
 
-	&:hover,
-	&:focus-visible {
+	&:is(:hover, :focus-visible) {
 		text-decoration: underline;
 	}
-
-	&:focus-visible {
+	&:is(:focus-visible) {
 		outline: 2px solid $color_black;
 		outline-offset: 2px;
 	}
 }
-
 .button-default {
 	background: $color_primary;
 	color: $color_white;
 
-	&:hover,
-	&:focus-visible {
+	&:is(:hover, :focus-visible) {
 		background: $color_black;
 		color: $color_white;
 	}
 }
-
 .button-outlined {
 	background: transparent;
 	border-color: currentcolor;
 	color: $color_primary;
 
-	&:hover,
-	&:focus-visible {
+	&:is(:hover, :focus-visible) {
 		background: $color_black;
 		border-color: $color_black;
 		color: $color_white;

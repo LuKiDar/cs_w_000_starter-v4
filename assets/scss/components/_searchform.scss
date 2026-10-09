@@ -8,7 +8,9 @@
 // shape reference only: a flex row with the block gap between the parts.
 // -----------------------------------------------------------------------------
 
+@use '../abstracts/functions' as *;
 @use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
 
 .search-form {
 	align-items: stretch;

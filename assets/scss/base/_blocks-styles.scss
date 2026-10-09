@@ -1,16 +1,12 @@
-// -----------------------------------------------------------------------------
-// Gutenberg blocks: frontend styles
-//
-// Trimmed to the first/last-child margin reset (controller ruling on the phase-2
-// recon's Q1). Ported from cs_w_000_starter-v3
-// assets/scss/base/_blocks-styles.scss:6-12.
-// -----------------------------------------------------------------------------
+/**
+ * Base: Gutenberg blocks frontend styles
+ * Included in main.css
+ */
 
 .wp-block {
 	&:first-child {
 		margin-top: 0;
 	}
-
 	&:last-child {
 		margin-bottom: 0;
 	}
