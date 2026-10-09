@@ -5,40 +5,43 @@
 
 /* --- Theme styles and scripts --- */
 function cs__enqueue_assets(){
-	$dir = get_template_directory();
-	$uri = get_template_directory_uri();
+	// Remove Contact form 7 styles
+	// wp_dequeue_style('contact-form-7');
 
+	// CSS
 	wp_enqueue_style('theme-style', get_stylesheet_uri());
+	wp_enqueue_style('theme-main', get_template_directory_uri() .'/assets/css/main.min.css', array(), filemtime(get_template_directory() .'/assets/css/main.min.css'), 'all');
 
-	$main_css = '/assets/css/main.min.css';
-	if ( file_exists($dir . $main_css) ){
-		wp_enqueue_style('theme-main', $uri . $main_css, array(), filemtime($dir . $main_css), 'all');
-	}
-
-	$main_js = '/assets/js/dist/main.min.js';
-	if ( file_exists($dir . $main_js) ){
-		wp_enqueue_script('theme-main', $uri . $main_js, array(), filemtime($dir . $main_js), true);
-	}
+	// JS
+	wp_enqueue_script('theme-main', get_template_directory_uri() .'/assets/js/dist/main.min.js', array(), filemtime(get_template_directory() .'/assets/js/dist/main.min.js'), true);
 }
 add_action('wp_enqueue_scripts', 'cs__enqueue_assets');
 
 
-/* --- Editor styles --- */
-function cs__enqueue_editor_assets(){
-	$editor_css = get_template_directory() .'/assets/css/editor.min.css';
-	if ( file_exists($editor_css) ){
-		add_editor_style('assets/css/editor.min.css');
-	}
+/* --- Gutenberg styles and scripts --- */
+function cs__enqueue_gutenberg_assets(){
+	// CSS
+	add_editor_style('assets/css/editor.min.css');
 
-	$block_styles_js = '/assets/js/block-styles.js';
-	if ( file_exists(get_template_directory() . $block_styles_js) ){
-		wp_enqueue_script(
-			'theme-block-styles',
-			get_template_directory_uri() . $block_styles_js,
-			array('wp-blocks', 'wp-dom-ready', 'wp-edit-post'),
-			filemtime(get_template_directory() . $block_styles_js),
-			true
-		);
-	}
+	// JS
+	wp_enqueue_script('theme-editor', get_theme_file_uri('/assets/js/block-styles.js'), array('wp-blocks', 'wp-dom'), filemtime(get_theme_file_path('/assets/js/block-styles.js')), true);
 }
-add_action('enqueue_block_editor_assets', 'cs__enqueue_editor_assets');
+add_action('enqueue_block_editor_assets', 'cs__enqueue_gutenberg_assets');
+
+
+/* --- Admin styles --- */
+function cs__enqueue_admin_styles(){
+	wp_enqueue_style('admin-styles', get_template_directory_uri() .'/assets/css/admin.min.css', array(), filemtime(get_template_directory() .'/assets/css/admin.min.css'), 'all');
+}
+add_action('admin_enqueue_scripts', 'cs__enqueue_admin_styles');
+
+
+/* --- Login styles --- */
+function cs__enqueue_login_styles(){
+	wp_enqueue_style('login-styles', get_template_directory_uri() .'/assets/css/login.min.css', array(), filemtime(get_template_directory() .'/assets/css/login.min.css'), 'all');
+}
+// add_action('login_head', 'cs__enqueue_login_styles');
+
+
+/* --- Disable default WooCommerce styles --- */
+// add_filter('woocommerce_enqueue_styles', '__return_empty_array');
