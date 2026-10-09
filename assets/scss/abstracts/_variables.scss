@@ -26,6 +26,7 @@ $layout_breakout: calc((var(--wp--custom--layout--wide) - var(--wp--custom--layo
 :root {
 	--header--height: #{rem(80)};
 	--header--logo-width: #{rem(275)};
+	--footer--logo-width: #{rem(180)};
 
 	--page--padding-top: calc(var(--wp--custom--layout--padding) * 4);
 	--page--padding-bottom: calc(var(--wp--custom--layout--padding) * 4);
@@ -33,5 +34,6 @@ $layout_breakout: calc((var(--wp--custom--layout--wide) - var(--wp--custom--layo
 
 $header_height: var(--header--height);
 $header_logoWidth: var(--header--logo-width);
+$footer_logoWidth: var(--footer--logo-width);
 $page_paddingTop: var(--page--padding-top);
 $page_paddingBottom: var(--page--padding-bottom);

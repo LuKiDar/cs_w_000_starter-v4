@@ -25,6 +25,17 @@
 			flex-flow: column nowrap;
 		}
 	}
+	&__logo {
+		display: block;
+		line-height: 0;
+		max-width: $footer_logoWidth;
+
+		img {
+			display: block;
+			height: auto;
+			width: 100%;
+		}
+	}
 	&__navigation {
 		display: flex;
 		flex-flow: row wrap;
@@ -32,5 +43,13 @@
 	}
 	&__copyright {
 		margin: 0;
+
+		a {
+			color: $color_white;
+
+			&:is(:hover, :focus-visible) {
+				color: $color_primary;
+			}
+		}
 	}
 }
