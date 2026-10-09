@@ -1,5 +1,5 @@
 /**
- * Pagination
+ * Components: Pagination
  */
 
 @use '../abstracts/functions' as *;
@@ -16,8 +16,6 @@
 	.page-numbers {
 		color: $color_black;
 		display: inline-block;
-		font-size: $fontSize_small;
-		font-weight: 400;
 		min-width: rem(24);
 		text-align: center;
 		text-decoration: none;
@@ -65,7 +63,6 @@
 
 		// States
 		&:is(:hover, :focus-within) {
-			color: $color_primary;
 			text-decoration: underline;
 		}
 	}

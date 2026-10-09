@@ -1,23 +1,6 @@
-// -----------------------------------------------------------------------------
-// Breadcrumbs
-//
-// The trail markup is emitted by inc/breadcrumbs.php: the root
-// `<nav class="breadcrumbs{$modifier}">` (L37), `<i class="breadcrumbs__delimiter">`
-// (L26), `<span class="breadcrumbs__current">` (L29-30) and
-// `<span class="breadcrumbs__paged">` (L165). The `$modifier` argument is appended
-// to the root class raw (L37), which is what makes the `--align-*` modifiers below
-// reachable.
-//
-// Ported from nucleux components/_breadcrumbs.scss:1-57 -- the closer of the two
-// available sources (corazon's is inline-block, this one is a flex row). Tokens
-// rewritten to v4's generated vocabulary ($medium_gray -> $color_gray_500,
-// $black -> $color_black) and `rem()` -> `rem()`.
-//
-// Two rules from the source are deliberately not carried: `br { display:none }`,
-// because inc/breadcrumbs.php emits no <br>, and the `--home-hide` modifier,
-// because it targets `.breadcrumbs__home`, a class inc/breadcrumbs.php never emits
-// (the Home crumb is a bare <a>).
-// -----------------------------------------------------------------------------
+/**
+ * Components: Breadcrumbs
+ */
 
 @use '../abstracts/functions' as *;
 @use '../abstracts/variables' as *;
@@ -34,36 +17,38 @@
 		color: $color_gray_500;
 		text-decoration: none;
 	}
-
 	a {
 		&:is(:hover, :focus-visible) {
-			color: $color_black;
 			text-decoration: underline;
 		}
 	}
-
 	&__delimiter {
 		display: inline-block;
+		font-style: normal;
 		margin: 0 rem(10);
 
 		@include mediaMaxWidth(md) {
 			margin: 0 rem(5);
 		}
 	}
-
-	&__current {
-		font-weight: 800;
+	&__current,
+	&__paged {
+		font-weight: 700;
+	}
+	&__paged {
+		margin-left: rem(4);
+	}
+	br {
+		display: none !important;
 	}
 
-	&--align-center {
-		text-align: center;
+	&.is-jc-center {
+		justify-content: center;
 	}
-
-	&--align-left {
-		text-align: left;
+	&.is-jc-start {
+		justify-content: flex-start;
 	}
-
-	&--align-right {
-		text-align: right;
+	&.is-jc-end {
+		justify-content: flex-end;
 	}
 }

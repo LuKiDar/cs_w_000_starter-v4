@@ -1,24 +1,6 @@
 <?php
 /**
  * Breadcrumbs
- *
- * Ported from v3. Every value this file prints is escaped at the echo site:
- *
- * - Values rendered as text are wrapped in esc_html() -- titles, the search
- *   query, tag and category names, post-type labels, the author's display name,
- *   and the fixed get_the_time() parts.
- * - URLs are wrapped in esc_url() where the anchor is built -- get_year_link(),
- *   get_month_link(), get_permalink() and get_post_type_archive_link().
- * - Markup this file assembles -- $homeItem, $delimiter, $beforeCurrent,
- *   $afterCurrent, $breadcrumbs[$i], $cats and get_category_parents() output --
- *   is passed through wp_kses_post() at the echo site, so the tags survive while
- *   anything unexpected is stripped. Wrapping those in esc_html() instead would
- *   print the tags as text.
- *
- * get_the_time() values come from a timestamp and a fixed format string, never
- * from user text, but they are escaped anyway so the EscapeOutput sniff stays
- * clean and the rule is "escape every output", not "escape the ones we think are
- * risky".
  */
 
 function cs__the_breadcrumbs( $modifier='' ){
@@ -53,7 +35,7 @@ function cs__the_breadcrumbs( $modifier='' ){
 				if ( $thisCat->parent!=0 ){
 					echo wp_kses_post( get_category_parents($thisCat->parent, true, $delimiter) );
 				}
-				echo wp_kses_post( $beforeCurrent ) .single_cat_title('', false). wp_kses_post( $afterCurrent );
+				echo wp_kses_post( $beforeCurrent ) . esc_html( single_cat_title('', false) ) . wp_kses_post( $afterCurrent );
 
 			} elseif ( is_search() ){
 				echo wp_kses_post( $beforeCurrent ) .'Search results for: '. esc_html( get_search_query() ) . wp_kses_post( $afterCurrent );

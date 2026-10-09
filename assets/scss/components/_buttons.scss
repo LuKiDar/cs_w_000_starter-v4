@@ -1,25 +1,12 @@
-// -----------------------------------------------------------------------------
-// Buttons
-//
-// `.button` and `.button.is-outlined` are emitted by cs__render_link_group()
-// (inc/helper-functions.php:120-124) and by the search form's submit
-// (searchform.php:20), both against the shell base/_button-base.scss defines.
-// Ported from cs_w_000_starter-v3 components/_buttons.scss:5-10.
-//
-// Arosa's components/_buttons.scss carries two further groups -- a
-// `.has-color-white` variant inside `.button` and a `.link-icon` family
-// (arosa:12-116). No v4 PHP emits `.has-color-white`, `has-leading-icon`,
-// `has-trailing-icon`, `has-size-*`, `has-hover-marker` or `.link-icon`, so none
-// of them is ported: styling a class nothing renders is the same defect as dead
-// code.
-// -----------------------------------------------------------------------------
+/**
+ * Components: Buttons
+ */
 
+@use '../abstracts/functions' as *;
+@use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
 @use '../base/button-base' as *;
 
-/* stylelint-disable scss/at-extend-no-missing-placeholder --
- * Same reason as base/_blocks-base.scss: the button shell is a real class, not a
- * placeholder, because a `%placeholder` is module-scoped under `@use` and could
- * not be extended across the `.button-base` module boundary here. */
 .button {
 	@extend .button-base;
 	@extend .button-default;
@@ -27,5 +14,23 @@
 	&.is-outlined {
 		@extend .button-outlined;
 	}
+	&.has-color-white {
+		&:not(.is-outlined) {
+			background: $color_white;
+			color: $color_black;
+
+			&:is(:hover, :focus-within) {
+				background: color-mix(in srgb, $color_white 95%, transparent);
+				color: $color_black;
+			}
+		}
+		&.is-outlined {
+			border-color: $color_white;
+			color: $color_white;
+
+			&:is(:hover, :focus-within) {
+				border-color: $color_white;
+			}
+		}
+	}
 }
-/* stylelint-enable scss/at-extend-no-missing-placeholder */

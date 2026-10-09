@@ -1,5 +1,5 @@
 /**
- * Button Group
+ * Components: Button group
  */
 
 @use '../abstracts/functions' as *;
@@ -13,10 +13,10 @@
   gap: $layout_block_gap;
   margin: 0;
 
-  &.align-center {
+  &.is-jc-center {
     justify-content: center;
   }
-  &.align-right {
+  &.is-jc-end {
     justify-content: flex-end;
   }
 }
