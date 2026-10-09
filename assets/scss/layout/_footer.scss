@@ -1,16 +1,6 @@
-// -----------------------------------------------------------------------------
-// Footer
-//
-// `.site-footer` shell from cs_w_000_starter-v3 layout/_footer.scss:5-11, token
-// names rewritten ($gray_900 -> $color_gray_900, $white -> $color_white). The
-// `.footer-menu` list inside it is styled in layout/_navigation.scss with the
-// other navigation.
-//
-// `.site-footer__inner`, `.site-footer__navigation` and `.site-footer__copyright`
-// (footer.php:9,11,21) are styled in no reference theme: arosa's footer is a
-// project-specific `__top`/`__bottom` structure and does not match v4's
-// two-element shell, so these three are new rules here.
-// -----------------------------------------------------------------------------
+/**
+ * Layout: Footer
+ */
 
 @use '../abstracts/functions' as *;
 @use '../abstracts/variables' as *;
@@ -41,8 +31,6 @@
 		gap: $layout_padding $layout_block_gap;
 	}
 	&__copyright {
-		font-size: $fontSize_small;
-		line-height: $lineHeight_base;
 		margin: 0;
 	}
 }

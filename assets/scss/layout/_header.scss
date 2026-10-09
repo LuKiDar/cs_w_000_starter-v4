@@ -1,48 +1,29 @@
-// -----------------------------------------------------------------------------
-// Site header
-//
-// Ported from cs_w_000_starter-v3 assets/scss/layout/_header.scss:5-137 — the
-// live rules only. L142-279 are a commented-out superseded variant of the same
-// header and are not ported (ruling 6).
-//
-// Three adjustments for v4's markup:
-//   * the toggle is taken from arosa layout/_header.scss:137-195, because v4
-//     emits `<span class="nav-toggle__bar">` (header.php:44) and arosa's
-//     three-bar rules already target `.nav-toggle::before/::after` and
-//     `.nav-toggle__bar`; `$teal` -> `$color_primary`;
-//   * `.mobile-navigation` is shown through the `hidden` attribute
-//     (header.php:50), not v3's `[aria-hidden="false"]`, so the state rules are
-//     `[hidden]` / `:not([hidden])`;
-//   * v3's `$graphite` and `$beaver` have no v4 palette entry. millburn is the
-//     only reference carrying both, as palette colours with the measured values
-//     #3E4349 / #9B7A68 (millburn abstracts/_variables.scss:30,28); v4's
-//     theme.json palette does not. Per the canonical-names rule they are not
-//     re-added as hex constants — the menu colours move to layout/_navigation.scss
-//     and resolve to the nearest v4 tokens there. Flagged to the owner.
-// `$lineHeight_huge` (v3 L27) is declared in abstracts/_variables.scss:46.
-// -----------------------------------------------------------------------------
+/**
+ * Layout: Header
+ */
 
 @use '../abstracts/functions' as *;
 @use '../abstracts/variables' as *;
 @use '../abstracts/mixins' as *;
 
 .site-header {
-	background: color-mix(in srgb, $color_white 50%, transparent);
+	background: color-mix(in srgb, $color_gray_100 90%, transparent);
 	height: $header_height;
-	transition: background .2s, box-shadow .2s, top .1s;
+	transition: background 0.3s ease, box-shadow 0.3s ease, top 0.1s;
 	z-index: 100;
 
 	&__inner {
 		align-items: center;
 		display: flex;
+		gap: $layout_block_gap;
 		justify-content: space-between;
-		padding: 1rem 0;
+		padding: $layout_padding 0;
 	}
 	&__navigation {
 		align-items: center;
 		display: flex;
 		flex-flow: row nowrap;
-		gap: 24px 48px;
+		gap: $layout_block_gap;
 
 		// Below `md` the primary menu lives in `.mobile-navigation` instead.
 		@include mediaMaxWidth( md ){
@@ -65,7 +46,7 @@
 		}
 		.logo__image {
 			height: auto;
-			transition: width .2s;
+			transition: width 0.3s ease;
 			width: $header_logoWidth;
 		}
 	}
@@ -84,8 +65,6 @@
 		}
 	}
 }
-
-// Mobile toggle — arosa layout/_header.scss:137-195, `$teal` -> `$color_primary`.
 .nav-toggle {
 	background: transparent;
 	border: none;
@@ -113,7 +92,7 @@
 		height: rem(2);
 		left: 0;
 		position: absolute;
-		transition: all .3s ease;
+		transition: all 0.3s ease;
 		width: 100%;
 	}
 	&::before {
@@ -144,23 +123,15 @@
 		}
 	}
 }
-
-// Panel only: v3 layout/_header.scss:94-123 minus the link colours, which the
-// menu layer in layout/_navigation.scss owns because v4 emits the same
-// `.primary-menu` in both the header nav and this panel.
 .mobile-navigation {
 	background: $color_white;
-	border-top: 1px solid $color_gray_100;
+	border-top: rem(1) solid $color_gray_100;
+	display: none;
 	left: 0;
-	padding: 1rem;
+	padding: $layout_padding;
 	position: absolute;
 	right: 0;
 	top: 100%;
-
-	// v4 toggles the `hidden` attribute (header.php:50). Hidden at every width
-	// by default (v3 L101); shown below `md` only when the attribute is absent.
-	// Both states are stated so the boolean attribute stays authoritative.
-	display: none;
 
 	&[hidden] {
 		display: none;

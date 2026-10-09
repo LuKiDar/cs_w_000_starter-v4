@@ -1,40 +1,16 @@
-// -----------------------------------------------------------------------------
-// Navigation
-//
-// The walker inc/menu-walker.php emits `<ul class="primary-menu">` whose items
-// carry `.menu-item` / `.main-menu-item` / `.sub-menu-item` /
-// `.menu-item-has-children` (menu-walker.php:40-45), a `.menu-item-trigger`
-// wrapper plus `.caret` for an item with children (menu-walker.php:67), and a
-// `<ul class="sub-menu menu-odd menu-depth-1">` dropdown (menu-walker.php:21-25).
-// The dropdown rules are ported from arosa layout/_navigation.scss:13-238 — its
-// `.menu` base layer and `.header-primary-menu` block target exactly those walker
-// classes. Arosa's own menu classes (`header-primary-menu`,
-// `header-auxiliary-menu`, `footer-primary-menu`, `footer-auxiliary-menu`) are
-// not emitted by v4 and are not ported; they collapse into the single
-// `.primary-menu` v4 emits. The flat `.footer-menu` block is v3
-// layout/_navigation.scss:100-127.
-//
-// Token rewrites: arosa `$teal` -> `$color_primary`, `$white` -> `$color_white`,
-// `$layout_blockGap` -> `$layout_block_gap`; v3 `$black` -> `$color_black`,
-// `$white` -> `$color_white`, `$primary` -> `$color_primary`. Arosa's
-// `$lineHeight_heading` (1.2) and `$teal_light` have no v4 counterpart
-// (theme.json declares only line-height.base and one primary), so the base step
-// is used and the hover state resolves to `$color_primary`, `$color_black` or
-// `$color_gray_900` as noted. `rem()` and the media mixins are namespaced.
-//
-// The mobile link colours are v3's `.mobile-navigation` link rules
-// (layout/_header.scss:112-121): v3's `$beaver` and `$graphite` have no v4
-// palette entry (millburn abstracts/_variables.scss:28,30 carries them as
-// #9B7A68 / #3E4349), so they resolve to the nearest canonical neutral pair,
-// `$color_gray_500` and `$color_gray_900` — the same base/current pair the
-// breadcrumbs use. Flagged to the owner.
-// -----------------------------------------------------------------------------
+/**
+ * Layout: Navigation
+ *
+ * `.menu` is the structural foundation. Real menus extend it and add only
+ * their own color, type, and spacing.
+ */
 
 @use '../abstracts/functions' as *;
 @use '../abstracts/variables' as *;
 @use '../abstracts/mixins' as *;
 
-.primary-menu {
+/* --- Base menu --- */
+.menu {
 	display: flex;
 	flex-wrap: wrap;
 	gap: $layout_padding $layout_block_gap;
@@ -42,53 +18,19 @@
 	margin: 0;
 	padding: 0;
 
-	@include mediaMinWidth( md ){
-		flex-flow: row nowrap;
-		justify-content: flex-end;
-	}
-	@include mediaMinWidth( lg ){
-		gap: $layout_padding calc($layout_padding * 3);
-	}
-	@include mediaMaxWidth( md ){
-		align-items: flex-start;
-		flex-flow: column nowrap;
-	}
-
-	> .menu-item {
+	.menu-item {
 		margin: 0;
 		position: relative;
 
-		> a,
-		> .menu-item-trigger > a {
+		a {
 			display: block;
 			text-decoration: none;
 
-			@include mediaMinWidth( md ){
-				color: $color_black;
-				font-size: $fontSize_medium;
-				font-weight: 700;
-				line-height: $lineHeight_base;
-			}
-			@include mediaMaxWidth( md ){
-				color: $color_gray_500;
-				font-size: $fontSize_small;
-				font-weight: 700;
-				letter-spacing: .3em;
-				line-height: $lineHeight_base;
-				text-transform: uppercase;
-			}
-
 			&:is(:hover, :focus-within) {
 				text-decoration: underline;
-				text-decoration-thickness: rem(2);
-				text-underline-offset: .1em;
-
-				@include mediaMinWidth( md ){
-					color: $color_primary;
-				}
-				@include mediaMaxWidth( md ){
-					color: $color_gray_900;
-				}
+			}
+			&:not([href]) {
+				text-decoration: none !important;
 			}
 		}
 		.menu-item-trigger {
@@ -96,12 +38,6 @@
 			display: flex;
 			gap: rem(8);
 			max-width: 100%;
-
-			> .caret {
-				@include mediaMinWidth( md ){
-					color: $color_primary;
-				}
-			}
 		}
 		.caret {
 			border-color: transparent currentcolor currentcolor transparent;
@@ -111,7 +47,7 @@
 			height: rem(10);
 			margin: -.3em 0 0 rem(8);
 			rotate: 45deg;
-			transition: all .3s ease;
+			transition: all 0.3s ease;
 			vertical-align: middle;
 			width: rem(10);
 
@@ -120,16 +56,7 @@
 			}
 		}
 
-		// States
-		&:is(:hover, :focus-within) {
-			> a,
-			> .menu-item-trigger > a,
-			> .menu-item-trigger > .caret {
-				@include mediaMinWidth( md ){
-					color: $color_primary;
-				}
-			}
-		}
+		// Modifiers
 		&.current-menu-item {
 			> a,
 			> .menu-item-trigger > a {
@@ -137,7 +64,6 @@
 			}
 		}
 	}
-
 	.sub-menu {
 		flex-flow: column nowrap;
 		gap: rem(4) 0;
@@ -146,21 +72,14 @@
 		padding: 0;
 
 		@include mediaMinWidth( md ){
-			background: $color_white;
-			border: rem(1) solid $color_primary;
-			border-radius: $borderRadius_medium;
 			display: none;
 			left: 0;
 			max-width: rem(200);
 			min-width: rem(160);
-			padding: rem(20) $layout_block_gap;
 			position: absolute;
 			top: 100%;
 			width: max-content;
 			z-index: 999;
-		}
-		@include mediaMaxWidth( md ){
-			padding: rem(12) 0;
 		}
 
 		> .menu-item {
@@ -168,38 +87,12 @@
 			width: 100%;
 
 			> a {
-				display: block;
-				padding: rem(4) 0;
-				text-decoration: none;
 				width: 100%;
-
-				@include mediaMinWidth( md ){
-					color: $color_black;
-					font-size: $fontSize_small;
-					font-weight: 500;
-					line-height: $lineHeight_base;
-
-					&:is(:hover, :focus-within) {
-						color: $color_primary;
-					}
-				}
-				@include mediaMaxWidth( md ){
-					color: $color_gray_500;
-					font-size: $fontSize_small;
-					font-weight: 400;
-					line-height: $lineHeight_base;
-
-					&:is(:hover, :focus-within) {
-						color: $color_gray_900;
-					}
-				}
 			}
 		}
-
-		// Arosa guards a nested sub-menu with `display: none !important`
-		// (layout/_navigation.scss:104). header.php caps the menu at depth 2
-		// (header.php:37,55), so no `.sub-menu > .sub-menu` is ever emitted and
-		// the guard — and its `!important` — is not carried.
+		.sub-menu {
+			display: none !important;
+		}
 	}
 
 	.menu-item-has-children {
@@ -217,33 +110,78 @@
 	}
 }
 
-// Flat footer list — v3 layout/_navigation.scss:100-127. footer.php renders it
-// at depth 1 (footer.php:16), so no sub-menu is emitted; v3's
-// `> .sub-menu { display: none !important }` (L121) is dropped rather than kept
-// without its reason — the dropdown rules above are scoped to `.primary-menu`
-// and cannot reach `.footer-menu`.
-.footer-menu {
-	display: flex;
-	flex-flow: row wrap;
-	gap: 20px 30px;
-	list-style: none;
-	margin: 0;
-	padding: 0;
+/* --- Primary menu --- */
+.primary-menu {
+	@extend .menu;
+
+	@include mediaMinWidth( md ){
+		flex-flow: row nowrap;
+		justify-content: flex-end;
+	}
+	@include mediaMaxWidth( md ){
+		align-items: flex-start;
+		flex-flow: column nowrap;
+	}
 
 	> .menu-item {
-		position: relative;
-
-		a {
-			color: $color_white;
-			text-decoration: none;
-
-			&:is(:hover, :focus-visible) {
+		> a,
+		> .menu-item-trigger > a {
+			&:is(:hover, :focus-within) {
+				text-decoration: underline;
+			}
+		}
+		> .menu-item-trigger > .caret {
+			@include mediaMinWidth( md ){
 				color: $color_primary;
 			}
 		}
 
-		&.current-menu-item {
-			font-weight: 700;
+		&:is(:hover, :focus-within) {
+			> a,
+			> .menu-item-trigger > a,
+			> .menu-item-trigger > .caret {
+				@include mediaMinWidth( md ){
+					color: $color_primary;
+				}
+			}
 		}
+	}
+
+	.sub-menu {
+		padding: $layout_padding;
+
+		@include mediaMinWidth( md ){
+			background: $color_white;
+			border: rem(1) solid $color_gray_100;
+			border-radius: $borderRadius_small;
+		}
+
+		a {
+			color: $color_black;
+
+			&:is(:hover, :focus-within) {
+				color: $color_primary;
+			}
+		}
+	}
+}
+
+
+/* --- Footer menu --- */
+.footer-menu {
+	@extend .menu;
+
+	flex-flow: row wrap;
+
+	a {
+		color: $color_white;
+
+		&:is(:hover, :focus-visible) {
+			color: $color_primary;
+		}
+	}
+
+	> .menu-item.current-menu-item {
+		font-weight: 700;
 	}
 }

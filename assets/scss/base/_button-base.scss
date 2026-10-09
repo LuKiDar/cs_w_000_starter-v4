@@ -8,7 +8,7 @@
 
 .button-base {
 	background: transparent;
-	border: 2px solid transparent;
+	border: rem(2) solid transparent;
 	border-radius: $borderRadius_small;
 	box-shadow: none;
 	display: inline-block;
@@ -17,17 +17,17 @@
 	font-weight: 600;
 	letter-spacing: 0;
 	line-height: $lineHeight_base;
-	padding: 0.375rem 1.125rem;
+	padding: rem(6) rem(18);
 	text-align: center;
 	text-decoration: none;
-	transition: all 0.2s;
+	transition: all 0.3s ease;
 
 	&:is(:hover, :focus-visible) {
 		text-decoration: underline;
 	}
 	&:is(:focus-visible) {
-		outline: 2px solid $color_black;
-		outline-offset: 2px;
+		outline: rem(2) solid $color_black;
+		outline-offset: rem(2);
 	}
 }
 .button-default {
