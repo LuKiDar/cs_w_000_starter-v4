@@ -8,13 +8,14 @@
 	"icon": "block-default",
 	"keywords": [],
 	"acf": {
+		"blockVersion": 3,
 		"hideFieldsInSidebar": true,
 		"mode": "auto",
 		"postTypes": ["page"],
 		"renderCallback": "cs__render_{{FUNC}}_block"
 	},
 	"style": "file:./style.min.css",
-	"script": "",
+	"script": "file:./script.min.js",
 	"editorStyle": "file:./editor.min.css",
 	"supports": {
 		"align": ["wide", "full"],

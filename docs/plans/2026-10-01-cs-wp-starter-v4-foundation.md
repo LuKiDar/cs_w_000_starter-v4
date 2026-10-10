@@ -2068,9 +2068,9 @@ function cs__render_link_group( $links, $modifier = '' ){
 			$link_classes = array('button-group__item');
 			if ( $type === 'button' ){
 				$link_classes[] = 'button';
-			} elseif ( $type === 'button-outlined' ){
+			} elseif ( $type === 'button-outline' ){
 				$link_classes[] = 'button';
-				$link_classes[] = 'is-outlined';
+				$link_classes[] = 'is-outline';
 			} else {
 				$link_classes[] = 'link-arrow';
 			}
@@ -2370,7 +2370,7 @@ Follow the conventions exactly — elements in architectural order, `// Modifier
 
 `acf-json/group_part_block_content.json` — title `Part: Block Content`, fields `eyebrow` (text), `heading` (text), `subheading` (text), `content` (wysiwyg), `location: [[{"param":"widget","operator":"==","value":"all"}]]`. *(removed 2026-10-05 — see note below)*
 
-`acf-json/group_part_button_group.json` — title `Part: Button Group`, field `buttons` (repeater → `link` link, `link_type` select with `button` / `button-outlined` / `link-arrow`), same `widget:all` location. *(removed 2026-10-05 — see note below)*
+`acf-json/group_part_button_group.json` — title `Part: Button Group`, field `buttons` (repeater → `link` link, `link_type` select with `button` / `button-outline` / `link-arrow`), same `widget:all` location. *(removed 2026-10-05 — see note below)*
 
 Use the key format from `arosa/acf-json/group_*.json` so the shapes stay identical to what the ACF UI writes.
 
@@ -2438,7 +2438,7 @@ wp_update_post( array( "ID" => $id, "post_content" =>
   "\"content\":\"<p>Body content.</p>\"," .
   "\"buttons\":[" .
   "{\"link\":{\"url\":\"https://example.com/contact\",\"title\":\"Contact us\"},\"link_type\":\"button\"}," .
-  "{\"link\":{\"url\":\"https://example.com/learn\",\"title\":\"Learn more\",\"target\":\"_blank\"},\"link_type\":\"button-outlined\"}]" .
+  "{\"link\":{\"url\":\"https://example.com/learn\",\"title\":\"Learn more\",\"target\":\"_blank\"},\"link_type\":\"button-outline\"}]" .
   "}} /-->" ) );
 echo do_blocks( get_post_field( "post_content", $id ) ), "\n";
 '

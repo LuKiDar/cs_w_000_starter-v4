@@ -13,8 +13,9 @@ function cs__get_template_page_ID( $template, $index=0 ){
 		'order' => 'ASC'
 	));
 
-	return $pages[$index]->ID;
+	return ( empty($pages[$index]) ) ? 0 : $pages[$index]->ID;
 }
+
 
 /* --- Parse content in search of a block --- */
 function cs__has_block( $post_content, $block_name='' ){
@@ -28,6 +29,7 @@ function cs__has_block( $post_content, $block_name='' ){
 
 	return false;
 }
+
 
 /* --- Check block name including inner blocks --- */
 function cs__block_matches_name( $block, $block_name ){
@@ -50,6 +52,7 @@ function cs__block_matches_name( $block, $block_name ){
 	return false;
 }
 
+
 /* --- Generate URL handle from text line --- */
 function cs__generate_url_handle( $text ){
 	$handle = strtolower($text);
@@ -63,6 +66,7 @@ function cs__generate_url_handle( $text ){
 function cs__get_block_id( $block ){
 	return ! empty($block['anchor']) ? $block['anchor'] : $block['id'];
 }
+
 
 /* --- Determine if a color is dark --- */
 function cs__is_dark_color( $color ){
@@ -101,6 +105,7 @@ function cs__is_dark_color( $color ){
 	return $luminance < 0.5;
 }
 
+
 /* --- Determine if a background slug is dark --- */
 function cs__is_dark_background_slug( $slug ){
 	if ( !is_string($slug) || $slug==='' ){
@@ -116,6 +121,7 @@ function cs__is_dark_background_slug( $slug ){
 	return in_array($slug, $dark_slugs, true);
 }
 
+
 /* --- Get block data value with fallback --- */
 function cs__get_block_value( $data, $block, $key ){
 	if ( !empty($data[$key]) ){
@@ -128,6 +134,7 @@ function cs__get_block_value( $data, $block, $key ){
 
 	return '';
 }
+
 
 /* --- Get background color value from block styles --- */
 function cs__get_block_background_value( $data, $block ){
@@ -142,6 +149,7 @@ function cs__get_block_background_value( $data, $block ){
 	return '';
 }
 
+
 /* --- Check if background is dark --- */
 function cs__has_dark_background( $background_color, $background_value ){
 	if ( $background_color && cs__is_dark_background_slug($background_color) ){
@@ -154,6 +162,7 @@ function cs__has_dark_background( $background_color, $background_value ){
 
 	return false;
 }
+
 
 /* --- Build block class list --- */
 function cs__get_block_classes( $block, $data=array(), $extra_classes=array() ){
@@ -241,9 +250,9 @@ function cs__render_link_group( $links, $modifier = '' ){
 			$link_classes = array('button-group__item');
 			if ( $type === 'button' ){
 				$link_classes[] = 'button';
-			} elseif ( $type === 'button-outlined' ){
+			} elseif ( $type === 'button-outline' ){
 				$link_classes[] = 'button';
-				$link_classes[] = 'is-outlined';
+				$link_classes[] = 'is-outline';
 			} else {
 				$link_classes[] = 'link-arrow';
 			}

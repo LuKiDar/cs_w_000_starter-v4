@@ -3,6 +3,7 @@
  * Customize theme
  */
 
+/* --- Add section --- */
 function cs__customize_add_section( $wp_customize, $id, $title, $priority ){
 	$wp_customize->add_section($id, array(
 		'title'    => $title,
@@ -10,6 +11,8 @@ function cs__customize_add_section( $wp_customize, $id, $title, $priority ){
 	));
 }
 
+
+/* --- Add setting and control --- */
 function cs__customize_add_setting_control( $wp_customize, $id, $section, $label, $type, $default, $sanitize_callback ){
 	$wp_customize->add_setting($id, array(
 		'default'           => $default,
@@ -23,6 +26,8 @@ function cs__customize_add_setting_control( $wp_customize, $id, $section, $label
 	));
 }
 
+
+/* --- Add divider --- */
 function cs__customize_add_divider( $wp_customize, $id, $section, $title ){
 	$wp_customize->add_setting($id, array(
 		'default'           => '',
@@ -37,6 +42,8 @@ function cs__customize_add_divider( $wp_customize, $id, $section, $title ){
 	)));
 }
 
+
+/* --- Register customize --- */
 function cs__customize_register( $wp_customize ){
 	// --- 0. General Section ---
 	cs__customize_add_section($wp_customize, 'cs_general_section', __('General', CSWP), 100);

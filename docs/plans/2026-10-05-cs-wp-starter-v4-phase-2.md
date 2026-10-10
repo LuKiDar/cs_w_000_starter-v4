@@ -205,9 +205,9 @@ uncomment the matching `@use` lines in `assets/scss/main.scss`.
 - [ ] **Step 4: `_content-formats.scss`** from v3 `base/_content-formats.scss:5–26` (list spacing) —
   directly reusable.
 - [ ] **Step 5: `_button-base.scss`** from v3 `base/_button-base.scss:5–51` (`.button-base`,
-  `.button-default`, `.button-outlined`). `searchform.php:20` emits `.button`.
+  `.button-default`, `.button-outline`). `searchform.php:20` emits `.button`.
 - [ ] **Step 6: the trimmed blocks layer** (controller ruling): `_blocks-base.scss` keeps only the
-  `.wp-block-button__link` → `.button-base` extension and the `.is-style-outlined` mapping;
+  `.wp-block-button__link` → `.button-base` extension and the `.is-style-outline` mapping;
   `_blocks-styles.scss` keeps only the first/last-child margin reset.
 - [ ] **Step 7: Verify** — `npm run build` exit 0; `.container`, `.grid` and `.col` behave on a real
   page at three widths (screenshot or computed-style read, not a visual opinion); `npm run stand`

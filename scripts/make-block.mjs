@@ -62,9 +62,9 @@ const render = src => Object.entries(replacements)
 
 fs.mkdirSync(target, { recursive: true });
 
-// Copy sources only. A build leaves style.min.css, editor.min.css and their
-// source maps inside _skeleton, and copying those would hand every new block a
-// stale compiled stylesheet built from the placeholder SCSS. This is reachable
+// Copy sources only. A build leaves style.min.css, editor.min.css, script.min.js
+// and their source maps inside _skeleton, and copying those would hand every new
+// block a stale compiled file built from the placeholder sources. This is reachable
 // from the second block onwards, not hypothetically.
 const COMPILED = /\.min\.(css|js)$|\.min\.(css|js)\.map$/;
 
@@ -96,4 +96,4 @@ console.log(`  block name:      cs/${slug}`);
 console.log(`  render callback: cs__render_${func}_block`);
 console.log(`  acf field group: acf-json/${groupKey}.json`);
 console.log('');
-console.log('Next: npm run build   (compiles style.min.css and editor.min.css)');
+console.log('Next: npm run build   (compiles style.min.css, editor.min.css and script.min.js)');

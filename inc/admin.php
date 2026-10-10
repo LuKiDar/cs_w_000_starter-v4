@@ -44,6 +44,7 @@ function cs__custom_menu_order( $menu_order ){
 add_filter('custom_menu_order', function() { return true; });
 add_filter('menu_order', 'cs__custom_menu_order', 10, 1);
 
+
 /* --- Tidy up admin bar --- */
 function remove_admin_bar_links(){
 	global $wp_admin_bar;
@@ -67,6 +68,7 @@ function remove_admin_bar_links(){
 	// $wp_admin_bar->remove_menu('my-account');     // Remove the user details tab
 }
 add_action( 'wp_before_admin_bar_render', 'remove_admin_bar_links' );
+
 
 /* --- Disable content editor for specific pages --- */
 function cs__hide_editor_for_pages(){

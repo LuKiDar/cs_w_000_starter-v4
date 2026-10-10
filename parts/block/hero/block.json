@@ -8,6 +8,7 @@
 	"icon": "cover-image",
 	"keywords": ["hero", "banner", "header", "intro"],
 	"acf": {
+		"blockVersion": 3,
 		"mode": "auto",
 		"postTypes": ["page"],
 		"renderCallback": "cs__render_hero_block"

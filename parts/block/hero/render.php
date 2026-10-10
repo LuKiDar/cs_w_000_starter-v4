@@ -49,15 +49,14 @@ if ( ! $has_text && ! $has_button && ! $image_id ){
 	return;
 }
 
-$classes = cs__get_block_classes($block, 'block-hero');
+$modifier = cs__get_block_classes($block, 'block-hero');
 if ( $image_id ){
-	$classes .= ' has-background-image';
-}
-?>
+	$modifier .= ' has-background-image';
+} ?>
 
 <section
 	id="<?= esc_attr(cs__get_block_id($block)); ?>"
-	class="block-hero <?= cs__get_block_classes($block, $data, []); ?>"
+	class="block-hero <?= cs__get_block_classes($block, $data, $modifier); ?>"
 	<?= cs__get_block_styles($block); ?>
 >
 	<?php if ( $image_id ): ?>

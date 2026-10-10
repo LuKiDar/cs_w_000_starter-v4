@@ -65,15 +65,6 @@ function cs__load_blocks(){
 add_action('init', 'cs__load_blocks', 5);
 
 
-/* --- ACF field groups stored beside their block --- */
-add_filter('acf/settings/load_json', function( $paths ){
-	foreach ( cs__get_blocks() as $block ){
-		$paths[] = get_stylesheet_directory() ."/parts/block/{$block}";
-	}
-	return $paths;
-});
-
-
 /* --- Keep generator templates out of the page-template registry --- */
 add_filter('theme_page_templates', 'cs__exclude_generator_templates');
 function cs__exclude_generator_templates( $templates ){

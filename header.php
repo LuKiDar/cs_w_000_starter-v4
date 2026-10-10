@@ -66,7 +66,7 @@ $button_new_tab = get_option('cs_header_button_new_tab');
 				<?php endif; ?>
 
 				<?php if ( $button_text!='' && $button_url!='' ): ?>
-					<a class="site-header__button button is-outlined"
+					<a class="site-header__button button is-outline"
 					   href="<?= esc_url($button_url); ?>"
 					   <?php if ( $button_new_tab ): ?>target="_blank" rel="noopener noreferrer"<?php endif; ?>
 					><?= esc_html($button_text); ?></a>
@@ -91,7 +91,7 @@ $button_new_tab = get_option('cs_header_button_new_tab');
 					<?php endif; ?>
 
 					<?php if ( $button_text!='' && $button_url!='' ): ?>
-						<a class="site-header__button button is-outlined"
+						<a class="site-header__button button is-outline"
 						   href="<?= esc_url($button_url); ?>"
 						   <?php if ( $button_new_tab ): ?>target="_blank" rel="noopener noreferrer"<?php endif; ?>
 						><?= esc_html($button_text); ?></a>

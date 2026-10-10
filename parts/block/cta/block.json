@@ -8,6 +8,7 @@
 	"icon": "megaphone",
 	"keywords": ["cta", "call to action", "button"],
 	"acf": {
+		"blockVersion": 3,
 		"hideFieldsInSidebar": true,
 		"mode": "auto",
 		"postTypes": ["page"],

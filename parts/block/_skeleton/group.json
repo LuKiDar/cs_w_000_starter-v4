@@ -142,7 +142,7 @@
                     },
                     "choices": {
                         "button": "Default button",
-                        "button-outlined": "Outlined button",
+                        "button-outline": "Outlined button",
                         "link-arrow": "Link with arrow"
                     },
                     "default_value": false,

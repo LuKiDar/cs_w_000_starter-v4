@@ -15,10 +15,10 @@
 		@extend .button-default;
 	}
 
-	&.is-style-outlined {
+	&.is-style-outline {
 		.wp-block-button__link {
 			@extend .button-base;
-			@extend .button-outlined;
+			@extend .button-outline;
 		}
 	}
 }

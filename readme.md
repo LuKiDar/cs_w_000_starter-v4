@@ -96,15 +96,16 @@ This copies `parts/block/_skeleton/` to `parts/block/my-block/`, replacing
 |---|---|
 | `block.json` | `title`, `description`, `icon`, `keywords`, `supports`, `attributes`, and which `postTypes` the block appears on. `name` is already `cs/<slug>`. |
 | `callback.php` | The render callback. It reads ACF fields with `get_field()` into an array and includes `render.php`. Add or rename the fields you need. |
+| `block-functions.php` | Helpers for this block only, loaded before the callback. Delete the file if the block does not need any. |
 | `render.php` | The block's markup. Escape output (`esc_html`, `esc_attr`, `wp_kses_post`) and build the wrapper with `cs__get_block_id()`, `cs__get_block_classes()` and `cs__get_block_styles()`. |
 | `style.scss` | Front-end styles for the block (see §10). |
 | `editor.scss` | Editor-only styles. |
-| `script.js` | Optional front-end behaviour, bundled to `script.min.js` by the esbuild task. Only when you add this file, change `block.json`'s `"script"` to the **built** file (`"script": "file:./script.min.js"`) — never the source. The skeleton ships `"script": ""` (the value a block with no script keeps, as `cta` does); a block that adds a `script.js` but leaves the default loads nothing. |
+| `script.js` | Front-end behaviour, bundled to `script.min.js`. `block.json` already points at that built file. Delete `script.js` and set `"script"` back to `""` if the block does not need any. |
 
 Finally:
 
 ```bash
-npm run build   # compiles style.min.css and editor.min.css, and script.min.js when script.js exists
+npm run build   # compiles style.min.css, editor.min.css and script.min.js
 ```
 
 `cs__get_blocks()` skips an **exact list of names** — `_skeleton`, `_base-block`
@@ -346,11 +347,10 @@ Accepted, documented limits — not defects to fix in passing:
   task and is enqueued by `inc/enqueue.php:19` behind the same `file_exists()`
   guard as the stylesheet. It is the only global behaviour the theme ships; it
   gives `.nav-toggle`/`.mobile-navigation` the toggle nothing provided before.
-  Per-block JS builds to `parts/block/<slug>/script.min.js` when a block has a
-  `script.js`; a block that adds one points `block.json` at that built path
-  (`"script": "file:./script.min.js"`). `_skeleton/block.json` ships
-  `"script": ""` (as `cta` does) — the value a block with no script keeps — so a
-  generated block with no script needs no change and passes the stand as generated.
+  Per-block JS builds to `parts/block/<slug>/script.min.js`. A generated block
+  includes `script.js`, and `block.json` points at `"script": "file:./script.min.js"`.
+  A block that does not need a script deletes that file and sets `"script"` back
+  to `""`, which is what `cta` keeps.
 - **The `h6` eyebrow filter is indiscriminate.** `inc/a11y-block-fixes.php`
   rewrites **every** `core/heading` level-6 block to a `<p>`, so a genuine H6
   heading an author meant as a heading is rewritten too. An H6 block carries
