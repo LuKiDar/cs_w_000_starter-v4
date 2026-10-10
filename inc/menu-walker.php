@@ -1,11 +1,6 @@
 <?php
 /**
  * Menu Walker
- *
- * Always-on: header.php wires cs__primary_menu_walker into both of its
- * wp_nav_menu calls, so the class must load with the theme. A class that is used
- * by the theme's own template and left behind a commented include is what took
- * v3 down.
  */
 
 /*--- Primary Menu Walker ---*/

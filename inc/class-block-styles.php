@@ -7,7 +7,7 @@
  *
  * Usage:
  * $styles = CS_Block_Styles::get_styles( $block );
- * <div <?php echo $styles; ?>>...</div>
+ * <div <?= $styles; ?>>...</div>
  */
 
 class CS_Block_Styles {

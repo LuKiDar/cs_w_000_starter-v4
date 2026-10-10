@@ -1,10 +1,6 @@
 <?php
 /**
  * Pagination
- *
- * Ported from arosa. The 1% edge cases WordPress itself passes through
- * (a single page, no links) are already handled by paginate_links(); this only
- * adds the disabled Previous/Next bookends arosa's markup styles.
  */
 
 function cs__the_pagination( $page_url='', $max_pages='' ){
@@ -29,7 +25,7 @@ function cs__the_pagination( $page_url='', $max_pages='' ){
 				<?php } ?>
 
 				<?php foreach ( $links as $item ){ ?>
-					<?php echo wp_kses_post($item); ?>
+					<?= wp_kses_post($item); ?>
 				<?php } ?>
 
 				<?php if ( !strpos($links[count($links)-1], 'Next') ){ ?>

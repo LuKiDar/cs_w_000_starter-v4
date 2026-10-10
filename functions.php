@@ -60,6 +60,7 @@ require_once 'inc/customize.php';
 require_once 'inc/helper-functions.php';
 require_once 'inc/class-block-styles.php';
 require_once 'inc/gutenberg.php';
+require_once 'inc/tinymce-editor.php';
 require_once 'inc/menu-walker.php';
 require_once 'inc/a11y-block-fixes.php';
 

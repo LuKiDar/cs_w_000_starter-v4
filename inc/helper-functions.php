@@ -106,19 +106,43 @@ function cs__is_dark_color( $color ){
 }
 
 
+/* --- Palette slugs whose theme.json color is dark --- */
+function cs__get_dark_background_slugs(){
+	static $slugs = null;
+
+	if ( $slugs!==null ){
+		return $slugs;
+	}
+
+	$slugs = array();
+	$palette = function_exists('wp_get_global_settings')
+		? wp_get_global_settings(array('color', 'palette', 'theme'))
+		: array();
+
+	if ( ! is_array($palette) ){
+		return $slugs;
+	}
+
+	foreach ( $palette as $color ){
+		if ( empty($color['slug']) || empty($color['color']) ){
+			continue;
+		}
+		if ( cs__is_dark_color($color['color']) ){
+			$slugs[] = $color['slug'];
+		}
+	}
+
+	return $slugs;
+}
+
+
 /* --- Determine if a background slug is dark --- */
 function cs__is_dark_background_slug( $slug ){
 	if ( !is_string($slug) || $slug==='' ){
 		return false;
 	}
 
-	$dark_slugs = array(
-		'primary',
-		'black',
-		'gray-900',
-	);
-
-	return in_array($slug, $dark_slugs, true);
+	return in_array($slug, cs__get_dark_background_slugs(), true);
 }
 
 
