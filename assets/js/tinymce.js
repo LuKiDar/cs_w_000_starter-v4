@@ -1,10 +1,14 @@
 /**
- * TinyMCE: insert [cs-button] shortcodes.
+ * TinyMCE editor behaviour.
  * Loaded through mce_external_plugins. Not part of the JS build.
  */
-
 (function () {
-	tinymce.PluginManager.add('cs_buttons', function (editor) {
+	tinymce.PluginManager.add('cs_tinymce', function (editor) {
+		addButtons(editor);
+	});
+
+	/* --- [cs-button] menu --- */
+	function addButtons(editor) {
 		function insertButton(attrs) {
 			var label = editor.selection.getContent({ format: 'text' }) || 'Button';
 			label = label.replace(/[\[\]]/g, '');
@@ -42,5 +46,5 @@
 				}
 			]
 		});
-	});
+	}
 })();

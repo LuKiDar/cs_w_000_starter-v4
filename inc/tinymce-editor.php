@@ -46,17 +46,17 @@ function cs__mce_add_more_buttons_2( $buttons ){
 add_filter('mce_buttons_2', 'cs__mce_add_more_buttons_2');
 
 
-/* --- Button menu. assets/js/tinymce-buttons.js inserts [cs-button]. --- */
-function cs__mce_button_plugin( $plugins ){
-	$plugins['cs_buttons'] = add_query_arg(
+/* --- Editor script. Toolbar buttons are registered inside assets/js/tinymce.js. --- */
+function cs__mce_plugin( $plugins ){
+	$plugins['cs_tinymce'] = add_query_arg(
 		'ver',
-		(string) filemtime(get_template_directory() .'/assets/js/tinymce-buttons.js'),
-		get_template_directory_uri() .'/assets/js/tinymce-buttons.js'
+		(string) filemtime(get_template_directory() .'/assets/js/tinymce.js'),
+		get_template_directory_uri() .'/assets/js/tinymce.js'
 	);
 
 	return $plugins;
 }
-add_filter('mce_external_plugins', 'cs__mce_button_plugin');
+add_filter('mce_external_plugins', 'cs__mce_plugin');
 
 
 /* --- Theme palette as a TinyMCE color map. CSS-variable colors are skipped. --- */
