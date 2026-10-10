@@ -6,12 +6,35 @@
  * Colors and font sizes come from theme.json.
  */
 
-/* --- TinyMCE: add style selector --- */
+/* --- TinyMCE: add toolbar buttons --- */
 function cs__mce_add_more_buttons( $buttons ){
-	$buttons[] = 'styleselect';
+	$align = array_search('alignright', $buttons, true);
+
+	if ( $align!==false ){
+		array_splice($buttons, $align + 1, 0, 'alignjustify');
+	} else {
+		$buttons[] = 'alignjustify';
+	}
+
 	return $buttons;
 }
-add_filter('mce_buttons_2', 'cs__mce_add_more_buttons');
+add_filter('mce_buttons', 'cs__mce_add_more_buttons');
+
+function cs__mce_add_more_buttons_2( $buttons ){
+	$extra = array('underline', 'subscript', 'superscript', 'wp_code');
+	$strike = array_search('strikethrough', $buttons, true);
+
+	if ( $strike!==false ){
+		array_splice($buttons, $strike + 1, 0, $extra);
+	} else {
+		$buttons = array_merge($extra, $buttons);
+	}
+
+	$buttons[] = 'styleselect';
+
+	return $buttons;
+}
+add_filter('mce_buttons_2', 'cs__mce_add_more_buttons_2');
 
 
 /* --- Theme palette as a TinyMCE color map. CSS-variable colors are skipped. --- */
@@ -77,18 +100,6 @@ function cs__mce_before_init( $settings ){
 	$color_map = cs__mce_color_map();
 	$font_sizes = cs__mce_font_size_formats();
 	$style_formats = array(
-		array(
-			'title' => 'Inline',
-			'items' => array(
-				array('title' => 'Bold',          'icon' => 'bold',          'format' => 'bold'),
-				array('title' => 'Italic',        'icon' => 'italic',        'format' => 'italic'),
-				array('title' => 'Underline',     'icon' => 'underline',     'format' => 'underline'),
-				array('title' => 'Strikethrough', 'icon' => 'strikethrough', 'format' => 'strikethrough'),
-				array('title' => 'Superscript',   'icon' => 'superscript',   'format' => 'superscript'),
-				array('title' => 'Subscript',     'icon' => 'subscript',     'format' => 'subscript'),
-				array('title' => 'Code',          'icon' => 'code',          'format' => 'code'),
-			)
-		),
 		array(
 			'title' => 'Buttons',
 			'items' => array(

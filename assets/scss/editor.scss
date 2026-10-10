@@ -5,6 +5,59 @@
  * which inc/enqueue.php registers with add_editor_style().
  */
 
+@use 'abstracts/variables' as *;
 @use 'base/typography' as *;
 @use 'base/content-formats' as *;
 @use 'components/buttons' as *;
+
+body.mce-content-body {
+	font-family: $fontFamily_primary;
+	font-size: $fontSize_small;
+	line-height: $lineHeight_base;
+
+	h1,
+	h2,
+	h3,
+	h4,
+	h5,
+	h6 {
+		color: currentColor;
+		font-family: $fontFamily_secondary;
+		font-style: normal;
+		line-height: $lineHeight_base;
+	}
+	h1 {
+		font-size: $fontSize_huge;
+		font-weight: 700;
+	}
+	h2 {
+		font-size: $fontSize_xx_large;
+		font-weight: 700;
+	}
+	h3 {
+		font-size: $fontSize_x_large;
+		font-weight: 400;
+	}
+	h4 {
+		font-size: $fontSize_large;
+		font-weight: 700;
+	}
+	h5 {
+		font-size: $fontSize_medium;
+		font-weight: 700;
+	}
+	h6 {
+		font-size: $fontSize_small;
+		font-weight: 400;
+		letter-spacing: 0.2em;
+		text-transform: uppercase;
+	}
+	a {
+		color: inherit;
+		text-decoration: underline;
+
+		&:is(:hover, :focus) {
+			text-decoration: none;
+		}
+	}
+}
