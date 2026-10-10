@@ -351,11 +351,6 @@ Accepted, documented limits — not defects to fix in passing:
   includes `script.js`, and `block.json` points at `"script": "file:./script.min.js"`.
   A block that does not need a script deletes that file and sets `"script"` back
   to `""`, which is what `cta` keeps.
-- **The `h6` eyebrow filter is indiscriminate.** `inc/a11y-block-fixes.php`
-  rewrites **every** `core/heading` level-6 block to a `<p>`, so a genuine H6
-  heading an author meant as a heading is rewritten too. An H6 block carries
-  nothing that distinguishes an eyebrow from a real heading, so the filter
-  cannot tell them apart — this is a limitation of the approach, not a bug.
 - **The stand check does not trace `require_once`.** It resolves a symbol by
   "defined somewhere in the theme", so a symbol behind a **commented-out**
   include passes while the page would fatal at runtime — the exact v3 failure.

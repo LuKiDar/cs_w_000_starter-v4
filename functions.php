@@ -57,12 +57,12 @@ add_filter('get_custom_logo', function( $html ){
 require_once 'inc/enqueue.php';
 require_once 'inc/wordpress-cleanup.php';
 require_once 'inc/customize.php';
+require_once 'inc/admin.php';
 require_once 'inc/helper-functions.php';
 require_once 'inc/class-block-styles.php';
 require_once 'inc/gutenberg.php';
 require_once 'inc/tinymce-editor.php';
 require_once 'inc/menu-walker.php';
-require_once 'inc/a11y-block-fixes.php';
 
 // Toolbox — uncomment what the project needs. Every file below exists in inc/.
 require_once 'inc/breadcrumbs.php';
@@ -70,7 +70,6 @@ require_once 'inc/pagination.php';
 require_once 'inc/shortcodes.php';
 // require_once 'inc/widgets.php';
 // require_once 'inc/cpt-post.php';
-// require_once 'inc/admin.php';
 
 // Plugin support
 // require_once 'inc/plugin-acf.php';       // ACF options page fallback (Customizer is the primary settings surface)

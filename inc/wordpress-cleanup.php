@@ -5,35 +5,27 @@
 
 /* --- Clean up the WordPress Head --- */
 function cs__head_cleanup(){
-	remove_action('wp_head', 'feed_links_extra', 3);					// Category Feeds
-	remove_action('wp_head', 'feed_links', 2);							// Post and Comment Feeds
-	remove_action('wp_head', 'rsd_link');								// EditURI link
-	remove_action('wp_head', 'wlwmanifest_link');						// Windows Live Writer
-	remove_action('wp_head', 'index_rel_link');							// index link
-	remove_action('wp_head', 'parent_post_rel_link', 10, 0);			// previous link
-	remove_action('wp_head', 'start_post_rel_link', 10, 0);				// start link
-	remove_action('wp_head', 'adjacent_posts_rel_link_wp_head', 10, 0);	// Links for Adjacent Posts
-	remove_action('wp_head', 'wp_generator');							// WP version
+	remove_action('wp_head', 'feed_links_extra', 3);                    // Category Feeds
+	remove_action('wp_head', 'feed_links', 2);                          // Post and Comment Feeds
+	remove_action('wp_head', 'rsd_link');                               // EditURI link
+	remove_action('wp_head', 'wlwmanifest_link');                       // Windows Live Writer
+	remove_action('wp_head', 'index_rel_link');                         // index link
+	remove_action('wp_head', 'parent_post_rel_link', 10, 0);            // previous link
+	remove_action('wp_head', 'start_post_rel_link', 10, 0);             // start link
+	remove_action('wp_head', 'adjacent_posts_rel_link_wp_head', 10, 0); // Links for Adjacent Posts
+	remove_action('wp_head', 'wp_generator');                           // WP version
 	remove_action('wp_head', 'wp_shortlink_wp_head', 10, 0);
 }
 add_action('init', 'cs__head_cleanup');
 
-add_filter('excerpt_length', function(){ return 30; });			// Change Excerpt length
-add_filter('excerpt_more', function (){ return '&hellip;'; });	// Change Excerpt "read more" string
-add_filter('the_excerpt', 'do_shortcode');						// Allow Shortcodes in Excerpt (Manual Excerpts only)
-add_filter('the_excerpt', 'shortcode_unautop');					// Remove auto <p> tags in Excerpt (Manual Excerpts only)
-remove_filter('the_excerpt', 'wpautop');						// Remove <p> tags from Excerpt altogether
-add_filter('the_generator', function (){ return ''; });			// Remove WP version from RSS
-add_filter('widget_text', 'do_shortcode');						// Allow Shortcodes in Dynamic Sidebar
-add_filter('widget_text', 'shortcode_unautop');					// Remove <p> tags in Dynamic Sidebars
-
-
-/* --- Header Meta Tags --- */
-function cs__header_meta_tags(){
-	echo '<meta charset="'. esc_attr(get_bloginfo('charset')) .'">';
-	echo '<meta name="viewport" content="width=device-width, initial-scale=1">';
-}
-add_action('wp_head', 'cs__header_meta_tags');
+add_filter('excerpt_length', function(){ return 30; });        // Change Excerpt length
+add_filter('excerpt_more', function (){ return '&hellip;'; }); // Change Excerpt "read more" string
+add_filter('the_excerpt', 'do_shortcode');                     // Allow Shortcodes in Excerpt (Manual Excerpts only)
+add_filter('the_excerpt', 'shortcode_unautop');                // Remove auto <p> tags in Excerpt (Manual Excerpts only)
+remove_filter('the_excerpt', 'wpautop');                       // Remove <p> tags from Excerpt altogether
+add_filter('the_generator', function (){ return ''; });        // Remove WP version from RSS
+add_filter('widget_text', 'do_shortcode');                     // Allow Shortcodes in Dynamic Sidebar
+add_filter('widget_text', 'shortcode_unautop');                // Remove <p> tags in Dynamic Sidebars
 
 
 /* --- Extra body classes --- */
@@ -46,26 +38,6 @@ function cs__extra_body_classes( $classes ){
 add_filter('body_class', 'cs__extra_body_classes');
 
 
-/* --- Clean body classes --- */
-function cs__clean_body_classes( $classes ){
-	$allowed_classes = [
-		'singular',
-		'single',
-		'page',
-		'archive',
-		'home',
-		'search',
-		'admin-bar',
-		'logged-in',
-		'wp-embed-responsive',
-		'is-header-fixed'
-	];
-
-	return array_intersect($classes, $allowed_classes);
-}
-add_filter('body_class', 'cs__clean_body_classes', 20);
-
-
 /* --- Clean Nav Menu Classes --- */
 function cs__clean_nav_menu_classes( $classes, $menu_item, $args ){
 	if ( !is_array($classes) ){
@@ -73,14 +45,13 @@ function cs__clean_nav_menu_classes( $classes, $menu_item, $args ){
 	}
 
 	foreach ( $classes as $i=>$class ){
-		// Remove class with menu item id.
-		$id = strtok($class, 'menu-item-');
-		if ( intval($id)>0 ){
+		// Remove menu-item-{id}.
+		if ( preg_match('/^menu-item-\d+$/', $class) ){
 			unset($classes[$i]);
 		}
 
 		// Remove menu-item-type-*.
-		if ( strpos($class, 'menu-item-type-') ){
+		if ( strpos($class, 'menu-item-type-')!==false ){
 			unset($classes[$i]);
 		}
 
