@@ -6,7 +6,7 @@
  * Colors and font sizes come from theme.json.
  */
 
-/* --- TinyMCE: add toolbar buttons --- */
+/* --- Row 1: justify after align right, button shortcodes after the link button --- */
 function cs__mce_add_more_buttons( $buttons ){
 	$align = array_search('alignright', $buttons, true);
 
@@ -16,10 +16,19 @@ function cs__mce_add_more_buttons( $buttons ){
 		$buttons[] = 'alignjustify';
 	}
 
+	$link = array_search('link', $buttons, true);
+	if ( $link!==false ){
+		array_splice($buttons, $link + 1, 0, 'cs_buttons');
+	} else {
+		$buttons[] = 'cs_buttons';
+	}
+
 	return $buttons;
 }
 add_filter('mce_buttons', 'cs__mce_add_more_buttons');
 
+
+/* --- Row 2: underline, subscript, superscript and code, then the Formats menu --- */
 function cs__mce_add_more_buttons_2( $buttons ){
 	$extra = array('underline', 'subscript', 'superscript', 'wp_code');
 	$strike = array_search('strikethrough', $buttons, true);
@@ -35,6 +44,19 @@ function cs__mce_add_more_buttons_2( $buttons ){
 	return $buttons;
 }
 add_filter('mce_buttons_2', 'cs__mce_add_more_buttons_2');
+
+
+/* --- Button menu. assets/js/tinymce-buttons.js inserts [cs-button]. --- */
+function cs__mce_button_plugin( $plugins ){
+	$plugins['cs_buttons'] = add_query_arg(
+		'ver',
+		(string) filemtime(get_template_directory() .'/assets/js/tinymce-buttons.js'),
+		get_template_directory_uri() .'/assets/js/tinymce-buttons.js'
+	);
+
+	return $plugins;
+}
+add_filter('mce_external_plugins', 'cs__mce_button_plugin');
 
 
 /* --- Theme palette as a TinyMCE color map. CSS-variable colors are skipped. --- */
@@ -96,20 +118,11 @@ function cs__mce_font_size_formats(){
 }
 
 
+/* --- Pass the theme palette and font-size formats into TinyMCE --- */
 function cs__mce_before_init( $settings ){
 	$color_map = cs__mce_color_map();
 	$font_sizes = cs__mce_font_size_formats();
-	$style_formats = array(
-		array(
-			'title' => 'Buttons',
-			'items' => array(
-				array('title' => 'Default button',          'selector' => 'a', 'classes' => 'button',                              'icon' => 'link'),
-				array('title' => 'Default button, White',   'selector' => 'a', 'classes' => 'button has-color-white',              'icon' => 'link'),
-				array('title' => 'Outlined button',         'selector' => 'a', 'classes' => 'button is-outline',                   'icon' => 'link'),
-				array('title' => 'Outlined button, White',  'selector' => 'a', 'classes' => 'button is-outline has-color-white',   'icon' => 'link'),
-			)
-		),
-	);
+	$style_formats = array();
 
 	if ( $font_sizes ){
 		$style_formats[] = array(
@@ -123,7 +136,9 @@ function cs__mce_before_init( $settings ){
 		$settings['textcolor_cols'] = (int) min(8, count($color_map) / 2);
 	}
 
-	$settings['style_formats'] = json_encode($style_formats);
+	if ( $style_formats ){
+		$settings['style_formats'] = json_encode($style_formats);
+	}
 
 	return $settings;
 }
@@ -147,6 +162,8 @@ function cs__mce_css( $stylesheets ){
 }
 add_filter('mce_css', 'cs__mce_css');
 
+
+/* --- Stylesheet printed for the editor iframe by the mce_css URL above --- */
 function cs__mce_styles(){
 	header('Content-Type: text/css; charset=UTF-8');
 

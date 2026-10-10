@@ -8,3 +8,16 @@
 // @use 'abstracts/functions' as *;
 // @use 'abstracts/variables' as *;
 // @use 'abstracts/mixins' as *;
+
+.mce-toolbar .mce-btn.mce-active,
+.mce-toolbar .mce-btn.mce-active:hover,
+.mce-toolbar .mce-btn.mce-active:focus {
+	button,
+	i {
+		color: var(--wp-components-color-accent, var(--wp-admin-theme-color, #3858e9));
+	}
+
+	.mce-caret {
+		border-top-color: var(--wp-components-color-accent, var(--wp-admin-theme-color, #3858e9));
+	}
+}

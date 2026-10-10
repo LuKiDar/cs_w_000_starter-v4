@@ -67,7 +67,7 @@ require_once 'inc/a11y-block-fixes.php';
 // Toolbox — uncomment what the project needs. Every file below exists in inc/.
 require_once 'inc/breadcrumbs.php';
 require_once 'inc/pagination.php';
-// require_once 'inc/shortcodes.php';
+require_once 'inc/shortcodes.php';
 // require_once 'inc/widgets.php';
 // require_once 'inc/cpt-post.php';
 // require_once 'inc/admin.php';
