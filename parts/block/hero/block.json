@@ -9,6 +9,7 @@
 	"keywords": ["hero", "banner", "header", "intro"],
 	"acf": {
 		"blockVersion": 3,
+		"hideFieldsInSidebar": true,
 		"mode": "auto",
 		"postTypes": ["page"],
 		"renderCallback": "cs__render_hero_block"
@@ -17,18 +18,46 @@
 	"script": "",
 	"editorStyle": "file:./editor.min.css",
 	"supports": {
-		"align": ["none", "wide", "full"],
+		"align": ["wide", "full"],
 		"alignContent": false,
 		"alignText": true,
 		"anchor": true,
 		"html": false,
 		"multiple": true,
-		"color": {"background": true, "link": false, "text": false},
-		"spacing": {"blockGap": false, "margin": ["top", "bottom"], "padding": ["top", "bottom"]}
+		"color": {
+			"background": true,
+			"link": false,
+			"text": true
+		},
+		"spacing": {
+			"blockGap": false,
+			"margin": ["top", "bottom"],
+			"padding": ["top", "bottom"]
+		}
 	},
 	"attributes": {
-		"align": {"type": "string", "default": ""},
-		"alignText": {"type": "string", "default": ""}
+		"align": {
+			"type": "string",
+			"default": "full"
+		},
+		"alignText": {
+			"type": "string",
+			"default": "center"
+		},
+		"style": {
+			"type": "object",
+			"default": {
+				"color":{
+					"background": "var:preset|color|gray-100"
+				},
+				"spacing": {
+					"padding": {
+						"top": "var:preset|spacing|40",
+						"bottom": "var:preset|spacing|40"
+					}
+				}
+			}
+		}
 	},
 	"example": {
 		"attributes": {
@@ -37,7 +66,15 @@
 				"eyebrow": "Welcome",
 				"heading": "Page-opening heading",
 				"subheading": "A short supporting line.",
-				"buttons": [{"link": {"title": "Get started", "url": "#"}, "link_type": "button"}]
+				"buttons": [
+					{
+						"link": {
+							"title": "Get started",
+							"url": "#"
+						},
+						"link_type": "button"
+					}
+				]
 			}
 		}
 	}

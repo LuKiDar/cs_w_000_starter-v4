@@ -6,7 +6,7 @@
 @use '../abstracts/variables' as *;
 @use '../abstracts/mixins' as *;
 
-.button-group {
+:where(.button-group) {
   align-items: center;
   display: flex;
   flex-flow: row wrap;

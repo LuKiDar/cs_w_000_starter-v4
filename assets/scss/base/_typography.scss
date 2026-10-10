@@ -37,6 +37,43 @@ h5 {
 h6 {
 	margin: calc($layout_padding * 2) 0 $layout_block_gap;
 }
+.h1,
+.h2,
+.h3,
+.h4,
+.h5,
+.h6 {
+	color: currentColor;
+	font-family: $fontFamily_secondary;
+	font-style: normal;
+	line-height: $lineHeight_base;
+}
+.h1 {
+	font-size: $fontSize_huge;
+	font-weight: 700;
+}
+.h2 {
+	font-size: $fontSize_xx_large;
+	font-weight: 700;
+}
+.h3 {
+	font-size: $fontSize_x_large;
+	font-weight: 400;
+}
+.h4 {
+	font-size: $fontSize_large;
+	font-weight: 700;
+}
+.h5 {
+	font-size: $fontSize_medium;
+	font-weight: 700;
+}
+.h6 {
+	font-size: $fontSize_small;
+	font-weight: 400;
+	letter-spacing: 0.2em;
+	text-transform: uppercase;
+}
 p {
 	margin: 0 0 1em;
 
